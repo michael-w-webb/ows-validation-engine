@@ -1,0 +1,28 @@
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# --- Excel and data outputs ---
+*.xlsx
+*.xlsm
+*.xlsb
+*.csv
+*.tmp
+*.log
+
+# --- VS Code ---
+.vscode/
+
+# --- Node/Electron (for later UI) ---
+node_modules/
+dist/
+build/

@@ -1,66 +1,169 @@
+### dataframe import
 import pandas as pd 
 
+### Engine Imports 
 from cc_validation_engine import ValidationEngine
 from cc_validation_workbook_loader import WorkbookLoader, MultiWorkbookLoader
-from cc_column_label_list import cc_column_label_list
+from cc_column_label_list import workbook_definitions
 from cc_file_directory import cc_file_directory
-
-
+from cc_key_creator import KeyCreator
+from cc_standard_normalizations import strict_alphabetic_normalize
 
 # Containers for results
 all_normalized = []
 all_errors = []
 all_mismatches = []  
 
+
 for org, data_types in cc_file_directory.items():
 
-    if "training data" not in data_types:
+    ##### Start - File selection ##### 
+
+    ## This section loads a file path (or collection of filepaths) and associated meta-data 
+    ## from a file directory specified by the user. Currently the user also still needs to  
+    ## specify a dataset type value that is used to deliniate between file types in the directory.  
+
+    ## File path and metadata are passed to workbook loader.  
+    
+    ## Current file types are:
+    # 
+    # For Career ConneCT - "training data" 
+    # For Good Jobs Challenge - "TPI" and "SSI"  
+
+    file_type = "training data"
+    
+    if file_type not in data_types:
         continue
 
     # Get all periods and pick the last one (sorted alphanumerically)
-    periods = sorted(data_types["training data"].keys())
+    periods = sorted(data_types[file_type].keys())
     if not periods:
         continue
     period = periods[-1]
 
-    file_meta = data_types["training data"][period]
+    file_meta = data_types[file_type][period]
     file_path = file_meta["file path"]
     workbook_format = file_meta["format"]
 
-     # ✅ Choose single vs. multi loader
+    ##### End - File Selection #####
+
+    #### Start - Key Specification #### 
+
+    ## Before loading workbooks, instantiate key creator and provide specifications 
+
+    sheetlink_keycreator = KeyCreator(
+    key_fields=["First Name", "Last Name"],     # minimal for now
+    normalizers={
+        "First Name": strict_alphabetic_normalize,
+        "Last Name": strict_alphabetic_normalize,
+    },
+    required_fields=["First Name", "Last Name"],  # will drop invalid rows
+    return_unhashed=True,                       # unhashed for easier debugging
+)
+    
+    ### key creator for entry level and linking to person database
+    # No normalization because this is called after normalization is completed.  
+
+    kc_strict = KeyCreator(
+    key_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
+    required_fields=["First Name, Last Name", "Client Date of Birth", "Zip Code"],
+    return_unhashed=True,
+    )
+
+    kc_med_name_dob = KeyCreator(
+    key_fields=["First Name", "Last Name", "Client Date of Birth"],
+    required_fields=["First Name, Last Name","Client Date of Birth"],
+    return_unhashed=True,
+    )
+
+    kc_med_name_zip = KeyCreator(
+    key_fields=["First Name", "Last Name", "Zip Code"],
+    required_fields=["First Name, Last Name","Zip Code"],
+    return_unhashed=True,
+    )
+
+    kc_weak = KeyCreator(
+    key_fields=["First Name","Last Name"],
+    required_fields =["First Name","Last Name"],
+    return_unhashed=True,
+    )
+
+    keycreators = [(kc_strict, "id_key_strict_name_dob_zip"),
+                   (kc_med_name_dob, "id_key_medium_name_dob"),
+                   (kc_med_name_zip, "id_key_medium_name_zip"),
+                   (kc_weak, "id_key_weak_name")]
+    
+    ##### Start - Workbook Loading ##### 
+
+    ## Start the workbook class that is appropriate based on whether you have a 
+    ## single file paths or set of file paths. Workbook loader passes a dictionary  
+    ## of sheet names and datasets to the validation engine.  
+
+    # ✅ Choose single vs. multi loader
     if isinstance(file_path, (list, set, tuple)):
         print(f"📘 Loading multiple workbooks for {org} ({len(file_path)} files)")
         loader = MultiWorkbookLoader(
             file_paths=file_path,
             workbook_type=workbook_format,
-            sheet_defs=cc_column_label_list["training data"],
-            dynamic=True
+            sheet_defs=workbook_definitions[file_type],
+            dynamic=True,
+            keycreator=sheetlink_keycreator
         )
         loader.preprocess_all()
         dfs_by_sheet = loader.load_all()  # dict[sheet_name] = combined_df
+
     else:
         print(f"📗 Loading single workbook for {org}")
         loader = WorkbookLoader(
             file_path=file_path,
             workbook_type=workbook_format,
-            sheet_defs=cc_column_label_list["training data"],
-            dynamic=True
+            sheet_defs=workbook_definitions[file_type],
+            dynamic=True,
+            keycreator=sheetlink_keycreator
         )
         loader.preprocess_excel()
         dfs_by_sheet = loader.load_sheets()
 
-    engine = ValidationEngine(cc_column_label_list)
+    ###### End - Workbook Loading ######
+
+    ###### Start - Validation ######
+    
+    ## This section calls the validation engine, which runs both data normalization ('cc_validation_column_types.py')
+    ## and cross rule checks ('cc_cross_rule_engine.py'). It relies on the workbook definition object from 
+    ## 'cc_column_label_list.py' as well as the sheet/dataset dictionary generated by the workbook loader.  
+
+    ## Section produces both the normalized data sets (dfs) and the error list generated by normalization (errs).
+
+    engine = ValidationEngine(workbook_definitions, logging = True)
     
     file_id = f"{org}|{period}".replace(" ", "_")
 
     engine.validate_workbook(
         file=file_id,
-        workbook_type="training data",
+        workbook_type=file_type,
         workbook_format=workbook_format,
-        dfs_by_sheet=dfs_by_sheet
+        dfs_by_sheet=dfs_by_sheet,
+        keycreators=keycreators
     )
 
     dfs = list(engine.normalized_data.items())  # [(sheet_name, df), ...]
+
+    errs = engine.get_all_errors()
+    if not errs.empty:
+        errs["org"] = org
+        errs["period"] = period
+        all_errors.append(errs)
+
+    ##### End - Validation #####
+
+    ##### Start - Key Evaluation  ##### 
+
+    ## This section assesses whether the keys that are present in each of the sheet/dataset pairings 
+    ## produced by the validation engine are present/absent/duplicated elsewhere. It logs the particular 
+    ## issue and its location. It removes problematic keys and passes the normalized data to the final print out. 
+
+    ## It's potentially problematic that this dedupe is happening after cross-rule application. 
+    ## It could cause errors upstream.
 
     nonmatching_records = []  # local for this org/period
 
@@ -127,12 +230,16 @@ for org, data_types in cc_file_directory.items():
     normalized_combined["period"] = period
     all_normalized.append(normalized_combined)
 
-    errs = engine.get_all_errors()
-    if not errs.empty:
-        errs["org"] = org
-        errs["period"] = period
-        all_errors.append(errs)
+    ##### End - Key Evaluation #####
 
+###### Start - Print Out ###### 
+
+## This section consoldiates the ouput from the different validation processes into a single report. 
+
+## it draws from:
+#           all_normalized (finalized in the key evaluation section but produced in validation)
+#           all_errors (produced in the validation stage)
+#           all_mismatches (produced in the key evaluation stage)
 
 # --- Combine everything ---
 normalized_final = pd.concat(all_normalized, ignore_index=True)
@@ -140,7 +247,9 @@ errors_final = pd.concat(all_errors, ignore_index=True) if all_errors else pd.Da
 mismatches_final = pd.concat(all_mismatches, ignore_index=True) if all_mismatches else pd.DataFrame()
 
 # --- Write once at the end ---
-output_file = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\cc_validation_results_all_orgs_11_3.xlsx"
+output_file = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\cc_validation_results_all_orgs_11_25.xlsx"
+
+
 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
     normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
     errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)

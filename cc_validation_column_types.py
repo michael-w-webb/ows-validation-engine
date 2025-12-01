@@ -3,7 +3,20 @@ from rapidfuzz import process, fuzz
 import re
 import unicodedata 
 
-class categoricalColumn:
+class BaseColumn:
+    
+    ERROR_TOKENS =  {"#VALUE!","#REF!","#DIV/0!","#NAME?","#NULL!","#NUM!","#N/A",
+        "nan","<NA>","NaN","null"}
+    
+    def base_clean(self, s: pd.Series) -> pd.Series:
+        s = s.astype("string")
+        s = s.str.strip().replace("", pd.NA)
+        s = s.replace(r"^\s*$", pd.NA, regex=True)
+        s = s.replace(self.ERROR_TOKENS, pd.NA)
+        return s
+
+class categoricalColumn(BaseColumn):
+
     """
     Column type for limited-response categorical fields.
     Normalizes, validates against accepted responses, and can fuzzy match typos.
@@ -38,14 +51,21 @@ class categoricalColumn:
         """Standardize case + whitespace for lookup."""
         if text is None:
             return ""
+        if pd.isna(text):
+            return ""
+        if re.fullmatch(r"0+", text):
+            return ""
         return self._whitespace.sub(" ", str(text)).strip().casefold()
     
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
-        raw = s.astype("string")
-
+        
+        s = s.astype("string")     
+        raw = s
+        ### handle excel errors / explicit nans sent to string 
+        cleaned = self.base_clean(s)
         # Apply cleaning to each value
-        cleaned = raw.map(self._clean)
+        cleaned = cleaned.map(self._clean)
 
         # Direct matches first (cleaned to canonical)
         mapped = cleaned.map(self.accepted)
@@ -107,7 +127,7 @@ class categoricalColumn:
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
 
-class fileSpecificCategoricalColumn:
+class fileSpecificCategoricalColumn(BaseColumn):
     """
     Column type for file-specific categorical mappings.
     Each file_id (e.g., 'BRBC', 'CWP', etc.) has its own canonical-to-variant map.
@@ -140,6 +160,8 @@ class fileSpecificCategoricalColumn:
         """Normalize text for lookup."""
         if pd.isna(text):
             return ""
+        if re.fullmatch(r"0+", text):
+            return ""
         return self._whitespace.sub(" ", str(text)).strip().casefold()
 
     def normalize(self, s: pd.Series) -> pd.Series:
@@ -159,6 +181,8 @@ class fileSpecificCategoricalColumn:
                 reverse_map[self._clean(v)] = canonical
 
         raw = s.astype("string")
+        ## handle excel errors / explicit nans sent to string
+        cleaned = self.base_clean(s)
         cleaned = raw.map(self._clean)
         mapped = cleaned.map(reverse_map)
 
@@ -215,7 +239,7 @@ class fileSpecificCategoricalColumn:
             columns=["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"]
         )
  
-class identifierColumn:
+class identifierColumn(BaseColumn):
     """
     Column type for free-text identifiers.
     Normalizes by lowercasing, trimming, and collapsing whitespace.
@@ -231,8 +255,11 @@ class identifierColumn:
 
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
+        
+        s = self.base_clean(s)
         s = s.astype("string").str.strip()
         s = s.str.casefold().str.replace(self._whitespace, " ", regex=True)
+        s = s.mask(s.str.fullmatch(r"0+"), pd.NA)
         # Treat empty or whitespace-only as missing
         return s.replace("", pd.NA)
 
@@ -283,7 +310,7 @@ class identifierColumn:
             columns=["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"]
         )
 
-class booleanColumn: 
+class booleanColumn(BaseColumn): 
 
     """
     Column type for Yes/No fields. 
@@ -304,6 +331,7 @@ class booleanColumn:
 
     def normalize(self, s: pd.Series) -> pd.Series: 
 
+        s = self.base_clean(s)
         s = s.astype("string").str.strip().str.lower()
         mapped = s.map(self.accepted)
         return mapped 
@@ -348,7 +376,7 @@ class booleanColumn:
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
     
-class dateTimeColumn: 
+class dateTimeColumn(BaseColumn): 
 
     """
     Column Type for Dates 
@@ -452,6 +480,9 @@ class dateTimeColumn:
     # ---- normalize ----
     
     def normalize(self, s: pd.Series) -> pd.Series:
+        
+        s = self.base_clean(s)
+        
         s = s.astype("string").str.strip()
 
         invalid_tokens = {"","n/a", "na", "none", "null", "nan", "<NA>","NaT"}
@@ -461,14 +492,15 @@ class dateTimeColumn:
         cleaned = s.map(self._clean_text)
 
         # Serial dates may already be datetime; only coerce the rest
-        parsed = pd.to_datetime(cleaned.astype(str), errors="coerce", dayfirst=False, utc=False)
+        parsed = pd.to_datetime(cleaned, errors="coerce", dayfirst=False, utc=False)
 
         return parsed
     # ---- format ----
 
     def format(self, s_norm: pd.Series) -> pd.Series: 
 
-        return s_norm.dt.strftime("%Y-%m-%d").where(s_norm.notna(), pd.NA)
+        out = s_norm.dt.strftime("%Y-%m-%d")
+        return out.fillna("")
     
     # ---- cchecks ----
 
@@ -476,8 +508,7 @@ class dateTimeColumn:
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
         
 
-        raw = raw.astype(str).replace({"<NA>": "", "NaT": "", "nan": ""})
-        
+        raw = raw.replace({"<NA>": pd.NA, "NaT": pd.NA, "nan": pd.NA})
 
         masks = {}
         masks["Required but missing"] = (
@@ -485,7 +516,7 @@ class dateTimeColumn:
         )
 
         masks["Invalid Value, not a valid date"] = (
-            raw.notna() & raw.str.strip().ne("") & s_norm.isna()
+            raw.notna() & raw.astype("string").str.strip().ne("") & s_norm.isna()
         )
 
         # add range checks
@@ -521,7 +552,7 @@ class dateTimeColumn:
             columns=["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"]
         )
     
-class zipCodeColumn:
+class zipCodeColumn(BaseColumn):
 
     """
     Column Type for Zip Codes
@@ -549,6 +580,7 @@ class zipCodeColumn:
     def normalize(self, 
                   s: pd.Series) -> pd.Series: 
 
+        s = self.base_clean(s)
         s = s.astype("string").str.strip()
         if self.strip_formatting:
             s = s.fillna("").str.replace(self._non_digits,"",regex=True)
@@ -570,9 +602,24 @@ class zipCodeColumn:
 
         out = s_norm.copy()
 
+        # ---- CASE 1: 4-digit → pad left with 0 ----
         four_digit_mask = out.str.fullmatch(r"\d{4}")
         out.loc[four_digit_mask] = "0" + out.loc[four_digit_mask]
 
+        # ---- CASE 2: 5-digit but with misplaced leading zero
+        # Example: 68770 → 06877
+        wrong_zero_mask = (
+            out.str.fullmatch(r"\d{5}") &
+            out.str.endswith("0") &
+            ~out.str.startswith("0")
+        )
+
+        # Rotate last digit → front
+        out.loc[wrong_zero_mask] = (
+            "0" + out.loc[wrong_zero_mask].str[:-1]
+        )
+
+        # ---- Final: keep only valid 5-digit ZIPs ----
         valid_mask = out.str.fullmatch(r"\d{5}")
         out = out.where(valid_mask, pd.NA)
 
@@ -617,7 +664,7 @@ class zipCodeColumn:
             columns = ["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
     
-class stateID7Column:
+class stateID7Column(BaseColumn):
 
     """
     Column Type for "State ID #" 
@@ -645,8 +692,11 @@ class stateID7Column:
 
     def normalize(self, s: pd.Series) -> pd.Series:
 
-        s = s.astype("string").str.strip()
+        s = s.astype("string")
+        s = self.base_clean(s)
+        s = s.str.strip()
         if self.strip_formatting:
+            s = s.str.replace(r"\.0$", "", regex=True)
             s = s.fillna("").str.replace(self._non_digits, "", regex = True)
             s = s.replace("", pd.NA)
         return s 
@@ -697,7 +747,7 @@ class stateID7Column:
             columns = ["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
 
-class ONETCodeColumn:
+class ONETCodeColumn(BaseColumn):
     """
     Column type for O*NET-SOC codes.
     Validates and auto-formats codes to 'DD-DDDD.DD' (e.g. '15-2051.00').
@@ -763,7 +813,11 @@ class ONETCodeColumn:
         return ";".join(formatted_codes) if formatted_codes else pd.NA
 
     def normalize(self, s: pd.Series) -> pd.Series:
-        s = s.astype("string").str.strip()
+
+        s = s.astype("string")
+        s = self.base_clean(s)
+        s = s.str.replace(r"\.0$", "", regex=True)
+        s = s.str.strip()
 
         def _apply(val):
             return self.fix_format(val)
@@ -819,7 +873,7 @@ class ONETCodeColumn:
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
 
-class CIPCodeColumn:
+class CIPCodeColumn(BaseColumn):
     """
     Column type for CIP codes (Classification of Instructional Programs).
     Validates and auto-formats to 'DD', 'DD.DD', or 'DD.DDDD' forms.
@@ -839,7 +893,10 @@ class CIPCodeColumn:
 
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
+        
         s = s.astype("string").str.strip()
+        s = self.base_clean(s)
+        s = s.str.replace(r"\.0$", "", regex=True)
 
         def fix_format(val):
             if pd.isna(val) or val == "":
@@ -942,7 +999,7 @@ class CIPCodeColumn:
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
 
-class hourlyWageColumn:
+class hourlyWageColumn(BaseColumn):
     """
     Column type for hourly wages.
     Cleans currency symbols/text and validates against reasonable wage ranges.
@@ -1029,7 +1086,7 @@ class hourlyWageColumn:
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
 
-class hoursWorkedColumn:
+class hoursWorkedColumn(BaseColumn):
     """
     Column type for hours worked.
     Must be numeric, non-negative, and <= 80.
@@ -1045,6 +1102,7 @@ class hoursWorkedColumn:
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
         s = s.astype("string").str.strip()
+        s = self.base_clean(s)   
 
         def to_number(val):
             if pd.isna(val) or val == "":
@@ -1102,7 +1160,7 @@ class hoursWorkedColumn:
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
 
-class NAICSCodeColumn:
+class NAICSCodeColumn(BaseColumn):
     """
     Column type for NAICS codes (North American Industry Classification System).
     Validates and auto-formats to 2–6 digit numeric codes.
@@ -1130,11 +1188,13 @@ class NAICSCodeColumn:
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
         s = s.astype("string").str.strip()
+        s = self.base_clean(s)
+        s = s.str.replace(r"\.0$", "", regex=True)
 
         def fix_format(val):
             if pd.isna(val) or val == "":
                 return pd.NA
-            val = str(val).strip()
+            val = val.strip()
 
             # Split into multiple possible codes
             codes = re.split(r"[;,/ ]+", val)

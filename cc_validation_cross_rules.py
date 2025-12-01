@@ -37,7 +37,6 @@ def connected_presence(dfs_by_sheet, sheet_x: str, col_x: str,
         column_error_index=column_error_index
     )
 
-
 # #### Conditionally blank, if col x is blank then col y must be blank (the negative half of conditional presence)
 # #### set for this one is CONDITIONALLY_BLANK_RULES
 
@@ -376,3 +375,248 @@ def conditionally_required_by_date_comparison(
         columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
     )
 
+
+def conditional_link(
+    dfs_by_sheet,
+    if_pairs: list[tuple[str, str]] | tuple[str, str],
+    then_pairs: list[tuple[str, str]] | tuple[str, str],
+    trigger_values: dict[tuple[str, str], list[str]] | list[str] | None = None,
+    operator: str = "AND",                 # 'AND' or 'OR'
+    mode: str = "require",                 # 'require', 'blank', 'symmetric', 'equal', 'not_equal', 'enforce_value', 'date_require'
+    allowed_values: list[str] | None = None,
+    relation: str | None = None,           # for date_require: 'before' or 'after'
+    reference_date: str | None = None,     # for date_require, optional literal
+    symmetric: bool = False,
+    require_when_trigger: bool | None = None,
+    file=None,
+    row_offset: int = 1,
+    column_error_index=None,
+):
+    """
+    Generalized cross-sheet rule handler.
+
+    Supports:
+      - Multiple IF conditions (AND/OR)
+      - Multiple THEN conditions
+      - All logic modes: 'require', 'blank', 'equal', 'not_equal', 'enforce_value', 'symmetric', 'date_require'
+      - Date comparison conditions: date1 before/after date2 or a fixed reference date
+    """
+
+    import pandas as pd
+
+    # --- Normalize inputs ---
+    if isinstance(if_pairs, tuple):
+        if_pairs = [if_pairs]
+    if isinstance(then_pairs, tuple):
+        then_pairs = [then_pairs]
+
+    # ==========================================================
+    # STEP 1: Build trigger or date condition
+    # ==========================================================
+    compound_trigger = None
+    trigger_descriptions = []
+
+    # --- Handle DATE comparison mode separately ---
+    if mode == "date_require":
+
+        # --- Base date (first pair) ---
+        sheet_date1, col_date1 = if_pairs[0]
+        df1 = dfs_by_sheet[sheet_date1]
+        base = df1[["id_key", col_date1]].copy()
+
+        # --- Second date: sheet column or static literal ---
+        if len(if_pairs) > 1:
+            sheet_date2, col_date2 = if_pairs[1]
+        else:
+            sheet_date2, col_date2 = (None, None)
+
+        if sheet_date2 and sheet_date2 in dfs_by_sheet:
+            df2 = dfs_by_sheet[sheet_date2]
+            base = base.merge(df2[["id_key", col_date2]], on="id_key", how="outer")
+            target_label = f"{col_date2} ({sheet_date2})"
+        else:
+            static_date = pd.Timestamp(reference_date or col_date2)
+            base["__static_ref_date__"] = static_date
+            col_date2 = "__static_ref_date__"
+            target_label = f"static date {static_date.date()}"
+
+        if relation == "after":
+            condition_mask = base[col_date1] > base[col_date2]
+            relation_text = "after"
+        elif relation == "before":
+            condition_mask = base[col_date1] < base[col_date2]
+            relation_text = "before"
+        else:
+            raise ValueError("relation must be 'before' or 'after' for mode='date_require'.")
+
+        condition_label = f"'{col_date1}' ({sheet_date1}) is {relation_text} {target_label}"
+        base_condition = condition_mask
+        compound_desc = condition_label
+
+    else:
+        
+        # --- Regular (non-date) trigger logic ---
+        for sheet_x, col_x in if_pairs:
+            df_x = dfs_by_sheet[sheet_x]
+            s = df_x[col_x].astype("string").str.strip()
+            s_blank = s.replace("", pd.NA).isna()
+
+            # Handle trigger values as dict or list
+            if isinstance(trigger_values, dict):
+                values = trigger_values.get((sheet_x, col_x), ["__NOT_BLANK__"])
+            else:
+                values = trigger_values or ["__NOT_BLANK__"]
+
+            norm_values = [v.casefold().strip() for v in values]
+            s_trigger = pd.Series(False, index=df_x.index)
+
+            if "__NOT_BLANK__" in norm_values:
+                s_trigger |= ~s_blank
+            s_trigger |= s.str.casefold().isin(norm_values)
+
+            if compound_trigger is None:
+                compound_trigger = s_trigger
+            elif operator.upper() == "AND":
+                compound_trigger &= s_trigger
+            elif operator.upper() == "OR":
+                compound_trigger |= s_trigger
+            else:
+                raise ValueError(f"Unsupported operator: {operator}")
+
+            trigger_desc = (
+                "not blank"
+                if "__NOT_BLANK__" in norm_values and len(norm_values) == 1
+                else ", ".join([v for v in values if v != "__NOT_BLANK__"]) or "not blank"
+            )
+            trigger_descriptions.append(f"'{col_x}' ({sheet_x}) is {trigger_desc}")
+
+        compound_desc = f" {'AND' if operator.upper() == 'AND' else 'OR'} ".join(trigger_descriptions)
+        base_condition = compound_trigger
+
+    # ==========================================================
+    # STEP 2: Normalize mode aliases
+    # ==========================================================
+    if require_when_trigger is True:
+        mode = "require"
+    elif require_when_trigger is False:
+        mode = "blank"
+    elif symmetric:
+        mode = "symmetric"
+
+    all_errors = []
+
+    # ==========================================================
+    # STEP 3: Apply to each THEN pair
+    # ==========================================================
+    for sheet_y, col_y in then_pairs:
+        df_y = dfs_by_sheet[sheet_y]
+
+        # Merge with the first IF sheet as base
+        base_sheet, base_col = if_pairs[0]
+        df_base = dfs_by_sheet[base_sheet]
+
+        merged = pd.merge(
+            df_base[["id_key", base_col]],
+            df_y[["id_key", col_y, "row_number"]],
+            on="id_key",
+            how="outer"
+        )
+
+        # Align condition mask to merged index
+        condition_mask = base_condition.reindex(merged.index, fill_value=False)
+
+        # ======================================================
+        #  --- Mode logic ---
+        # ======================================================
+        y_str = merged[col_y].astype("string").str.strip()
+        y_blank = y_str.replace("", pd.NA).isna()
+        y_present = ~y_blank
+
+        if mode == "symmetric":
+            x_str = merged[base_col].astype("string").str.strip()
+            x_blank = x_str.replace("", pd.NA).isna()
+            mask = x_blank ^ y_blank
+            rule_type = "Connected presence"
+            message = (
+                f"{rule_type} violation: '{base_col}' ({base_sheet}) and '{col_y}' ({sheet_y}) "
+                f"must both be filled or both be blank."
+            )
+
+        elif mode == "require":
+            mask = condition_mask & y_blank
+            rule_type = "Conditionally required"
+            message = (
+                f"{rule_type} violation: '{col_y}' ({sheet_y}) must not be blank when {compound_desc}."
+            )
+
+        elif mode == "blank":
+            mask = (~condition_mask) & y_present
+            rule_type = "Conditionally blank"
+            message = (
+                f"{rule_type} violation: '{col_y}' ({sheet_y}) must be blank unless {compound_desc}."
+            )
+
+        elif mode == "equal":
+            x_str = merged[base_col].astype("string").str.strip()
+            mask = condition_mask & (x_str != y_str)
+            rule_type = "Conditionally equal"
+            message = (
+                f"{rule_type} violation: when {compound_desc}, '{col_y}' ({sheet_y}) must equal '{base_col}' ({base_sheet})."
+            )
+
+        elif mode == "not_equal":
+            x_str = merged[base_col].astype("string").str.strip()
+            mask = condition_mask & (x_str == y_str)
+            rule_type = "Conditionally not equal"
+            message = (
+                f"{rule_type} violation: when {compound_desc}, '{col_y}' ({sheet_y}) must differ from '{base_col}' ({base_sheet})."
+            )
+
+        elif mode == "enforce_value":
+            mask = condition_mask & (~y_str.str.casefold().isin([v.casefold() for v in (allowed_values or [])]))
+            rule_type = "Conditional value enforcement"
+            allowed_desc = ", ".join(allowed_values or [])
+            message = (
+                f"{rule_type} violation: when {compound_desc}, '{col_y}' ({sheet_y}) must be one of: {allowed_desc}."
+            )
+
+        elif mode == "date_require":
+            # (Condition already built in Step 1)
+            if allowed_values:
+                allowed_norm = [a.casefold().strip() for a in allowed_values]
+                mask = (
+                    condition_mask
+                    & (y_str.notna() & ~y_str.str.casefold().isin(allowed_norm))
+                )
+                allowed_text = f"one of {allowed_values}"
+            else:
+                mask = condition_mask & y_blank
+                allowed_text = "not blank"
+
+            rule_type = "Conditionally required by date comparison"
+            message = (
+                f"{rule_type}: When {compound_desc}, '{col_y}' ({sheet_y}) must be {allowed_text}."
+            )
+
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+
+        errs = cross_errors_df(
+            merged,
+            [p[1] for p in if_pairs] + [col_y],
+            {message: mask},
+            file=file,
+            sheet=f"{' & '.join([s for s, _ in if_pairs])} <-> {sheet_y}",
+            pairs=if_pairs + [(sheet_y, col_y)],
+            row_offset=row_offset,
+            column_error_index=column_error_index,
+        )
+
+        if not errs.empty:
+            all_errors.append(errs)
+
+    return (
+        pd.concat(all_errors)
+        if all_errors
+        else pd.DataFrame(columns=["file","sheet","row_number","column","rule","raw_value","normalized"])
+    )

@@ -2371,11 +2371,13 @@ cc_column_label_list = {
   }
 
 workbook_definitions = {
+
+"training data":{
   "simple format": {
   
     "Report":{
     "labels": simple_format_training_data_labels,
-    "accepted_responses": simple_format_training_data_accepted_responses,
+    "accepted_responses": simple_format_training_data_accepted_responses_w_types,
     "columns_used": None,
     "starting_row": 0,
     "sheet_name": "Report",
@@ -2388,7 +2390,7 @@ workbook_definitions = {
       "Personal Information":{
           "labels": four_sheet_personal_information_labels,
           "sheet_name": "Personal Information",
-          "accepted_responses": four_sheet_personal_information_accepted_responses,
+          "accepted_responses": four_sheet_personal_information_accepted_responses_w_types,
           "columns_used": None,
           "starting_row": 0,
           "starting_column": 0 # zero covers whole df
@@ -2397,7 +2399,7 @@ workbook_definitions = {
       "Training": {
           "labels": four_sheet_training_labels,
           "sheet_name": "Training",
-          "accepted_responses": four_sheet_training_accepted_responses,
+          "accepted_responses": four_sheet_training_accepted_responses_w_types,
           "columns_used":None,
           "starting_row": 0,
           "starting_column": 0 # zero covers whole df
@@ -2405,7 +2407,7 @@ workbook_definitions = {
     "Credential": {
           "labels": four_sheet_credential_labels,
           "sheet_name": "Credential",
-          "accepted_responses": four_sheet_credential_accepted_responses,
+          "accepted_responses": four_sheet_credential_accepted_responses_w_types,
           "columns_used": None,
           "starting_row": 0,
           "starting_column": 0 # zero covers whole df
@@ -2413,11 +2415,13 @@ workbook_definitions = {
     "Outcomes": {
           "labels": four_sheet_outcomes_labels,
           "sheet_name": "Outcomes",
-          "accepted_responses": four_sheet_outcomes_accepted_responses,
+          "accepted_responses": four_sheet_outcomes_accepted_responses_w_types,
           "columns_used": None,
           "starting_row": 0,
           "starting_column": 0 # zero covers whole df
     }
+
+  }
   },
 
   "Logic_Templates":{

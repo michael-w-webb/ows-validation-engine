@@ -1,10 +1,14 @@
 import pandas as pd 
 import os
 import win32com.client as win32
-from win32com.client import gencache, constants, DispatchEx
 import time
 import traceback
 from datetime import datetime
+import pythoncom
+import win32com.client
+
+from cc_key_creator import KeyCreator
+from cc_standard_normalizations import strict_alphabetic_normalize
 
 def ensure_unprotected_visible(excel, file_path, password="workforce"):
     """
@@ -143,41 +147,58 @@ def clean_text(val):
         return val.replace('\xa0', ' ').replace('Â', '').strip()
     return val
 
-def make_id_key(row, labels):
-    try:
-        first = str(row.get("First Name", "")).strip().lower()
-        last = str(row.get("Last Name", "")).strip().lower()
-        return f"{first}||{last}" if first or last else None
-    except Exception:
-        return None
-
-
 class WorkbookLoader:
-    def __init__(self, file_path, workbook_type, sheet_defs, dynamic=False, password="workforce"):
+    def __init__(self, file_path, workbook_type, sheet_defs, dynamic=False, password="workforce", keycreator: KeyCreator = None):
         self.file_path = file_path
         self.workbook_type = workbook_type
         self.sheet_defs = sheet_defs
         self.dynamic = dynamic
         self.password = password
 
+        self.keycreator = keycreator
+
+    
     def preprocess_excel(self):
         """
         Use COM automation to unprotect workbook and unhide sheets before reading.
+        Handles intermittent Excel COM initialization errors gracefully.
         """
         print(f"🔧 Preprocessing workbook: {self.file_path}")
-        excel = win32.Dispatch("Excel.Application")
-        # Or if you prefer a new instance each time:
-        # excel = DispatchEx("Excel.Application")
 
-        # Set properties using safe COM methods (no need to touch _oleobj_)
-        excel.Visible = True
-        excel.DisplayAlerts = False
+        # --- Ensure COM is initialized for this thread ---
+        pythoncom.CoInitialize()
 
+        # --- Create or connect to Excel safely ---
+        try:
+            excel = win32.Dispatch("Excel.Application")
+        except Exception as e:
+            print(f"⚠️ Excel.Dispatch() failed ({e}), retrying after short delay...")
+            time.sleep(0.5)
+            excel = win32.Dispatch("Excel.Application")
+
+        # --- Attempt to set properties safely ---
+        try:
+            excel.Visible = False   # you can keep True if needed
+        except Exception as e:
+            print(f"⚠️ Could not set Excel.Visible — {e}")
 
         try:
+            excel.DisplayAlerts = False
+        except Exception as e:
+            print(f"⚠️ Could not set DisplayAlerts — {e}")
+
+        # --- Execute main task ---
+        try:
             ensure_unprotected_visible(excel, self.file_path, password=self.password)
+        except Exception as e:
+            print(f"❌ Error while unprotecting/unhiding workbook: {e}")
         finally:
-            excel.Quit()
+            # Always close Excel cleanly
+            try:
+                pythoncom.CoUninitialize()
+                excel.Quit()
+            except Exception:
+                pass
 
     def load_sheets(self) -> dict[str, pd.DataFrame]:
         """
@@ -255,7 +276,8 @@ class WorkbookLoader:
 
                 if multi_sheet_mode:
                     df = df.copy()
-                    df["id_key"] = df.apply(lambda r: make_id_key(r, labels), axis=1)
+                    if self.keycreator is not None:
+                        df = self.keycreator.add_key_column(df, key_col="id_key")
                     df["row_number"] = df.index + 2
                 else:
                     df["row_number"] = df.index + 2
@@ -270,19 +292,24 @@ class WorkbookLoader:
         # ------------------------------------------------------------
         # Filter out rows with no first/last name
         # ------------------------------------------------------------
-        for sheet_name, df in dfs_by_sheet.items():
-            if "First Name" in df.columns and "Last Name" in df.columns:
-                dfs_by_sheet[sheet_name] = df[
-                    df["First Name"].astype(str).str.contains(r"[A-Za-z]", na=False) |
-                    df["Last Name"].astype(str).str.contains(r"[A-Za-z]", na=False)
-                ]
+            for sheet_name, df in dfs_by_sheet.items():
+                if "First Name" in df.columns and "Last Name" in df.columns:
+
+                    # Apply strict alphabetic normalization to detect valid rows
+                    first_norm = df["First Name"].apply(strict_alphabetic_normalize)
+                    last_norm  = df["Last Name"].apply(strict_alphabetic_normalize)
+
+                    # Keep rows where at least one field is valid
+                    mask_valid = first_norm.notna() | last_norm.notna()
+
+                    dfs_by_sheet[sheet_name] = df[mask_valid].copy()
 
         self.permission_denied_log = permission_denied_log
         return dfs_by_sheet
 
 
 class MultiWorkbookLoader:
-    def __init__(self, file_paths, workbook_type, sheet_defs, dynamic=False, password="workforce"):
+    def __init__(self, file_paths, workbook_type, sheet_defs, dynamic=False, password="workforce", keycreator: KeyCreator = None):
         """
         file_paths: list or set of Excel file paths
         workbook_type: key for sheet_defs (e.g. "Participant Data")
@@ -294,17 +321,33 @@ class MultiWorkbookLoader:
         self.dynamic = dynamic
         self.password = password
 
-    def preprocess_all(self):
-        """Unprotect/unhide all workbooks before loading."""
-        excel = win32.Dispatch("Excel.Application")
-        excel.Visible = False
-        excel.DisplayAlerts = False
+        self.keycreator = keycreator
 
+    def preprocess_all(self):
+
+        pythoncom.CoInitialize()
+        """Unprotect/unhide all workbooks before loading."""
+        try:
+            excel = win32.Dispatch("Excel.Application")
+        except Exception:
+        # Retry after short delay — Excel may not have initialized
+            time.sleep(0.5)
+            excel = win32com.client.Dispatch("Excel.Application")
+        try:
+            excel.Visible = False
+        except Exception as e:
+            print(f"⚠️ Warning: Could not set Excel visibility — {e}")
+            # continue silently; this is not fatal
+        try:
+            excel.DisplayAlerts = False
+        except Exception as e:
+            print(f"Warning: could not set Excel Display Alerts - {e}")
         try:
             for fp in self.file_paths:
                 print(f"🔧 Preprocessing: {fp}")
                 ensure_unprotected_visible(excel, fp, password=self.password)
         finally:
+            pythoncom.CoUninitialize()
             excel.Quit()
 
     def load_all(self):
@@ -321,7 +364,8 @@ class MultiWorkbookLoader:
                 workbook_type=self.workbook_type,
                 sheet_defs=self.sheet_defs,
                 dynamic=self.dynamic,
-                password=self.password
+                password=self.password,
+                keycreator=self.keycreator
             )
 
             dfs_by_sheet = loader.load_sheets()

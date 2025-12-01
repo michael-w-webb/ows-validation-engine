@@ -1,0 +1,122 @@
+import sqlite3
+from pathlib import Path
+
+DB_PATH = Path(__file__).resolve().parent / "validation_dev.db"
+
+SCHEMA_SQL = """
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS person (
+
+    -- Core identifying attributes (the golden record)
+    person_id            TEXT PRIMARY KEY,
+    first_name           TEXT,
+    last_name            TEXT,
+    dob                  TEXT,
+    zip                  TEXT,
+
+    -- Multi-tier hashed keys (deterministic, stored for matching)
+    id_key_strict_name_dob_zip        TEXT UNIQUE,   -- first|last|dob|zip
+    id_key_medium_name_dob    TEXT UNIQUE,   -- first|last|dob
+    id_key_medium_name_zip    TEXT UNIQUE,   -- first|last|zip
+    id_key_weak_name          TEXT,          -- first|last (NOT unique!)
+
+    -- Audit metadata
+    created_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_timestamp    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+);
+
+CREATE TABLE IF NOT EXISTS validation_run (
+    run_id TEXT PRIMARY KEY,
+    dataset_name TEXT,
+    run_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    organization TEXT,
+    quarter TEXT,
+    triggered_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS participant (
+    participant_id TEXT PRIMARY KEY,
+    person_id TEXT NOT NULL,
+    dataset_name TEXT NOT NULL,   -- e.g. "Training", "Enrollment", etc.
+    sheet_name TEXT NOT NULL,     -- which sheet this row came from
+    org TEXT,                     -- EWIB, CWP, NCR, etc.
+    quarter TEXT,                 -- extracted from filename
+    row_number INT,               -- position in the sheet (optional but helpful)
+    created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (person_id) REFERENCES person(person_id)
+);
+
+CREATE TABLE IF NOT EXISTS dataset_column (
+    column_id TEXT PRIMARY KEY,
+    dataset_name TEXT,
+    sheet_name TEXT,
+    column_name TEXT,
+    UNIQUE(dataset_name, sheet_name, column_name)
+);
+
+CREATE TABLE IF NOT EXISTS participant_presence_log(
+    run_id TEXT,
+    participant_id TEXT,
+    status TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (run_id, participant_id),
+    FOREIGN KEY (run_id) REFERENCES validation_run(run_id),
+    FOREIGN KEY (participant_id) REFERENCES participant(participant_id)
+);
+
+CREATE TABLE IF NOT EXISTS cell_value_history (
+    history_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    participant_id TEXT NOT NULL,
+    column_id TEXT NOT NULL,
+    value_raw TEXT,
+    value_normalized TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (run_id) REFERENCES validation_run(run_id),
+    FOREIGN KEY (participant_id) REFERENCES participant(participant_id),
+    FOREIGN KEY (column_id) REFERENCES dataset_column(column_id)
+);
+
+CREATE TABLE IF NOT EXISTS validation_rule (
+    rule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_name TEXT,
+    rule_type TEXT,
+    logic_json TEXT,
+    description TEXT
+);
+
+CREATE TABLE IF NOT EXISTS validation_violation (
+    violation_id TEXT PRIMARY KEY,
+    run_id TEXT,
+    rule_id TEXT,
+    participant_id TEXT,
+    column_id TEXT,
+    normalized TEXT,
+    raw_value TEXT,
+    severity TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS entry_presence_log (
+    dataset_name TEXT,
+    entry_id TEXT,
+    run_id TEXT,
+    status TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (dataset_name, entry_id, run_id)
+);
+"""
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.executescript(SCHEMA_SQL)
+    conn.commit()
+    conn.close()
+    print(f"✅ SQLite DB initialized at: {DB_PATH}")
+
+if __name__ == "__main__":
+    init_db()

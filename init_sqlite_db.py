@@ -40,10 +40,8 @@ CREATE TABLE IF NOT EXISTS participant (
     participant_id TEXT PRIMARY KEY,
     person_id TEXT NOT NULL,
     dataset_name TEXT NOT NULL,   -- e.g. "Training", "Enrollment", etc.
-    sheet_name TEXT NOT NULL,     -- which sheet this row came from
     org TEXT,                     -- EWIB, CWP, NCR, etc.
-    quarter TEXT,                 -- extracted from filename
-    row_number INT,               -- position in the sheet (optional but helpful)
+    
     created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (person_id) REFERENCES person(person_id)
@@ -61,6 +59,9 @@ CREATE TABLE IF NOT EXISTS participant_presence_log(
     run_id TEXT,
     participant_id TEXT,
     status TEXT,
+    row_number INT,
+    sheet_name TEXT NOT NULL,     -- which sheet this row came from
+    quarter TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (run_id, participant_id),
     FOREIGN KEY (run_id) REFERENCES validation_run(run_id),
@@ -100,14 +101,22 @@ CREATE TABLE IF NOT EXISTS validation_violation (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS entry_presence_log (
-    dataset_name TEXT,
-    entry_id TEXT,
-    run_id TEXT,
-    status TEXT,
+CREATE TABLE IF NOT EXISTS participant_key_mismatch (
+    mismatch_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+
+    org TEXT NOT NULL,
+    quarter TEXT NOT NULL,
+    sheet_name TEXT NOT NULL,
+
+    id_key TEXT NOT NULL,
+    issue TEXT NOT NULL,          -- e.g. duplicate_in_sheet, missing_in_other_sheet, etc.
+
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (dataset_name, entry_id, run_id)
+
+    FOREIGN KEY (run_id) REFERENCES validation_run(run_id)
 );
+
 """
 
 def init_db():

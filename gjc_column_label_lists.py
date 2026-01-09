@@ -2452,7 +2452,7 @@ workbook_definitions = {
 
     "Participant_Info": {
         "labels": participant_info_labels,
-        "columns_used": range(0, len(participant_info_labels)),
+        "columns_used": None,
         "sheet_name": "Participant_Info",
         "starting_row": 0,
         "accepted_responses": participant_info_accepted_responses_w_types,
@@ -2461,7 +2461,7 @@ workbook_definitions = {
 
     "Program_Enrollment":{
         "labels": program_enrollment_labels,
-        "columns_used": range(0, len(program_enrollment_labels)),
+        "columns_used": None,
         "sheet_name": "Program_Enrollment",
         "starting_row": 0,
         "accepted_responses": program_enrollment_accepted_responses_w_types,
@@ -2470,7 +2470,7 @@ workbook_definitions = {
 
     "Credential_Attainment":{
         "labels": credential_attainment_labels,
-        "columns_used": range(0, len(credential_attainment_labels)),
+        "columns_used": None,
         "sheet_name": "Credential_Attainment",
         "starting_row": 0,
         "accepted_responses": credential_attainment_accepted_responses_w_types,
@@ -2479,7 +2479,7 @@ workbook_definitions = {
 
     "Employment":{
         "labels": employment_labels,
-        "columns_used": range(0, len(employment_labels)),
+        "columns_used": None,
         "sheet_name": "Employment",
         "starting_row": 0,
         "accepted_responses": employment_accepted_responses_w_types,
@@ -2621,7 +2621,7 @@ workbook_program_definitions = {
 
     "Institutional_Information": {
         "labels": institutional_information_labels,
-        "columns_used": range(0, len(institutional_information_labels)),
+        "columns_used": None,
         "sheet_name": "Institutional_Information",
         "starting_row": 0,
         "accepted_responses": institutional_information_accepted_responses_w_types,

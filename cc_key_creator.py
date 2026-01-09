@@ -1,3 +1,60 @@
+"""
+KeyCreator Module
+=================
+
+Provides a flexible, schema-agnostic key generation utility used to create 
+deterministic identifiers for participant records, workbook rows, 
+and entity matching across datasets.
+
+The :class:`KeyCreator` class supports:
+
+- **Composite key creation** from arbitrary fields
+- **Optional normalization** of individual components via user-supplied functions
+- **Required field enforcement**, with automatic invalidation when requirements fail
+- **Hashed or unhashed keys**, depending on debugging or privacy needs
+- **Attach-to-DataFrame API** for generating key columns at scale
+
+Typical Use Cases
+-----------------
+This module is used throughout the validation engine to generate
+stable row-level identifiers such as:
+
+- ``sheet-level linking keys`` (e.g., First Name + Last Name)
+- ``participant identity keys`` for database lookup
+- ``hashed canonical IDs`` used for cross-dataset entity resolution
+
+The class accepts any schema and is not tied to CareerConneCT, GJC,
+or specific column conventions.
+
+Example
+-------
+
+.. code-block:: python
+
+    from key_creator import KeyCreator
+    from utils import strict_alphabetic_normalize
+
+    kc = KeyCreator(
+        key_fields=["First Name", "Last Name", "DOB"],
+        normalizers={"First Name": strict_alphabetic_normalize},
+        required_fields=["First Name", "Last Name"],
+        return_unhashed=False
+    )
+
+    df["id_key"] = df.apply(kc.create_key_from_row, axis=1)
+
+
+Contents
+--------
+- KeyCreator  -- main class for composite/hashing logic
+
+Dependencies
+------------
+- pandas
+- hashlib
+
+"""
+
 import pandas as pd
 import hashlib
 

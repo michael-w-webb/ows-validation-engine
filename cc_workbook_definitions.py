@@ -1,4 +1,147 @@
-# Auto-generated results module
+"""
+Workbook Definitions, Label Maps, and Schema Metadata
+=====================================================
+
+This module contains the authoritative schema specification for all
+CareerConneCT “training data” workbooks supported by the validation
+pipeline. It encodes:
+
+    • Canonical column names used throughout the pipeline  
+    • All known spelling / formatting variants (“label maps”) that appear
+      in provider-submitted Excel files  
+    • Column-level metadata describing expected types, requirements, and
+      accepted categorical responses  
+    • Workbook-level structure (sheet names, starting rows/columns, and
+      schema for both *simple format* and *four-sheet format*)  
+    • Logic template phrases used by natural-language rule descriptions  
+
+These definitions serve as the central contract between:
+
+    1. **WorkbookLoader** – to map raw header text → canonical names  
+    2. **NormalizationEngine / ColumnType classes** – to validate, clean,
+       and coerce column values into standardized formats  
+    3. **CrossRuleEngine** – to interpret variable types and retrieve the
+       correct pandas Series for cross-sheet logic evaluation  
+    4. **UI or reporting layers** – to generate intelligible messages and
+       consistent descriptions of rule expectations  
+
+-----------------------------------------------------------------------
+Label Maps (“labels”)
+-----------------------------------------------------------------------
+
+Each sheet definition includes a mapping:
+
+    {
+        "Canonical Name": ["Variant A", "Variant B", ...]
+    }
+
+The workbook loader uses these maps to:
+
+    • Match raw column headers from provider files  
+    • Normalize them into predictable, canonical field names  
+    • Tolerate typos, punctuation differences, capitalization,
+      OWS-specific export labels, and Salesforce-style field names  
+
+These maps are *lossless*: they never drop fields, they only expand the
+set of acceptable column headers.
+
+-----------------------------------------------------------------------
+Accepted Responses and Types (“accepted_responses_w_types”)
+-----------------------------------------------------------------------
+
+Each canonical column has a metadata block describing:
+
+    • type – one of the defined column classes
+      (e.g., "dateTime", "categorical", "boolean", "identifier",
+      "hourlyWage", "hoursWorked", "stateID7", "CIPCode", "ONETCode")
+
+    • required – whether the field must be present and non-blank
+
+    • accepted_responses – (optional) list of canonical categorical
+      values used by CategoricalColumn normalization and by
+      CrossRuleEngine for logical operations
+
+These definitions are consumed by:
+
+    • BaseColumn subclasses during normalization  
+    • CrossRuleEngine.get_variable() when creating Variable instances  
+    • Rule authoring and error-message templates  
+
+-----------------------------------------------------------------------
+Workbook Structure (“workbook_definitions”)
+-----------------------------------------------------------------------
+
+The outer `workbook_definitions` object organizes schemas by:
+
+    workbook_type → workbook_format → sheet_name → sheet_definition
+
+For example:
+
+    "training data" →
+        "simple format" →
+            "Report" → {labels, accepted_responses, starting_row, ...}
+
+        "four sheet format" →
+            "Personal Information"
+            "Training"
+            "Credential"
+            "Outcomes"
+
+Each sheet definition includes:
+
+    • labels – a full header normalization map  
+    • accepted_responses – the column metadata schema  
+    • starting_row – where data begins (allows skipping header clutter)  
+    • starting_column – permits partial-sheet ingestion  
+    • columns_used – reserved for restricting the importable subset
+
+This structure makes it easy for the loader to select the correct
+parsing logic depending on which workbook format the provider uploaded.
+
+-----------------------------------------------------------------------
+Logic Templates and Expectations
+-----------------------------------------------------------------------
+
+Two auxiliary dictionaries define natural-language templates used by
+`CrossRuleEngine.describe_logic()`:
+
+    • Logic_Templates – maps operator categories to English snippets
+      (e.g., “is in the past”, “is blank”, “is {values}”)
+
+    • Logic_Expectations – indicates whether a field is “required” or
+      “should be blank” in IF/THEN constructions
+
+These templates ensure that every rule written in clause-tree syntax can
+be rendered into a readable English explanation without custom text.
+
+-----------------------------------------------------------------------
+Extending or Updating This Module
+-----------------------------------------------------------------------
+
+To add new fields or update schemas:
+
+    1. Add new label variants under the correct sheet’s `labels` dict  
+    2. Add (or update) a canonical entry under `accepted_responses`
+       with its correct type and accepted categorical responses  
+    3. If a new sheet or workbook format is added, create a new
+       nested dictionary under `workbook_definitions` following the
+       established pattern  
+    4. If a new variable type is introduced (e.g., NAICSCode),
+       ensure that BaseColumn+Variable subclasses support the type
+       before referencing it here  
+
+All changes propagate automatically through:
+
+    • Column mapping  
+    • Data normalization  
+    • Cross-sheet rule evaluation  
+    • Validation reporting  
+
+This module is therefore the **single source of truth** for schema
+consistency across every component of the CareerConneCT validation
+pipeline.
+"""
+
 
 simple_format_training_data_labels = {  "First Name": [
       "First Name"
@@ -437,565 +580,6 @@ simple_format_training_data_accepted_responses_w_types = {
     'Employment Related to Training  (2nd Quarter After Exit)': {'type': 'boolean'}
 }
 
-
-simple_format_training_data_accepted_responses = {
-    # -------- Personal Information --------
-    "First Name": {"limited_response": False, "accepted_responses": [], "type":"identifier"},
-    "Last Name": {"limited_response": False, "accepted_responses": [], "type": "identifier"},
-    "CT Hires Username": {"limited_response": False, "accepted_responses": [], "type":"identifier", "non_essential":True},
-    "CT Hires State ID #": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,  # from four_sheet_personal_information
-        "type":"stateID7"
-    },
-    "Submitted Required OWS Forms?": {"limited_response": False, "accepted_responses": [], "type":"boolean"},
-    "Zip Code": {"limited_response": False, "accepted_responses": [],"type":"zipCode"},
-    "Client Date of Birth": {"limited_response": False, "accepted_responses": [],"type":"dateTime"},
-    "Low Income Status at Program Entry?": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "Basic Skills Deficient/Low Levels of Literacy?": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "Single Parent at Program Entry?": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "Co-enrollment (WIOA or WP)": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "Local Workforce Board Code": {"limited_response": False, "accepted_responses": [], "type":"identifier"},
-    "Highest Education Level Completed at Program Entry": {"limited_response": False, "accepted_responses": [],"type":"categorical"},
-    "School Status at Program Entry": {"limited_response": False, "accepted_responses": [], "type":"categorical"},
-    "TANF": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "SSI/SSD": {"limited_response": False, "accepted_responses": [],"type":"categorical"},
-    "SNAP": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "Other public assistance recipient": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "Hourly Wage in most recent employment prior to participation": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,  # from four_sheet_personal_information
-        "type":"hourlyWage"
-    },
-    "Hours worked per week most recent employment prior to participation                                                          (Only go back 9 months.)": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # if hourly wage is blank, this should be blank
-        "conditional": {
-            "conditional_column": "Hourly Wage in most recent employment prior to participation",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"hoursWorked"
-    },
-    "Occupational Code of Most Recent Employment Prior to Participation": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # if hourly wage is blank, this should be blank
-        "conditional": {
-            "conditional_column": "Hourly Wage in most recent employment prior to participation",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"ONETCode"
-    },
-
-    # -------- Training --------
-    "Date of Program Entry (Enrollment Date)": {"limited_response": False, "accepted_responses": [], "type":"dateTime"},
-    "Date of Program Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # if entry is blank, exit should be blank
-        "conditional": {
-            "conditional_column": "Date of Program Entry (Enrollment Date)",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"dateTime"
-    },
-    "Received Training?": {"limited_response": False, "accepted_responses": [],"type":"boolean"},
-    "CareerConneCT Training Provider": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"identifier"
-    },
-    "Date Entered Training": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"dateTime"
-    },
-    "Type of Training Service": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"categorical"
-    },
-    "CareerConneCT Training Provider Program of Study": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"identifier"
-    },
-    "CareerConneCT Training Provider CIP Code": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"CIPCode"
-    },
-    "Occupational Skills Training Code #1": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                "conditional_column": "Received Training?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"ONETCode"
-    },
-    "Training Completed?": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            # drop _different_sheet → not_date_in_past
-            {
-                "conditional_column": "Date of Program Exit",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "not_date_in_past",
-            },
-            {
-                "conditional_column": "Date of Program Exit",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"boolean"
-    },
-    "Date Completed or Withdrew From Training #1": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Training Completed?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"dateTime"
-    },
-    "Date Entered Training #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "type":"dateTime"
-    },
-    "Type of Training Service #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": {
-            "conditional_column": "Date Entered Training #2",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"categorical"
-    },
-    "Occupational Skills Training Code #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": {
-            "conditional_column": "Date Entered Training #2",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"ONETCode"
-    },
-    "Training Completed #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": [
-            {
-                # drop _different_sheet → not_date_in_past
-                "conditional_column": "Date of Program Exit",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "not_date_in_past",
-            },
-            {
-                "conditional_column": "Date Entered Training #2",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"boolean"
-    },
-    "Date Completed, or Withdrew from, Training #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": [
-            {
-                # drop _different_sheet → not_date_in_past
-                "conditional_column": "Date of Program Exit",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "not_date_in_past",
-            },
-            {
-                "conditional_column": "Date Entered Training #2",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"dateTime"
-    },
-    "Date Entered Training #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "type":"dateTime"
-    },
-    "Type of Training Service #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": {
-            "conditional_column": "Date Entered Training #3",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"categorical"
-    },
-    "Occupational Skills Training Code #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": {
-            "conditional_column": "Date Entered Training #3",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"ONETCode"
-    },
-    "Training Completed #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "conditional": [
-            {
-                # drop _different_sheet → not_date_in_past
-                "conditional_column": "Date of Program Exit",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "not_date_in_past",
-            },
-            {
-                "conditional_column": "Date Entered Training #3",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"boolean"
-    },
-    "Date Completed, or Withdrew from, Training #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                # drop _different_sheet → not_date_in_past
-                "conditional_column": "Date of Program Exit",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "not_date_in_past",
-            },
-            {
-                "conditional_column": "Date Entered Training #3",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"dateTime"
-    },
-
-    # -------- Credentials --------
-    "Type of Recognized Credential": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            # drop _different_sheet → specific_value
-            "conditional_column": "Training Completed?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "specific_value",
-            "conditional_value": "No",
-        },
-        "type":"categorical"
-    },
-    "Date Attained Recognized Credential": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": [
-            {
-                # drop _different_sheet → specific_value
-                "conditional_column": "Training Completed?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "specific_value",
-                "conditional_value": "No",
-            },
-            {
-                # drop _different_sheet → is_blank
-                "conditional_column": "Training Completed?",
-                "conditional_expectation": "if_then_not",
-                "conditional_logic": "is_blank",
-            },
-        ],
-        "type":"dateTime"
-    },
-    "Type of Recognized Credential #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "type":"categorical"
-    },
-    "Date Attained Recognized Credential #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Type of Recognized Credential #2",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"dateTime"
-    },
-    "Type of Recognized Credential #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "type":"categorical"
-    },
-    "Date Attained Recognized Credential #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Type of Recognized Credential #3",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"dateTime"
-    },
-    "Type of Recognized Credential #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "type":"categorical"
-    },
-    "Date Attained Recognized Credential #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Type of Recognized Credential #4",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"dateTime"
-    },
-    "Type of Recognized Credential #5": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True,
-        "type":"categorical"
-    },
-    "Date Attained Recognized Credential #5": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Type of Recognized Credential #5",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"dateTime"
-    },
-
-    # -------- Outcomes --------
-    "School Status at Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # drop _different_sheet → is_blank
-        "conditional": {
-            "conditional_column": "Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"categorical"
-    },
-    "Employment Status at exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # drop _different_sheet → is_blank
-        "conditional": {
-            "conditional_column": "Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "is_blank",
-        },
-        "type":"categorical"
-    },
-    "Hourly Wage at Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic": "not_specific_value",
-        },
-        "type":"hourlyWage"
-    },
-    "Hours Worked per Week": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic": "not_specific_value",
-        },
-        "type":"hoursWorked"
-    },
-    "Employer": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic": "not_specific_value",
-        },
-        "type":"identifier"
-    },
-    "Job Title": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic": "not_specific_value",
-        },
-        "type":"identifier"
-    },
-    "Employer Zip Code": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic": "not_specific_value",
-        },
-        "type":"zipCode"
-    },
-    "Occupational Code of Employment After Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional": {
-            "conditional_column": "Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic": "not_specific_value",
-        },
-        "type":"ONETCode"
-    },
-    "Occupational Code of Employment 2nd Quarter After Exit Quarter": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # drop _different_sheet → not_date_in_past_182
-        "conditional": {
-            "conditional_column": "Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "not_date_in_past_182",
-        },
-        "type":"ONETCode"
-    },
-    "Occupational Code of Employment 4th Quarter After Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # drop _different_sheet → not_date_in_past_365
-        "conditional": {
-            "conditional_column": "Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "not_date_in_past_365",
-        },
-        "type":"ONETCode"
-    },
-    "Employment Related to Training  (2nd Quarter After Exit)": {
-        "limited_response": False,
-        "accepted_responses": [],
-        # drop _different_sheet → not_date_in_past_182
-        "conditional": {
-            "conditional_column": "Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic": "not_date_in_past_182",
-        },
-        "type":"ONETCode"
-    },
-}
-
 simple_format_supportive_services_labels = {
     "First Name": [
         "First Name",
@@ -1106,7 +690,6 @@ simple_format_supportive_services_labels = {
     "Dollar Amount 20": ["Dollar Amount ($) 20", "Dollar_20", "dollar_amount_20", "Dollar Amount 20"]
 }
 
-
 four_sheet_personal_information_labels = {
 
       "First Name": [
@@ -1196,105 +779,6 @@ four_sheet_personal_information_labels = {
 
 }
 
-four_sheet_personal_information_accepted_responses = {
-    "First Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Last Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "CT Hires Username": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "CT Hires State ID #": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Submitted Required OWS Forms?": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Zip Code": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Client Date of Birth": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Low Income Status at Program Entry?": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Basic Skills Deficient/Low Levels of Literacy?": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Single Parent at Program Entry?": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Co-enrollment (WIOA or WP)": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Local Workforce Board Code": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Highest Education Level Completed at Program Entry": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "School Status at Program Entry": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "TANF": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "SSI/SSD": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "SNAP": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Other public assistance recipient": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Hourly Wage in most recent employment prior to participation": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Hours worked per week most recent employment prior to participation                                                          (Only go back 9 months.)": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Hourly Wage in most recent employment prior to participation",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank",
-        }
-    },
-    "Occupational Code of Most Recent Employment Prior to Participation": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Hourly Wage in most recent employment prior to participation",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank",
-        }
-    }
-}
-
 four_sheet_personal_information_accepted_responses_w_types = {
     "First Name": {
         "type": "identifier"
@@ -1381,7 +865,6 @@ four_sheet_personal_information_accepted_responses_w_types = {
         "type": "ONETCode"
     }
 }
-
 
 four_sheet_training_labels = {
       "First Name": [
@@ -1475,301 +958,6 @@ four_sheet_training_labels = {
       ]
 }
 
-
-four_sheet_training_accepted_responses = {
-    "First Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Last Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Date of Program Entry (Enrollment Date)": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Date of Program Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date of Program Entry (Enrollment Date)",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank",
-        }
-    },
-    "Received Training?": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "CareerConneCT Training Provider": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value",
-            "conditional_value":"No"
-        },{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Entered Training": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value",
-            "conditional_value":"No"
-        },{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Type of Training Service": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value",
-            "conditional_value":"No"
-        },{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "CareerConneCT Training Provider Program of Study": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value",
-            "conditional_value":"No"
-        },{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "CareerConneCT Training Provider CIP Code": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value",
-            "conditional_value":"No"
-        },{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Occupational Skills Training Code #1": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value",
-            "conditional_value":"No"
-        },{
-            "conditional_column":"Received Training?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Training Completed?": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Completed or Withdrew From Training #1": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Training Completed?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Date Entered Training #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Type of Training Service #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date Entered Training #2",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Occupational Skills Training Code #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date Entered Training #2",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Training Completed #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },
-        {
-            "conditional_column":"Date Entered Training #2",
-            "conditional_expectation":"if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Completed, or Withdrew from, Training #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },
-        {
-            "conditional_column":"Date Entered Training #2",
-            "conditional_expectation":"if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Entered Training #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Type of Training Service #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date Entered Training #3",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Occupational Skills Training Code #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date Entered Training #3",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Training Completed #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },
-        {
-            "conditional_column":"Date Entered Training #3",
-            "conditional_expectation":"if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Completed, or Withdrew from, Training #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },
-        {
-            "conditional_column":"Date Entered Training #3",
-            "conditional_expectation":"if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Entered Training #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Type of Training Service #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date Entered Training #4",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Occupational Skills Training Code #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date Entered Training #4",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Training Completed #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },
-        {
-            "conditional_column":"Date Entered Training #4",
-            "conditional_expectation":"if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    },
-    "Date Completed, or Withdrew from, Training #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"not_date_in_past_different_sheet"
-        },
-        {
-            "conditional_column":"Date Entered Training #4",
-            "conditional_expectation":"if_then_not",
-            "conditional_logic":"is_blank"
-        }]
-    }
-}
-
 four_sheet_training_accepted_responses_w_types = {
     "First Name": {
         "type": "identifier"
@@ -1794,12 +982,12 @@ four_sheet_training_accepted_responses_w_types = {
     },
     "Type of Training Service": {
         "type": "categorical",
-        "accepted_responses": ["customized training",
-                               "prerequisite training",
-                               "occupational skills training (non-wioa youth)",
-                               "youth occupational skills training",
-                               "on the job training (non-wioa youth)",
-                               "skill upgrading"]
+        "accepted_responses": {"customized training":["customized training"],
+                               "prerequisite training":["prerequisite training"],
+                               "occupational skills training (non-wioa youth)":["occupational skills training (non-wioa youth)","Occupational Skills Building (non-WIOA Youth)"],                               
+                               "youth occupational skills training":["youth occupational skills training"],
+                               "on the job training (non-wioa youth)":["on the job training (non-wioa youth)"],
+                               "skill upgrading":["skill upgrading"]}
     },
     "CareerConneCT Training Provider Program of Study": {
         "type": "categorical",
@@ -1933,101 +1121,6 @@ four_sheet_credential_labels = {
 
 }
 
-four_sheet_credential_accepted_responses = {
-    "First Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Last Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Type of Recognized Credential": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Training Completed?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value_different_sheet",
-            "conditional_sheet":"Training",
-            "conditional_value":"No"
-        }
-    },
-    "Date Attained Recognized Credential": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":[{
-            "conditional_column":"Training Completed?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"specific_value_different_sheet",
-            "conditional_sheet":"Training",
-            "conditional_value":"No"
-        },{"conditional_column":"Training Completed?",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank_different_sheet",
-            "conditional_sheet":"Training",
-            "conditional_value":"No"
-            
-        }]
-    },
-    "Type of Recognized Credential #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Date Attained Recognized Credential #2": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Type of Recognized Credential #2",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Type of Recognized Credential #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Date Attained Recognized Credential #3": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Type of Recognized Credential #3",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Type of Recognized Credential #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Date Attained Recognized Credential #4": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Type of Recognized Credential #4",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    },
-    "Type of Recognized Credential #5": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "non_essential": True
-    },
-    "Date Attained Recognized Credential #5": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Type of Recognized Credential #5",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank"
-        }
-    }
-}
-
 four_sheet_credential_accepted_responses_w_types = {
     "First Name": {
         "type": "identifier"
@@ -2137,127 +1230,6 @@ four_sheet_outcomes_labels = {
       ]
 }
 
-four_sheet_outcomes_accepted_responses = {
-    "First Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "Last Name": {
-        "limited_response": False,
-        "accepted_responses": []
-    },
-    "School Status at Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date of Program Exit",
-            "conditional_sheet":"Training",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"is_blank_different_sheet"
-        }
-    },
-    "Employment Status at exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date of Program Exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_sheet": "Training",
-            "conditional_logic":"is_blank_different_sheet"
-        }
-    },
-    "Hourly Wage at Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic":"not_specific_value"
-        }
-    },
-    "Hours Worked per Week": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic":"not_specific_value"
-        }
-    },
-    "Employer": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic":"not_specific_value"
-        }
-    },
-    "Job Title": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic":"not_specific_value"
-        }
-    },
-    "Employer Zip Code": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic":"not_specific_value"
-        }
-    },
-    "Occupational Code of Employment After Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Employment Status at exit",
-            "conditional_expectation": "if_then_not",
-            "conditional_value": "Unemployed",
-            "conditional_logic":"not_specific_value"
-        }
-    },
-    "Occupational Code of Employment 2nd Quarter After Exit Quarter": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date of Program Exit",
-            "conditional_sheet":"Training",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"not_date_in_past_different_sheet_182"
-        }
-    },
-    "Occupational Code of Employment 4th Quarter After Exit": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date of Program Exit",
-            "conditional_sheet":"Training",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"not_date_in_past_different_sheet_365"
-        }
-    },
-    "Employment Related to Training  (2nd Quarter After Exit)": {
-        "limited_response": False,
-        "accepted_responses": [],
-        "conditional":{
-            "conditional_column":"Date of Program Exit",
-            "conditional_sheet":"Training",
-            "conditional_expectation": "if_then_not",
-            "conditional_logic":"not_date_in_past_different_sheet_182"
-        }
-    }
-}
-
 four_sheet_outcomes_accepted_responses_w_types = {
     "First Name": {
         "type": "identifier"
@@ -2312,63 +1284,6 @@ four_sheet_outcomes_accepted_responses_w_types = {
         "type": "boolean"
     }
 }
-
-
-cc_column_label_list = {
-  
-  "training data":{
-  
-  "simple format": {
-    "Report":{
-    "labels": simple_format_training_data_labels,
-    "accepted_responses": simple_format_training_data_accepted_responses_w_types,
-    "starting_row": 0,
-    "starting_column": 0 # zero covers whole df
-    }
-
-  },
-  "four sheet format": {
-      
-      "Personal Information":{
-          "labels": four_sheet_personal_information_labels,
-          "accepted_responses": four_sheet_personal_information_accepted_responses_w_types,
-          "starting_row": 0,
-          "starting_column": 0 # zero covers whole df
-      } 
-    ,
-      "Training": {
-          "labels": four_sheet_training_labels,
-          "accepted_responses": four_sheet_training_accepted_responses_w_types,
-          "starting_row": 0,
-          "starting_column": 0 # zero covers whole df
-    },
-    "Credential": {
-          "labels": four_sheet_credential_labels,
-          "accepted_responses": four_sheet_credential_accepted_responses_w_types,
-          "starting_row": 0,
-          "starting_column": 0 # zero covers whole df
-    },
-    "Outcomes": {
-          "labels": four_sheet_outcomes_labels,
-          "accepted_responses": four_sheet_outcomes_accepted_responses_w_types,
-          "starting_row": 0,
-          "starting_column": 0 # zero covers whole df
-    }
-  }
-  },
-  "supportive services":
-  {
-    "simple format": {
-  
-    "labels": simple_format_supportive_services_labels,
-    "accepted_responses": [],
-    "columns_used": range(0, len(simple_format_supportive_services_labels)),
-    "starting_row": 0,
-    "starting_column": 0 # zero covers whole df
-
-  }
-  }
-  }
 
 workbook_definitions = {
 

@@ -4,149 +4,152 @@ from cc_validation_engine import ValidationEngine
 from cc_validation_workbook_loader import WorkbookLoader
 from gjc_column_label_lists import workbook_definitions
 from gjc_file_metadata_dicitionary import submission_files
+from cc_key_creator import KeyCreator
+from cc_standard_normalizations import strict_alphabetic_normalize
+from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 
 workbook_definitions = workbook_definitions
 # Containers for results
-all_normalized = []
-all_errors = []
-all_mismatches = []  
 
-for org, data_types in submission_files.items():
 
-    target_book = "TPI"
+cross_rules = [
+    ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
+    ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
+]
 
-    if target_book not in data_types:
-        continue
+for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
-    # Get all periods and pick the last one (sorted alphanumerically)
-    periods = sorted(data_types[target_book].keys())
-    if not periods:
-        continue
-    period = periods[-1]
+    all_normalized = []
+    all_errors = []
+    all_mismatches = []  
 
-    file_meta = data_types[target_book][period]
-    file_path = file_meta["file path"]
-    workbook_format = file_meta["format"]
+    for org, data_types in submission_files.items():
 
-    loader = WorkbookLoader(
-        file_path=file_path,
-        workbook_type=workbook_format,
-        sheet_defs=workbook_definitions[target_book],
-        dynamic=True
-    )
+        target_book = "TPI"
 
-    loader.preprocess_excel()
-    dfs_by_sheet = loader.load_sheets()
-    engine = ValidationEngine(workbook_definitions)
+        if target_book not in data_types:
+            continue
     
-    file_id = f"{org}|{period}".replace(" ", "_")
+        # Get all periods and pick the last one (sorted alphanumerically)
+        periods = sorted(data_types[target_book].keys())
+        if target_period not in periods:
+            continue
+        period = target_period
 
-    engine.validate_workbook(
-        file=file_id,
-        workbook_type=target_book,
-        workbook_format=workbook_format,
-        dfs_by_sheet=dfs_by_sheet
-    )
+        file_meta = data_types[target_book][period]
 
-    dfs = list(engine.normalized_data.items())  # [(sheet_name, df), ...]
-
-    # Determine whether this workbook type has multiple sheets defined
-    multi_sheet_mode = len(workbook_definitions[target_book][workbook_format]) > 1
-
-    # Collect validation results
-    errs = engine.get_all_errors()
-    if not errs.empty:
-        errs["org"] = org
-        errs["period"] = period
-        all_errors.append(errs)
-
-    # If only one sheet — no id_key logic, just append normalized output
-    if not multi_sheet_mode:
-        single_name, single_df = dfs[0]
-        single_df["org"] = org
-        single_df["period"] = period
-        all_normalized.append(single_df)
-        continue  # skip mismatch logic entirely
-
-    # --- multi-sheet logic below (only runs when >1 sheet) ---
-    nonmatching_records = []  # local for this org/period
-
-    def record_mismatches(keys, org, period, sheet, issue):
-        for k in keys:
-            nonmatching_records.append({
-                "org": org,
-                "period": period,
-                "sheet": sheet,
-                "id_key": k,
-                "issue": issue
-            })
-
-    # --- Step 1: find all globally duplicated id_keys ---
-    all_dup_keys = set()
-    for sheet_name, df in dfs:
-        if "id_key" in df.columns:
-            dup_keys = df.loc[df["id_key"].duplicated(), "id_key"].unique()
-            if len(dup_keys) > 0:
-                record_mismatches(dup_keys, org, period, sheet_name, "duplicate_in_sheet")
-                all_dup_keys.update(dup_keys)
-
-    # --- Step 2: drop those keys from every sheet before comparing/merging ---
-    cleaned_dfs = []
-    for sheet_name, df in dfs:
-        if "id_key" in df.columns:
-            df = df[~df["id_key"].isin(all_dup_keys)].copy()
-        cleaned_dfs.append((sheet_name, df))
-
-    # --- Step 3: do matching/missing/extra on the cleaned data ---
-    base_name, base_df = cleaned_dfs[0]
-    merged = base_df.copy()
-
-    for sheet_name, df in cleaned_dfs[1:]:
-        if "id_key" not in df.columns:
+        if file_meta.get("formatting_issues", False):
             continue
 
-        base_keys = set(merged["id_key"])
-        sheet_keys = set(df["id_key"])
+        file_path = file_meta["file path"]
+        workbook_format = file_meta["format"]
 
-        missing_in_sheet = base_keys - sheet_keys
-        extra_in_sheet   = sheet_keys - base_keys
+        #### Start - Key Specification #### 
 
-        if missing_in_sheet:
-            record_mismatches(missing_in_sheet, org, period, sheet_name, "missing_in_sheet")
-        if extra_in_sheet:
-            record_mismatches(extra_in_sheet, org, period, sheet_name, "extra_in_sheet")
+        ## Before loading workbooks, instantiate key creator and provide specifications 
 
-        merged = merged.merge(df, on="id_key", how="inner", suffixes=("", f"_{sheet_name}"))
+        sheetlink_keycreator = KeyCreator(
+        key_fields=["First Name", "Last Name"],     # minimal for now
+        normalizers={
+            "First Name": strict_alphabetic_normalize,
+            "Last Name": strict_alphabetic_normalize,
+        },
+        required_fields=["First Name", "Last Name"],  # will drop invalid rows
+        return_unhashed=True,                       # unhashed for easier debugging
+    )
+        
+        ### key creator for entry level and linking to person database
+        # No normalization because this is called after normalization is completed.  
 
-    normalized_combined = merged
+        kc_strict = KeyCreator(
+        key_fields=["First Name", "Last Name", "Date of Birth", "Zip Code"],
+        required_fields=["First Name, Last Name", "Date of Birth", "Zip Code"],
+        return_unhashed=True,
+        )
 
-    mismatches_df = pd.DataFrame(nonmatching_records)
+        kc_med_name_dob = KeyCreator(
+        key_fields=["First Name", "Last Name", "Date of Birth"],
+        required_fields=["First Name, Last Name","Date of Birth"],
+        return_unhashed=True,
+        )
 
-    if not mismatches_df.empty:
-        all_mismatches.append(mismatches_df)
+        kc_med_name_zip = KeyCreator(
+        key_fields=["First Name", "Last Name", "Zip Code"],
+        required_fields=["First Name, Last Name","Zip Code"],
+        return_unhashed=True,
+        )
 
-    dedup_cols = ["id_key", "First Name", "Last Name", "row_number"]
-    mask = normalized_combined.columns.duplicated() & normalized_combined.columns.isin(dedup_cols)
-    normalized_combined = normalized_combined.loc[:, ~mask]
+        kc_weak = KeyCreator(
+        key_fields=["First Name","Last Name"],
+        required_fields =["First Name","Last Name"],
+        return_unhashed=True,
+        )
 
-    normalized_combined["org"] = org
-    normalized_combined["period"] = period
-    all_normalized.append(normalized_combined)
+        keycreators = [(kc_strict, "id_key_strict_name_dob_zip"),
+                    (kc_med_name_dob, "id_key_medium_name_dob"),
+                    (kc_med_name_zip, "id_key_medium_name_zip"),
+                    (kc_weak, "id_key_weak_name")]
+
+        loader = WorkbookLoader(
+            file_path=file_path,
+            workbook_type=workbook_format,
+            sheet_defs=workbook_definitions[target_book],
+            dynamic=True,
+            keycreator = sheetlink_keycreator
+        )
+
+        loader.preprocess_excel()
+        dfs_by_sheet = loader.load_sheets()
+        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
+        
+        file_id = f"{org}|{period}".replace(" ", "_")
+
+        engine.validate_workbook(
+            file=file_id,
+            workbook_type=target_book,
+            workbook_format=workbook_format,
+            dfs_by_sheet=dfs_by_sheet,
+            keycreators= keycreators,
+            passed_identity_sheet="Participant_Info"
+        )
+
+        dfs = list(engine.normalized_data.items())  # [(sheet_name, df), ...]
+
+        # Collect validation results
+        errs = engine.get_all_errors()
+        if not errs.empty:
+            errs["org"] = org
+            errs["period"] = period
+            all_errors.append(errs)
+
+        # --- multi-sheet logic below (only runs when >1 sheet) ---
+        mismatches = pd.DataFrame(engine.mismatches)    
+        if not mismatches.empty:
+            mismatches["org"] = org
+            mismatches["period"] = period
+
+        all_mismatches.append(engine.mismatches)
+        all_normalized.append(engine.single_sheet)
 
 
-# --- Combine everything ---
-normalized_final = pd.concat(all_normalized, ignore_index=True)
-errors_final = pd.concat(all_errors, ignore_index=True) if all_errors else pd.DataFrame()
-mismatches_final = pd.concat(all_mismatches, ignore_index=True) if all_mismatches else pd.DataFrame()
+    # --- Combine everything ---
+    normalized_final = pd.concat(all_normalized, ignore_index=True)
+    errors_final = pd.concat(all_errors, ignore_index=True) if all_errors else pd.DataFrame()
 
-print(normalized_final)
+    flat_rows = [
+        row
+        for sublist in all_mismatches
+        for row in sublist
+    ]
 
-# --- Write once at the end ---
-output_file = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\gjc_validation_results_all_orgs_10_30.xlsx"
-with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-    normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
-    errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)
-    if not mismatches_final.empty:
-        mismatches_final.to_excel(writer, sheet_name="Key Mismatches", index=False)
+    mismatches_final = pd.DataFrame(flat_rows)
 
-print(f"✅ Results written to {output_file}")
+    # --- Write once at the end ---
+    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\gjc_validation_results_all_orgs_{target_period}.xlsx"
+    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+        normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
+        errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)
+        if not mismatches_final.empty:
+            mismatches_final.to_excel(writer, sheet_name="Key Mismatches", index=False)
+
+    print(f"✅ Results written to {output_file}")

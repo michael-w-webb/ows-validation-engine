@@ -70,7 +70,7 @@ sqlite_tables = [
     "validation_rule",
     "sqlite_sequence",
     "validation_violation",
-    "entry_presence_log",
+    "participant_key_mismatch"
 ]
 
 # Output directory

@@ -1,49 +1,45 @@
-# CONNECTED_PRESENCE_RULES = [
-#     # Personal Information sheet
-#     {"sheet_x": "Personal Information", "col_x": "Hourly Wage in most recent employment prior to participation",
-#      "sheet_y": "Personal Information", "col_y": "Hours worked per week most recent employment prior to participation (Only go back 9 months.)"},
-#     {"sheet_x": "Personal Information", "col_x": "Hourly Wage in most recent employment prior to participation",
-#      "sheet_y": "Personal Information", "col_y": "Occupational Code of Most Recent Employment Prior to Participation"},
+"""
+Rule Definitions for Cross-Sheet Validation
+===========================================
 
-#     # Training sheet
-#     {"sheet_x": "Training", "col_x": "Date Entered Training #2",
-#      "sheet_y": "Training", "col_y": "Type of Training Service #2"},
-#     {"sheet_x": "Training", "col_x": "Date Entered Training #2",
-#      "sheet_y": "Training", "col_y": "Occupational Skills Training Code #2"},
-#     {"sheet_x": "Training", "col_x": "Date Entered Training #3",
-#      "sheet_y": "Training", "col_y": "Type of Training Service #3"},
-#     {"sheet_x": "Training", "col_x": "Date Entered Training #3",
-#      "sheet_y": "Training", "col_y": "Occupational Skills Training Code #3"},
-#     {"sheet_x": "Training", "col_x": "Date Entered Training #4",
-#      "sheet_y": "Training", "col_y": "Type of Training Service #4"},
-#     {"sheet_x": "Training", "col_x": "Date Entered Training #4",
-#      "sheet_y": "Training", "col_y": "Occupational Skills Training Code #4"},
+This module defines the structured rule sets used by the CrossRuleEngine
+to evaluate logical, conditional, and relational dependencies across the
+normalized workbook.
 
-#     # Program Entry (from Training) linked to participant context (from Personal Information)
-    
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Low Income Status at Program Entry?"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Basic Skills Deficient/Low Levels of Literacy?"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Single Parent at Program Entry?"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Co-enrollment (WIOA or WP)"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Local Workforce Board Code"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Highest Education Level Completed at Program Entry"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "School Status at Program Entry"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "TANF"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "SSI/SSD"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "SNAP"},
-#     {"sheet_x": "Training", "col_x": "Date of Program Entry (Enrollment Date)",
-#     "sheet_y": "Personal Information", "col_y": "Other public assistance recipient"},
-# ]
+Each rule is expressed as a nested "clause tree" describing:
+
+    • which variables the rule applies to (via (sheet, column) tuples)
+    • the logical operator to apply (e.g., AND, OR, NOT, IF_THEN)
+    • the comparison relationship (e.g., is_blank, connected_presence, before)
+
+Rules are grouped into semantic categories that mirror common data-quality
+requirements for CareerConneCT and GJC datasets:
+
+    CONNECTED_PRESENCE_RULES
+        Ensure that two or more related fields share consistent blank/non-blank
+        status. Used for contexts such as training program fields where the
+        existence of one item implies the existence of another.
+
+    CONDITIONALLY_BLANK_UNLESS_RULES
+        Identify fields that must remain blank unless a specific prerequisite
+        condition is met (e.g., “training received” flags).
+
+    CONDITIONALLY_ALLOWED_RULES
+        Ensure that certain fields are *only* allowed when a triggering condition
+        is true, preventing spurious or contradictory data entry.
+
+    CONDITIONALLY_REQUIRED_RULES
+        Require certain downstream fields to be completed if prerequisite fields
+        are filled (e.g., training completion dates when a participant has exited).
+
+    CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
+        Require data fields based on chronological relationships, such as training
+        entries that occur before or after fixed program deadlines.
+
+These rule structures are consumed by CrossRuleEngine.expand_rules(), which
+automatically resolves grouped “var” or “compare_to” fields and produces
+individual atomic rules for evaluation.
+"""
 
 CONNECTED_PRESENCE_RULES = [
 
@@ -113,39 +109,6 @@ CONNECTED_PRESENCE_RULES = [
     },
 ]
 
-
-
-# CONDITIONALLY_BLANK_UNLESS_RULES = [
-        
-#     ## Training received  
-#         {
-#         "if_pair": ["Training", "Received Training?"],
-#         "then_pairs": [
-#             ["Training", "CareerConneCT Training Provider"],
-#             ["Training", "Date Entered Training"],
-#             ["Training", "Type of Training Service"],
-#             ["Training", "CareerConneCT Training Provider Program of Study"],
-#             ["Training", "CareerConneCT Training Provider CIP Code"],
-#             ["Training", "Occupational Skills Training Code #1"],
-#             ["Training", "Date Completed or Withdrew From Training #1"]
-#         ],
-#         "trigger_values": ["1"]
-#     },
-
-#     ## Date of program entry 
-#         {
-#         "if_pair": ["Training", "Date of Program Entry (Enrollment Date)"],
-#         "then_pairs": [
-#             ["Training", "Date of Program Exit"],
-#             ["Training", "Received Training?"]
-#         ],
-#         "trigger_values": ["__NOT_BLANK__"]
-#     },
-
-#     ## 
-#     {
-#     }
-# ]
 CONDITIONALLY_BLANK_UNLESS_RULES = [
 
     # ------------------------------------------------------------
@@ -184,11 +147,11 @@ CONDITIONALLY_BLANK_UNLESS_RULES = [
         "logic": {
             "IF_THEN": [
                 {
-                    "var": ("Training", "Date of Program Entry (Enrollment Date)"),
+                    "var": ("Training", "Date of Program Exit"),
                     "op": "is_not_blank"
                 },
                 {
-                    "var": ("Training", "Date of Program Exit"),
+                    "var": ("Training", "Date of Program Entry (Enrollment Date)"),
                     "op": "is_not_blank",
                     "compare_to": [
                         ("Training", "Received Training?")
@@ -205,12 +168,19 @@ CONDITIONALLY_ALLOWED_RULES = [
     # 🧾 Training fields conditionally allowed when training received
     # ------------------------------------------------------------
     {
-        "rule_name": "Training fields conditionally allowed when training received",
+        "rule_name": "Training fields must be blank when training not received",
         "logic": {
             "IF_THEN": [
-
                 {
-                    "var": [("Training", "CareerConneCT Training Provider"),
+                "NOT":{
+                    "var": ("Training", "Received Training?"),
+                    "op": "equals",
+                    "value": 1
+                }
+                },
+                {
+                    "var": [
+                        ("Training", "CareerConneCT Training Provider"),
                         ("Training", "Date Entered Training"),
                         ("Training", "Type of Training Service"),
                         ("Training", "CareerConneCT Training Provider Program of Study"),
@@ -219,19 +189,11 @@ CONDITIONALLY_ALLOWED_RULES = [
                         ("Training", "Date Completed or Withdrew From Training #1")
                     ],
                     "op": "is_blank"
-                },
-                {
-                    "NOT": [
-                        {
-                            "var": ("Training", "Received Training?"),
-                            "op": "equals",
-                            "value": 1
-                        }
-                    ]
                 }
             ]
         }
     }
+
 ]
 
 

@@ -30,4 +30,6 @@ build/
 
 ### datafiles
 *.db
+*.db-shm
+*.db-wal
 **/*.parquet

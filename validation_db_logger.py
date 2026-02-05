@@ -51,7 +51,6 @@ class ValidationDBLogger:
     components (e.g., validation engines, workbook loaders) rather than
     directly by end users.
     """
-
     def __init__(self):
 
         """
@@ -70,12 +69,92 @@ class ValidationDBLogger:
         The database file is expected to exist and have a valid schema.
         This constructor does not create or migrate tables.
         """
+        self._violation_buffer = []
+        self._participant_presence_buffer = []
+        self._column_cache = {}
+        self._participant_cache = {}
+
+        self._participant_map = {}
+        self._new_participants_buffer = []
+
+        self._person_by_strict = {}
+        self._person_by_med_dob = {}
+        self._person_by_med_zip = {}
+
+        self._new_people_buffer = []
 
         self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         self.conn.execute("PRAGMA foreign_keys = ON;")
         self.conn.execute("PRAGMA journal_mode = WAL;")
         self.conn.execute("PRAGMA synchronous = NORMAL;")
         self.conn.commit()
+
+    #### some functions for mapping values: 
+
+    def load_participant_map(
+    self,
+    dataset_name: str,
+    org: str | None = None,
+    ):
+        """
+        Preload participant identifiers into an in-memory map for fast lookup.
+
+        Populates self._participant_map with keys of the form:
+            (person_id, dataset_name, org) -> participant_id
+
+        This should be called once per run, before validation begins.
+        """
+
+        self._participant_map.clear()
+
+        if org is None:
+            sql = """
+                SELECT participant_id, person_id, dataset_name, org
+                FROM participant
+                WHERE dataset_name = ?
+            """
+            params = (dataset_name,)
+        else:
+            sql = """
+                SELECT participant_id, person_id, dataset_name, org
+                FROM participant
+                WHERE dataset_name = ? AND org = ?
+            """
+            params = (dataset_name, org)
+
+        cur = self.conn.execute(sql, params)
+
+        for participant_id, person_id, dataset_name, org in cur.fetchall():
+            key = (person_id, dataset_name, org)
+            self._participant_map[key] = participant_id
+
+    def load_person_maps(self):
+
+        """
+        Preload person identity key maps into memory.
+        """
+
+        self._person_by_strict.clear()
+        self._person_by_med_dob.clear()
+        self._person_by_med_zip.clear()
+
+        cur = self.conn.execute("""
+            SELECT
+                person_id,
+                id_key_strict_name_dob_zip,
+                id_key_medium_name_dob,
+                id_key_medium_name_zip
+            FROM person
+        """)
+
+        for pid, strict, med_dob, med_zip in cur.fetchall():
+            if strict:
+                self._person_by_strict[strict] = pid
+            if med_dob:
+                self._person_by_med_dob[med_dob] = pid
+            if med_zip:
+                self._person_by_med_zip[med_zip] = pid
+ 
 
     def _clean_sql_value(self, v):
 
@@ -159,6 +238,12 @@ class ValidationDBLogger:
         str
             UUID string identifying the column.
         """
+        key = (dataset_name, sheet_name, column_name)
+
+        cached = self._column_cache.get(key)
+
+        if cached:
+            return cached
 
         cur = self.conn.execute(
             "SELECT column_id FROM dataset_column WHERE dataset_name=? AND sheet_name=? AND column_name=?",
@@ -174,6 +259,7 @@ class ValidationDBLogger:
             (column_id, dataset_name, sheet_name, column_name)
         )
         self.conn.commit()
+        self._column_cache[key] = column_id
         return column_id
 
     def get_person_by_key(self, key_field, key_value):
@@ -261,81 +347,93 @@ class ValidationDBLogger:
         return person_id
 
     
-    def resolve_person(self, row):
-
+    def resolve_person(self, row) -> str:
         """
-        Resolve or create a person record for a given data row.
+        Resolve a person using in-memory identity key maps.
+        Creates a new person *logically* if no match is found,
+        deferring persistence until later.
+        """
 
-        Attempts to match an existing person using a hierarchy of
-        identity keys in decreasing order of confidence:
+        strict  = row.get("id_key_strict_name_dob_zip")
+        med_dob = row.get("id_key_medium_name_dob")
+        med_zip = row.get("id_key_medium_name_zip")
+        weak    = row.get("id_key_weak_name")
 
-        1. Strict (name + DOB + ZIP)
-        2. Medium (name + DOB)
-        3. Medium (name + ZIP)
-
-        Weak (name-only) matching is intentionally disabled to avoid
-        accidental merges. If no match is found, a new person record
-        is created.
-
-        Parameters
-        ----------
-        row : dict-like
-            Normalized row containing identity keys and demographic fields.
-
-        Returns
-        -------
-        str
-            UUID string identifying the resolved or newly created person.
-        """        
-
-        # Extract keys
-        strict    = row.get("id_key_strict_name_dob_zip")
-        med_dob   = row.get("id_key_medium_name_dob")
-        med_zip   = row.get("id_key_medium_name_zip")
-        weak      = row.get("id_key_weak_name")
-
-        # 1️⃣ strict match
-        if strict:
-            person = self.get_person_by_key("id_key_strict_name_dob_zip", strict)
-            if person:
-                return person[0]  # person_id
+        # 1️⃣ strict
+        if strict and strict in self._person_by_strict:
+            return self._person_by_strict[strict]
 
         # 2️⃣ medium (name + dob)
-        if med_dob:
-            person = self.get_person_by_key("id_key_medium_name_dob", med_dob)
-            if person:
-                return person[0]
+        if med_dob and med_dob in self._person_by_med_dob:
+            return self._person_by_med_dob[med_dob]
 
         # 3️⃣ medium (name + zip)
+        if med_zip and med_zip in self._person_by_med_zip:
+            return self._person_by_med_zip[med_zip]
+
+        # 4️⃣ No match → register new person
+        person_id = str(uuid.uuid4())
+
+        self._new_people_buffer.append((
+            person_id,
+            row.get("First Name"),
+            row.get("Last Name"),
+            row.get("Client Date of Birth"),
+            row.get("Zip Code"),
+            strict,
+            med_dob,
+            med_zip,
+            weak,
+        ))
+
+        # Register keys immediately for downstream rows
+        if strict:
+            self._person_by_strict[strict] = person_id
+        if med_dob:
+            self._person_by_med_dob[med_dob] = person_id
         if med_zip:
-            person = self.get_person_by_key("id_key_medium_name_zip", med_zip)
-            if person:
-                return person[0]
+            self._person_by_med_zip[med_zip] = person_id
 
-        ## Not linking on weak, even if only one match. Too risky. 
-        # # 4️⃣ weak (name only)
-        # if weak:
-        #     cur = self.conn.execute(
-        #         "SELECT person_id FROM person WHERE id_key_weak_name = ?",
-        #         (weak,)
-        #     )
-        #     rows = cur.fetchall()
-        #     if len(rows) == 1:  # safe fallback
-        #         return rows[0][0]
+        return person_id
 
-        # 5️⃣ No match → create new person
-        return self.insert_person(
-            first=row.get("First Name"),
-            last=row.get("Last Name"),
-            dob=row.get("Client Date of Birth"),
-            zip_code=row.get("Zip Code"),
-            strict_key=strict,
-            med_name_dob_key=med_dob,
-            med_name_zip_key=med_zip,
-            weak_key=weak
-        )
+    def flush_new_people_buffer(self):
+        if not self._new_people_buffer:
+            return
 
-    
+        clean = self._clean_sql_value
+
+        self.conn.executemany("""
+            INSERT INTO person (
+                person_id,
+                first_name, last_name, dob, zip,
+                id_key_strict_name_dob_zip,
+                id_key_medium_name_dob,
+                id_key_medium_name_zip,
+                id_key_weak_name,
+                created_timestamp,
+                updated_timestamp
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """, [
+            (
+                pid,
+                clean(first),
+                clean(last),
+                clean(dob),
+                clean(zip),
+                clean(strict),
+                clean(med_dob),
+                clean(med_zip),
+                clean(weak),
+            )
+            for (
+                pid, first, last, dob, zip,
+                strict, med_dob, med_zip, weak
+            ) in self._new_people_buffer
+        ])
+
+        self.conn.commit()
+        self._new_people_buffer.clear()
+
     def get_or_create_participant(
         self,
         person_id,
@@ -367,29 +465,36 @@ class ValidationDBLogger:
         str
             UUID string identifying the participant.
         """
+        key = (person_id, dataset_name, org)
 
-        # 1. Try fetch existing participant
-        cur = self.conn.execute("""
-            SELECT participant_id 
-            FROM participant
-            WHERE person_id=? AND dataset_name=? AND org=?
-        """, (person_id, dataset_name, org))
-
-        row = cur.fetchone()
-        if row:
-            return row[0]  # <-- existing persistent participant_id
-
-        # 2. Create new participant
+        pid = self._participant_map.get(key)
+        
+        if pid:
+            return pid
+        
         participant_id = str(uuid.uuid4())
 
-        self.conn.execute("""
+        self._participant_map[key] = participant_id
+
+        self._new_participants_buffer.append(
+        (participant_id, person_id, dataset_name, org)
+        )
+
+        return participant_id
+    
+    def flush_new_participants(self):
+        if not self._new_participants_buffer:
+            return
+
+        self.conn.executemany("""
             INSERT INTO participant (
                 participant_id, person_id, dataset_name, org
             ) VALUES (?, ?, ?, ?)
-        """, (participant_id, person_id, dataset_name, org))
+        """, self._new_participants_buffer)
 
         self.conn.commit()
-        return participant_id
+        self._new_participants_buffer.clear()
+        
     
     def mark_presence_participant(self, run_id, participant_id, status, row_number, sheet_name, quarter):
         
@@ -410,41 +515,44 @@ class ValidationDBLogger:
             Presence status (e.g. ``"present"``, ``"missing"``).
         """
 
-        self.conn.execute(
-            """
+        # self.conn.execute(
+        #     """
+            # INSERT OR REPLACE INTO participant_presence_log
+            #     (run_id, participant_id, status, row_number, sheet_name, quarter, timestamp)
+            # VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        #     """,
+        #     (run_id, participant_id, status, row_number, sheet_name, quarter)
+        # )
+
+        self._participant_presence_buffer.append((
+        run_id,
+        participant_id,
+        status,
+        row_number,
+        sheet_name,
+        quarter
+        ))
+
+    def flush_participant_presence(self):
+
+        if not self._participant_presence_buffer:
+            return
+        try:
+            self.conn.execute("BEGIN")
+            self.conn.executemany("""
             INSERT OR REPLACE INTO participant_presence_log
                 (run_id, participant_id, status, row_number, sheet_name, quarter, timestamp)
             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            """,
-            (run_id, participant_id, status, row_number, sheet_name, quarter)
-        )
-
-        self.conn.commit()
-
-
-    def bulk_log_cell_history(self, records):
-
-        """
-        Bulk insert cell-level value history records.
-
-        Parameters
-        ----------
-        records : list of dict
-            Each record represents a single cell value observation
-            with associated run, participant, and column identifiers.
-
-        Notes
-        -----
-        This method performs no validation; it assumes records are
-        already normalized and schema-compliant.
-        """
-
-        df = pd.DataFrame(records)
-        if not df.empty:
-            df.to_sql("cell_value_history", self.conn, if_exists="append", index=False)
+        """, self._participant_presence_buffer)
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        finally:
+            self._participant_presence_buffer.clear()   
 
     def log_all_normalized_cell_values(
-        logger,
+        self,
         run_id,
         dataset_name,
         normalized_data,   # dict: sheet_name → normalized df
@@ -490,51 +598,49 @@ class ValidationDBLogger:
             if "id_key" not in df_norm.columns:
                 print(f"[WARN] Sheet '{sheet_name}' has no id_key column; skipping logging.")
                 continue
+            
+            df_norm = df_norm[df_norm["id_key"].isin(key_to_participant)].copy()
 
-            records = []
 
-            # ---------------------------------------------------
-            # 3. Loop through every row in this sheet
-            # ---------------------------------------------------
-            for idx, row in df_norm.iterrows():
+            column_ids = {}
 
-                id_key = row["id_key"]
-
-                # Skip rows with no matching participant
-                participant_id = key_to_participant.get(id_key)
-                if participant_id is None:
-                    # Optionally accumulate untracked rows here
-                    continue
-
-                # ---------------------------------------------------
-                # 4. Log every meaningful column except metadata
-                # ---------------------------------------------------
-                for col in df_norm.columns:
+            for col in df_norm.columns:
                     if col in ("id_key", "row_number", "person_id", "participant_id"):
                         continue
 
-                    column_id = logger.get_or_create_column(
+                    column_ids[col] = self.get_or_create_column(
                         dataset_name=dataset_name,
                         sheet_name=sheet_name,
                         column_name=col
                     )
 
-                    value_raw = None  # raw not available because this is post-normalization logging
-                    value_norm = row[col]
+            value_cols = [
+                c for c in df_norm.columns
+                if c not in ("id_key", "row_number", "person_id", "participant_id")
+            ]
 
-                    records.append({
-                        "history_id": uuid.uuid4().hex,
-                        "run_id": run_id,
-                        "participant_id": participant_id,
-                        "column_id": column_id,
-                        "value_raw": value_raw,
-                        "value_normalized": value_norm
-                    })
+            long_df = df_norm.melt(
+                id_vars=["id_key"],
+                value_vars=value_cols,
+                var_name="column_name",
+                value_name="value_normalized"
+            )
 
-            # ---------------------------------------------------
-            # 5. Bulk insert logs for this sheet
-            # ---------------------------------------------------
-            logger.bulk_log_cell_history(records)
+            long_df["participant_id"] = long_df["id_key"].map(key_to_participant)
+            long_df["column_id"] = long_df["column_name"].map(column_ids)
+            long_df["run_id"] = run_id
+            long_df["history_id"] = [uuid.uuid4().hex for _ in range(len(long_df))]
+            long_df["value_raw"] = None
+
+            long_df = long_df.drop(columns=["id_key", "column_name"])
+
+            long_df.to_sql(
+                "cell_value_history",
+                self.conn,
+                if_exists="append",
+                index=False,
+                chunksize=5_000
+            )
     
     def log_violation(self, run_id, rule_id, participant_id,
                     column_id, normalized, raw_value, severity="error"):
@@ -563,22 +669,49 @@ class ValidationDBLogger:
             Severity level (default: ``"error"``).
         """
          
-        violation_id = str(uuid.uuid4())
+        # violation_id = str(uuid.uuid4())
         
         clean = self._clean_sql_value
         
-        self.conn.execute("""
+        # self.conn.execute("""
+            # INSERT INTO validation_violation (
+            #     violation_id, run_id, rule_id, participant_id,
+            #     column_id, normalized, raw_value, severity
+            # ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        # """, (violation_id, run_id, rule_id, participant_id,
+        #     column_id, clean(normalized), clean(raw_value), severity))
+        
+        # self.conn.commit()
+
+        self._violation_buffer.append((
+        uuid.uuid4().hex,
+        run_id,
+        rule_id,
+        participant_id,
+        column_id,
+        clean(normalized),
+        clean(raw_value),
+        severity,
+        ))
+
+    def flush_violations(self):
+
+        if not self._violation_buffer:
+            return
+        try:
+            self.conn.execute("BEGIN")
+            self.conn.executemany("""
             INSERT INTO validation_violation (
                 violation_id, run_id, rule_id, participant_id,
                 column_id, normalized, raw_value, severity
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (violation_id, run_id, rule_id, participant_id,
-            column_id, clean(normalized), clean(raw_value), severity))
-        
-        self.conn.commit()
-
-
-    import uuid
+        """, self._violation_buffer)
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        finally:
+            self._violation_buffer.clear()    
 
     def log_key_mismatches(self, run_id, mismatches):
         """

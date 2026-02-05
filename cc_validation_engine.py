@@ -118,7 +118,9 @@ from cc_cross_rule_engine import CrossRuleEngine
 ### SQL Logging Related Imports 
 from validation_db_logger import ValidationDBLogger
 from hashlib import sha256
+from datetime import datetime
 import uuid
+import warnings
 
 COLUMN_CLASS_MAP = {
     "categorical": categoricalColumn,
@@ -169,7 +171,13 @@ class ValidationEngine:
             Identifier used when generating error reports (“org|quarter|filename”).
     """
     def __init__(self, workbook_definitions, cross_rules=None, logging = False):
+        
+        ## file meta data navigation 
         self.workbook_definitions = workbook_definitions
+        self.workbook_type = None
+        self.workbook_format = None
+        self.workbook_definitions_location = None
+        
         self.cross_rules = cross_rules or {}
         self.normalized_data = {}   # {sheet_name: DataFrame}
         self.errors = []            # list of DataFrames
@@ -179,9 +187,14 @@ class ValidationEngine:
         self.logging = logging 
         self.mismatches = []
         self.single_sheet = []
+        self.db_logger = None
+        self.run_id = None
 
+        if self.logging:
+            self.db_logger = ValidationDBLogger()
+            
 
-    def _validate_sheet(self, df, sheet_name, accepted_responses, file=None, row_offset=1):
+    def _validate_sheet(self, df, sheet_name, accepted_responses, row_offset=1):
         
         """
         Validate and normalize all columns for a single sheet.
@@ -287,7 +300,7 @@ class ValidationEngine:
             s_norm = validator.normalize(raw)
             s_fmt = validator.format(s_norm)
 
-            errs = validator.errors_df(col, raw, s_norm, file=file, sheet=sheet_name, row_offset=row_offset)    
+            errs = validator.errors_df(col, raw, s_norm, file=self.file, sheet=sheet_name, row_offset=row_offset)    
 
             if not errs.empty:
 
@@ -334,10 +347,188 @@ class ValidationEngine:
 
         # --- Remove any errors that belong to fully blank rows ---
         if dropped_row_numbers:
-            errors_df = errors_df[~errors_df[f"row_number_{sheet_name}"].isin(dropped_row_numbers)]
+            errors_df = errors_df[~errors_df["row_number"].isin(dropped_row_numbers)]
 
         self._validated = True
         return normalized_df, errors_df
+    
+    def _set_org(self): 
+
+        if isinstance(self.file, str):
+            parts = self.file.split("|")
+
+            if len(parts) == 2:
+                self.org = parts[0] 
+                if(len(parts[0])==0):
+                    warnings.warn("Potential Problem - Org is empty string.")
+        else:
+            raise ValueError("Cannot set org: file must be a string structured as {org}|{quarter}")
+
+    def _set_quarter(self): 
+
+        if isinstance(self.file, str):
+            parts = self.file.split("|")
+
+            if len(parts) == 2:
+                self.quarter = parts[1] 
+                if(len(parts[1])==0):
+                    warnings.warn("Potential Problem - Quarter is empty string.")
+        else:
+            raise ValueError("Cannot set quarter: file must be a string structured as {org}|{quarter}")
+
+    def set_file(self, file):
+        
+        self.file = file
+        self._set_org()
+        self._set_quarter()
+
+    def _assert_file_context_ready(self) -> None:
+        if self.file is None:
+            raise RuntimeError("Engine is not ready: file/org/quarter have not been set. Call set_file().")
+        if self.org is None:
+            raise RuntimeError("Engine is not ready: file/org/quarter have not been set. Call set_file().")
+        if self.quarter is None: 
+            raise RuntimeError("Engine is not ready: file/org/quarter have not been set. Call set_file().")
+        
+    def _set_workbook_format(self, workbook_format):
+        
+        if workbook_format not in self.workbook_definitions[self.workbook_type]:
+            raise ValueError(f"Workbook format '{workbook_format}' is not defined for workbook type '{self.workbook_type}'.")
+        self.workbook_format = workbook_format
+        
+    def _set_workbook_definitions_context(self, workbook_type, workbook_format):
+
+        if workbook_type not in self.workbook_definitions:
+            raise ValueError(f"Workbook type '{workbook_type}' is not defined.")
+        self.workbook_type = workbook_type
+
+        self._set_workbook_format(workbook_format)
+
+    def _set_workbook_definitions_location(self, sheet_name):
+
+        working_location = self.workbook_definitions[self.workbook_type][self.workbook_format]
+
+        if sheet_name not in working_location:
+            raise ValueError(f"Sheet name '{sheet_name}' is not defined for workbook type '{self.workbook_type}' and format '{self.workbook_format}'.")
+        
+        self.workbook_definitions_location = self.workbook_definitions[self.workbook_type][self.workbook_format][sheet_name]
+
+    def _get_file_metadata(self, item:str):
+
+        if self.workbook_definitions_location is None: 
+            raise ValueError("workbook_definitions_location is not set. Call set_workbook_definitions_location first.")
+        
+        return self.workbook_definitions_location[item]
+
+    ## normalize_data
+    def normalize_data(self, workbook_type, workbook_format, dfs_by_sheet):
+
+        ### confirm that the file, org, and quarter values have been set correctly.
+        self._assert_file_context_ready()
+
+        ### make sure the provided workbook type and format vavlues are valid and pass them to the engine's self.values
+        self._set_workbook_definitions_context(workbook_type, workbook_format)
+
+        ### declare the run level column_error_index value that is going to be used across validate_sheet calls 
+        self.column_error_index = {}
+
+        ### if logging is enabled, create a new run entry in the database and pass the run id to the engine for later use
+        if self.logging and self.run_id is None:
+            ## create a unique id connected to the information passed in the run table 
+            self.run_id =  self.db_logger.start_run(self.workbook_type, self.org, self.quarter, triggered_by="mwebb")
+
+        # ============================================================
+        # 1️⃣ Sheet-by-sheet validation
+        # ============================================================
+        
+        ### using the dfs_by_sheet dictionary generated by the workbook loader loop through validate_sheet calls and generate a normalized data dictionary and an errors list
+        for sheet_name, df in dfs_by_sheet.items():
+
+            ### using the workbook type and format values set earlier, set the workbook definitions location for the current sheet
+            self._set_workbook_definitions_location(sheet_name)
+
+            ### grab the accepted response dictionary for the current sheet
+            accepted_responses = self._get_file_metadata("accepted_responses")
+
+            norm_df, errs = self._validate_sheet(df, sheet_name, accepted_responses)
+
+            cols_to_check = [c for c in norm_df.columns if c not in ["id_key", f"row_number_{sheet_name}"]]
+            norm_df = norm_df.dropna(subset=cols_to_check, how="all")
+
+            ### pass the cleaned data to the engine attribute for normalized data
+            self.normalized_data[sheet_name] = norm_df
+
+            ### pass the errors to the existing engine level error list 
+            if not errs.empty:
+                self.errors.append(errs)
+
+    #### identify canonical entries and log to the databse if logging 
+
+    def ensure_normalized_data(self, normalized_data: dict) -> None:
+        if normalized_data is None:
+            raise ValueError("normalized_data is None")
+
+        if not isinstance(normalized_data, dict) or not normalized_data:
+            raise ValueError("normalized_data must be a non-empty dict")  
+
+    def build_id_key(self,
+        df: pd.DataFrame,
+        columns: list[str],
+        *,
+        normalize: bool = True,
+        sep: str = "|",
+        null_token: str = ""
+    ) -> pd.Series:
+        """
+        Build a deterministic ID key from an arbitrary list of columns.
+        """
+
+        if not columns:
+            raise ValueError("columns must contain at least one column name")
+
+        missing = [c for c in columns if c not in df.columns]
+        if missing:
+            raise KeyError(f"Missing columns for id_key: {missing}")
+
+        parts = []
+
+        for col in columns:
+            s = df[col].astype(str)
+
+            if normalize:
+                s = (
+                    s.str.strip()
+                    .str.lower()
+                    .replace({"nan": null_token, "none": null_token})
+                )
+
+            parts.append(s.fillna(null_token))
+
+        return pd.Series(
+            sep.join(values) for values in zip(*parts)
+        )
+
+    def attach_identity_key(self,
+        normalized_data: dict,
+        identity_sheet: str,
+        id_columns: list[str],
+        id_col_name: str = "id_key"
+    ) -> None:
+        
+        self.ensure_normalized_data(normalized_data)
+
+        if identity_sheet not in normalized_data:
+            raise KeyError(f"Identity sheet '{identity_sheet}' not found")
+
+        df = normalized_data[identity_sheet]
+
+        df[id_col_name] = self.build_id_key(
+            df,
+            id_columns,
+            normalize=True
+        )
+
+        normalized_data[identity_sheet] = df
 
     ## main function, the one implementing the other functions 
     def validate_workbook(self, file, workbook_type, workbook_format, dfs_by_sheet, passed_identity_sheet, keycreators = None):
@@ -424,22 +615,22 @@ class ValidationEngine:
         self.file = file
         self.column_error_index = {}
 
-        org = file.split("|")[0] if isinstance(file, str) else ""
-        quarter = file.split("|")[1] if isinstance(file, str) else ""
+        self.org = file.split("|")[0] if isinstance(file, str) else ""
+        self.quarter = file.split("|")[1] if isinstance(file, str) else ""
 
         if self.logging:
-
-            logger = ValidationDBLogger()
             ## create a unique id connected to the information passed in the run table 
-            run_id = logger.start_run(workbook_type, org, quarter, triggered_by="mwebb")
+            self.run_id =  self.db_logger.start_run(workbook_type, self.org, self.quarter, triggered_by="mwebb")
 
         # ============================================================
         # 1️⃣ Sheet-by-sheet validation
         # ============================================================
+        print(f"{self.org} {workbook_type} - Starting Normalization @ {datetime.now()}")
+
         for sheet_name, df in dfs_by_sheet.items():
             accepted_responses = self.workbook_definitions[workbook_type][workbook_format][sheet_name]["accepted_responses"]
 
-            norm_df, errs = self._validate_sheet(df, sheet_name, accepted_responses, file=file)
+            norm_df, errs = self._validate_sheet(df, sheet_name, accepted_responses)
 
             cols_to_check = [c for c in norm_df.columns if c not in ["id_key", f"row_number_{sheet_name}"]]
             norm_df = norm_df.dropna(subset=cols_to_check, how="all")
@@ -463,96 +654,9 @@ class ValidationEngine:
             raise ValueError(f"Identity sheet '{identity_sheet}' not found in workbook.")
         
         # Generate spreadsheet specific keys that can be used to map back to a universal person ID
+        
+        print(f"{self.org} {workbook_type} - Recording Mismatches @ {datetime.now()}")
 
-        if self.logging:
-
-            for kc, colname in keycreators:
-                id_df[colname] = id_df.apply(kc.create_key_from_row, axis=1)
-
-            person_ids = []
-
-            for idx, row in id_df.iterrows():
-                
-                pid = logger.resolve_person(row) ### checks keys, and resolves match or creates new person as needed
-                person_ids.append(pid) ## create list of recognized person ids to be added to participant table 
-
-            id_df["person_id"] = person_ids
-
-            # Create or update dataset entries in the DB
-
-            participant_ids = []
-
-            for idx, row in id_df.iterrows():
-                pid = row["person_id"]
-
-                participant_id = logger.get_or_create_participant(
-                    person_id=pid,
-                    dataset_name=workbook_type,
-                    org=org
-                )
-
-                participant_ids.append(participant_id)
-
-            id_df["participant_id"] = participant_ids
-            
-            logger.log_all_normalized_cell_values(
-                run_id=run_id,
-                dataset_name=workbook_type,
-                normalized_data=self.normalized_data,
-                id_df=id_df
-            )
-
-            ### if this is the first run for a given dataset, mark all participants as present. 
-            cur = logger.conn.execute(
-                """
-                SELECT COUNT(*) 
-                FROM participant 
-                WHERE dataset_name=? AND org=?
-                """,
-                (workbook_type, org)
-            )
-            prior_count = cur.fetchone()[0]
-            is_first_run = prior_count == 0
-            
-            row_col = f"row_number_{identity_sheet}"
-
-            pid_to_row = (
-                id_df
-                .set_index("participant_id")[row_col]
-                .to_dict()
-            )
-
-            seen = set(pid_to_row.keys())
-
-            if is_first_run:
-                for pid, row_number in pid_to_row.items():
-                    logger.mark_presence_participant(
-                        run_id=run_id,
-                        participant_id=pid,
-                        status="present",
-                        row_number=row_number,
-                        sheet_name = identity_sheet,
-                        quarter = quarter
-                    )
-            else:
-                cur = logger.conn.execute(
-                    "SELECT participant_id FROM participant WHERE dataset_name=? AND org=?",
-                    (workbook_type, org)
-                )
-                all_ids = [r[0] for r in cur.fetchall()]
-
-                for pid in all_ids:
-                    status = "present" if pid in pid_to_row else "missing"
-                    row_number = pid_to_row.get(pid)  # None if missing
-                    logger.mark_presence_participant(
-                        run_id=run_id,
-                        participant_id=pid,
-                        status=status,
-                        row_number=row_number,
-                        sheet_name=identity_sheet,
-                        quarter=quarter
-                    )
-                
         def record_mismatches(keys, org, quarter, sheet, issue):
             for k in keys:
                 self.mismatches.append({
@@ -568,7 +672,7 @@ class ValidationEngine:
             if "id_key" in df.columns:
                 dup_keys = df.loc[df["id_key"].duplicated(), "id_key"].unique()
                 if len(dup_keys) > 0:
-                    record_mismatches(dup_keys, org, quarter, sheet_name, "duplicate_in_sheet")
+                    record_mismatches(dup_keys, self.org, self.quarter, sheet_name, "duplicate_in_sheet")
                     all_dup_keys.update(dup_keys)
 
         # --- Step 2: drop those keys from every sheet before comparing/merging ---
@@ -593,12 +697,123 @@ class ValidationEngine:
             extra_in_sheet   = sheet_keys - base_keys
 
             if missing_in_sheet:
-                record_mismatches(missing_in_sheet, org, quarter, sheet_name, "missin_in_sheet")
+                record_mismatches(missing_in_sheet, self.org, self.quarter, sheet_name, "missing_in_sheet")
             if extra_in_sheet:
-                record_mismatches(extra_in_sheet, org, quarter, sheet_name, "extra_in_sheet")
+                record_mismatches(extra_in_sheet, self.org, self.quarter, sheet_name, "extra_in_sheet")
 
             ### inner merge is catching any stray single participant entries and removing from the dataset that will be processed
             merged = merged.merge(df, on="id_key", how="inner", suffixes=("", f"_{sheet_name}"))
+
+            
+        valid_id_keys = set(merged["id_key"])
+
+        id_df_valid = id_df[id_df["id_key"].isin(valid_id_keys)].copy()
+
+        print(f"{self.org} {workbook_type} - Starting Logging @ {datetime.now()}")
+
+        if self.logging:
+
+            for kc, colname in keycreators:
+                id_df_valid[colname] = id_df_valid.apply(kc.create_key_from_row, axis=1)
+
+            person_ids = []
+
+            self.db_logger.load_person_maps()
+
+            for _, row in id_df_valid.iterrows():
+                
+                pid = self.db_logger.resolve_person(row) ### checks keys, and resolves match or creates new person as needed
+                person_ids.append(pid) ## create list of recognized person ids to be added to participant table 
+
+            self.db_logger.flush_new_people_buffer()
+
+            id_df_valid["person_id"] = person_ids
+
+            # Create or update dataset entries in the DB
+
+            participant_ids = []
+
+            self.db_logger.load_participant_map(workbook_type, self.org)
+
+            for _, row in id_df_valid.iterrows():
+                pid = row["person_id"]
+
+                participant_id = self.db_logger.get_or_create_participant(
+                    person_id=pid,
+                    dataset_name=workbook_type,
+                    org=self.org
+                )
+
+                participant_ids.append(participant_id)
+            
+            self.db_logger.flush_new_participants()
+
+            id_df_valid["participant_id"] = participant_ids
+            
+            self.db_logger.log_all_normalized_cell_values(
+                run_id=self.run_id,
+                dataset_name=workbook_type,
+                normalized_data=self.normalized_data,
+                id_df=id_df_valid
+            )
+
+            ### if this is the first run for a given dataset, mark all participants as present. 
+            cur = self.db_logger.conn.execute(
+                """
+                SELECT COUNT(*) 
+                FROM participant 
+                WHERE dataset_name=? AND org=?
+                """,
+                (workbook_type, self.org)
+            )
+            prior_count = cur.fetchone()[0]
+            is_first_run = prior_count == 0
+            
+            row_col = f"row_number_{identity_sheet}"
+
+            pid_to_row = (
+                id_df_valid
+                .set_index("participant_id")[row_col]
+                .to_dict()
+            )
+
+            seen = set(pid_to_row.keys())
+
+            if is_first_run:
+                for pid, row_number in pid_to_row.items():
+                    self.db_logger.mark_presence_participant(
+                        run_id= self.run_id,
+                        participant_id=pid,
+                        status="present",
+                        row_number=row_number,
+                        sheet_name = identity_sheet,
+                        quarter = self.quarter
+                    )
+
+                self.db_logger.flush_participant_presence()
+
+            else:
+                cur = self.db_logger.conn.execute(
+                    "SELECT participant_id FROM participant WHERE dataset_name=? AND org=?",
+                    (workbook_type, self.org)
+                )
+                all_ids = [r[0] for r in cur.fetchall()]
+
+                print(f"There are {len(all_ids)} participant IDs to check presence for.")
+
+                for pid in all_ids:
+                    status = "present" if pid in pid_to_row else "missing"
+                    row_number = pid_to_row.get(pid)  # None if missing
+                    self.db_logger.mark_presence_participant(
+                        run_id=self.run_id,
+                        participant_id=pid,
+                        status=status,
+                        row_number=row_number,
+                        sheet_name=identity_sheet,
+                        quarter=self.quarter
+                    )
+
+                self.db_logger.flush_participant_presence()
 
         if self.mismatches:
             filtered = [
@@ -607,8 +822,8 @@ class ValidationEngine:
             ]
 
             if filtered and self.logging:
-                logger.log_key_mismatches(
-                    run_id=run_id,
+                self.db_logger.log_key_mismatches(
+                    run_id= self.run_id,
                     mismatches=filtered
                 )
 
@@ -618,8 +833,8 @@ class ValidationEngine:
         mask = normalized_combined.columns.duplicated() & normalized_combined.columns.isin(dedup_cols)
         normalized_combined = normalized_combined.loc[:, ~mask]
 
-        normalized_combined["org"] = org
-        normalized_combined["period"] = quarter
+        normalized_combined["org"] = self.org
+        normalized_combined["period"] = self.quarter
         self.single_sheet = normalized_combined
 
         # ============================================================
@@ -641,7 +856,7 @@ class ValidationEngine:
 
                 # Build lookup: id_key → participant_id
                 id_lookup = (
-                    id_df
+                    id_df_valid
                     .dropna(subset=["id_key"])
                     .drop_duplicates(subset=["id_key"], keep="first")
                     .set_index("id_key")["participant_id"]
@@ -657,6 +872,8 @@ class ValidationEngine:
             # --------------------------------------------------------
             # Persist each violation
             # --------------------------------------------------------
+            print(f"There are {len(err_df)} to log in this run.")
+            
             for idx, row in err_df.iterrows():
 
                 rule_name = row.get("rule", "")
@@ -667,18 +884,26 @@ class ValidationEngine:
 
                 severity = "error"   # or dynamic based on rule definition
 
+                column_id = self.db_logger.get_or_create_column(
+                    dataset_name = workbook_type, 
+                    sheet_name = row.get("sheet"),
+                    column_name = col 
+                )
 
                 if self.logging: 
-                    logger.log_violation(
-                        run_id=run_id,
+                    self.db_logger.log_violation(
+                        run_id=self.run_id,
                         rule_id=rule_name,                # optionally: map rule → rule_id
                         participant_id=participant_id,
-                        column_id=col,               # or your internal column_id
+                        column_id= column_id,               # or your internal column_id
                         normalized=normalized,
                         raw_value=raw_value,
                         severity=severity
                     )
 
+                print(f"Logging an error for {participant_id} at {col}.")
+
+            self.db_logger.flush_violations()
 
     def _apply_cross_rules(self, workbook_type, workbook_format, file=None, row_offset=1):
         

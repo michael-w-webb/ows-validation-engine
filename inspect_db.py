@@ -352,21 +352,33 @@ print(latest_runs_by_org_dataset["run_id"])
 
 from rapidfuzz import process, fuzz
 
-person_check = pd.read_sql_query("""SELECT
-    p.person_id,
-    p.participant_id,
-    p.org,
-    p.dataset_name
-FROM participant p
-WHERE p.person_id IN (
-    SELECT person_id
-    FROM participant
-    GROUP BY person_id
-    HAVING COUNT(*) > 1
+person_check = pd.read_sql_query(
+    """
+    SELECT
+        p.person_id,
+        per.first_name,
+        per.last_name,
+        per.dob,
+        per.zip,
+        p.participant_id,
+        p.org,
+        p.dataset_name
+    FROM participant p
+    JOIN person per
+      ON p.person_id = per.person_id
+    WHERE p.person_id IN (
+        SELECT person_id
+        FROM participant
+        GROUP BY person_id
+        HAVING COUNT(*) > 1
+    )
+    ORDER BY
+        p.person_id,
+        p.participant_id;
+    """,
+    conn
 )
-ORDER BY
-    p.person_id,
-    p.participant_id;""", conn)
+
 
 person_check.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\person_check.csv", index=False)
 

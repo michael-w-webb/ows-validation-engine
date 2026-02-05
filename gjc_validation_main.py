@@ -2,7 +2,7 @@ import pandas as pd
 
 from cc_validation_engine import ValidationEngine
 from cc_validation_workbook_loader import WorkbookLoader
-from gjc_column_label_lists import workbook_definitions
+from gjc_column_label_lists import workbook_program_definitions, workbook_definitions
 from gjc_file_metadata_dicitionary import submission_files
 from cc_key_creator import KeyCreator
 from cc_standard_normalizations import strict_alphabetic_normalize
@@ -17,7 +17,8 @@ cross_rules = [
     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 ]
 
-for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
+for target_period in ["PY4 Q2"]:
+                      #, "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
     all_normalized = []
     all_errors = []
@@ -43,6 +44,14 @@ for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3"
 
         file_path = file_meta["file path"]
         workbook_format = file_meta["format"]
+
+        #### starting row for data ingestion, treated as the 'header' value in read_excel, it can take a value from the file itself 
+        #### as it does here (if available), but it can also take a sheet specific value from the workbook_definitions object inside of 
+        #### workbook loader if one is specified there. The order of precedence is goings to be : workbook_definitions -> file_meta -> default (0)
+
+        starting_row = 0  # default starting row
+        if "starting row" in file_meta and file_meta["starting row"] is not None:
+            starting_row = file_meta["starting row"]
 
         #### Start - Key Specification #### 
 
@@ -90,17 +99,22 @@ for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3"
                     (kc_med_name_zip, "id_key_medium_name_zip"),
                     (kc_weak, "id_key_weak_name")]
 
+
+        multi_sheet_mode = len(workbook_definitions[target_book][workbook_format]) > 1
+
         loader = WorkbookLoader(
             file_path=file_path,
             workbook_type=workbook_format,
             sheet_defs=workbook_definitions[target_book],
+            starting_row=starting_row,
             dynamic=True,
-            keycreator = sheetlink_keycreator
+            keycreator = sheetlink_keycreator,
+            multi_sheet_mode= multi_sheet_mode
         )
 
         loader.preprocess_excel()
         dfs_by_sheet = loader.load_sheets()
-        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
+        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = False)
         
         file_id = f"{org}|{period}".replace(" ", "_")
 

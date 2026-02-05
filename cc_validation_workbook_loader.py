@@ -144,11 +144,19 @@ def ensure_unprotected_visible(excel, file_path, password="workforce"):
           can still be unhidden using this approach unless protected.
         - Caller must ensure ``excel.Quit()`` is eventually called.
     """
+    def retry(call, attempts=5, delay=0.4):
+        for _ in range(attempts):
+            try:
+                return call()
+            except Exception:
+                time.sleep(delay)
+        raise
+        
     wb = None
     try:
         print(f"🔓 Unprotecting and unhiding sheets in: {file_path}")
         wb = excel.Workbooks.Open(file_path, UpdateLinks=0)
-
+        time.sleep(0.5)
         # Unprotect the workbook itself (if protected)
         try:
             wb.Unprotect(password or "")
@@ -171,9 +179,12 @@ def ensure_unprotected_visible(excel, file_path, password="workforce"):
 
     finally:
         if wb:
-            wb.Close(SaveChanges=1)
+            try:
+                retry(lambda: wb.Close(SaveChanges=1))
+            except Exception as e:
+                print(f"⚠️ Workbook did not close cleanly: {e}")
 
-def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int = 5, debug: bool = True):
+def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int = 5, debug: bool = False):
     """
     Select and reorder columns from a messy Excel DataFrame using a canonical-to-variants
     mapping, with tolerant header matching and optional debug output.
@@ -363,7 +374,7 @@ class WorkbookLoader:
         * Workbooks may arrive protected or with hidden sheets.
         * Files may be intermittently locked (OneDrive, concurrent users, etc.).
         """
-    def __init__(self, file_path, workbook_type, sheet_defs, dynamic=False, password="workforce", keycreator: KeyCreator = None):
+    def __init__(self, file_path, workbook_type, sheet_defs, starting_row = 0, dynamic=False, password="workforce", keycreator: KeyCreator = None, multi_sheet_mode: bool = True):
         """
         Initialize a WorkbookLoader for a specific Excel file and schema.
 
@@ -406,9 +417,11 @@ class WorkbookLoader:
 
         self.file_path = file_path
         self.workbook_type = workbook_type
+        self.starting_row = starting_row
         self.sheet_defs = sheet_defs
         self.dynamic = dynamic
         self.password = password
+        self.multi_sheet_mode = multi_sheet_mode
 
         self.keycreator = keycreator
 
@@ -466,6 +479,7 @@ class WorkbookLoader:
         finally:
             # Always close Excel cleanly
             try:
+                
                 pythoncom.CoUninitialize()
                 excel.Quit()
             except Exception:
@@ -515,11 +529,15 @@ class WorkbookLoader:
         permission_denied_log = getattr(self, "permission_denied_log", [])
 
         sheet_defs_for_type = self.sheet_defs[self.workbook_type]
-        multi_sheet_mode = len(sheet_defs_for_type) > 1
+        # multi_sheet_mode = len(sheet_defs_for_type) > 1
 
         for sheet_key, config in sheet_defs_for_type.items():
-            starting_row = config.get("starting_row", 1)
             starting_col = config.get("starting_column", 0)
+
+            sheet_specific_starting_row = config.get("starting_row", None)
+
+            if sheet_specific_starting_row is not None and sheet_specific_starting_row != 0:
+                self.starting_row = sheet_specific_starting_row
 
             raw_df = None
             attempt = 0
@@ -532,12 +550,12 @@ class WorkbookLoader:
                     with open(self.file_path, "rb") as f:
 
                         read_kwargs = {
-                            "header": starting_row,
+                            "header": self.starting_row,
                             "engine": "openpyxl",
                             "usecols": config.get("columns_used", None),
                         }
 
-                        if multi_sheet_mode:
+                        if self.multi_sheet_mode:
                             read_kwargs["sheet_name"] = sheet_key
 
                         raw_df = pd.read_excel(f, **read_kwargs).applymap(clean_text)
@@ -591,7 +609,7 @@ class WorkbookLoader:
 
                 df.columns = labels
 
-                if multi_sheet_mode:
+                if self.multi_sheet_mode:
                     df = df.copy()
                     if self.keycreator is not None:
                         df = self.keycreator.add_key_column(df, key_col="id_key")
@@ -644,7 +662,7 @@ class MultiWorkbookLoader:
     Designed for noisy, inconsistent partner submissions that still follow a
     common schema (labels, starting rows, required sheets).
     """
-    def __init__(self, file_paths, workbook_type, sheet_defs, dynamic=False, password="workforce", keycreator: KeyCreator = None):
+    def __init__(self, file_paths, workbook_type, sheet_defs, starting_row = 0, dynamic=False, password="workforce", keycreator: KeyCreator = None, multi_sheet_mode: bool = True):
         """
         Initialize a MultiWorkbookLoader.
 
@@ -672,6 +690,7 @@ class MultiWorkbookLoader:
         self.file_paths = list(file_paths)
         self.workbook_type = workbook_type
         self.sheet_defs = sheet_defs
+        self.starting_row = starting_row
         self.dynamic = dynamic
         self.password = password
 
@@ -770,6 +789,7 @@ class MultiWorkbookLoader:
                 file_path=file_path,
                 workbook_type=self.workbook_type,
                 sheet_defs=self.sheet_defs,
+                starting_row=self.starting_row,
                 dynamic=self.dynamic,
                 password=self.password,
                 keycreator=self.keycreator

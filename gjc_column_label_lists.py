@@ -154,7 +154,10 @@ institutional_information_accepted_responses_w_types = {
             "Putnam High School": ["putnam high school"],
             "New London High School": ["new london high school"],
             "CT STATE Three Rivers": ["ct state three rivers"],
-            "Community College Rhode Island": ["community college rhode island"]
+            "Community College Rhode Island": ["community college rhode island"],
+            "Lyman Memorial High School": ["lyman memorial high school"],
+            "Windham High School": ["windham high school"],
+            "Parish Hill High School": ["parish hill"]
         },
         "EWIB_HC": {
             "CT State Community College - Quinebaug Valley": [
@@ -195,7 +198,10 @@ institutional_information_accepted_responses_w_types = {
             ],
             "Connecticut Center for Arts and Technology & Greater New Haven Chamber of Commerce": [
                 "connecticut center for arts and technology & greater new haven chamber of commerce"
-            ]
+            ],
+            "Northeast Medical Institute": ["northeast medical institute"],
+            "Southern Connecticut State University": ["southern connecticut state university"],
+            "Excel Academy": ["excel academy"]
         },
         "TWP": {
             "Southern Connecticut State University": ["southern connecticut state university"],
@@ -266,7 +272,10 @@ institutional_information_accepted_responses_w_types = {
             "Manufacturing Essentials": ["manufacturing essentials"],
             "Optic Fabrication and Metrology": [
                 "optic fabrication and metrology"
-            ]
+            ],
+            "Swiss CNC Level 1": ["swiss cnc level 1"],
+            "Multi-Disciplinary Manufacturing Pre-Apprenticeship": [
+                "multi-disciplinary manufacturing pre-apprenticeship"]
         },
         "CWP": {
             # Health programs
@@ -277,7 +286,9 @@ institutional_information_accepted_responses_w_types = {
             "Patient Care Technician": ["patient care technician"],
             "Pharmacy Technician": ["pharmacy technician"],
             "Central Sterile Processing Technician": [
-                "central sterile processing technician"
+                "central sterile processing technician",
+                "certified sterile processing technician"
+
             ],
             "Career Training": [
                 "strive (support and training result in valuable employees)"
@@ -323,11 +334,18 @@ institutional_information_accepted_responses_w_types = {
         },
         "GNHCC": {
             "BioLaunch Basic Training Program": ["biolaunch basic training program"],
-            "Professional Skills Program": ["professional skills program"],
+            "Professional Skills Program": ["professional skills program", 
+                                            "professional skills training program"],
             "BioLaunch Basic Training Program & Professional Skills Program": [
-                "biolaunch basic training program & professional skills program"
+                "biolaunch basic training program & professional skills program",
+                "biolaunch basic training program professional skills training"
             ],
-            "BioLaunch Advanced Training Program": ["biolaunch advanced training program"]
+            "BioLaunch Advanced Training Program": ["biolaunch advanced training program"],
+            "Patient Care Technician": ["patient care technician training program"],
+            "Phlebotomy": ["phlebotomy"],
+            "Certified Nurses Aide":["cna training program",
+                                     "cna training program (8 week)",
+                                     "cna training program (11 week)"]
         },
         "TWP": {
             "Generative AI": ["generative ai"],
@@ -373,17 +391,20 @@ institutional_information_accepted_responses_w_types = {
                 "phlebotomy technician",
                 "certified phlebotomy technician"
             ],
-            "Patient Care Technician": ["patient care technician","EKG Technician and Phlebotomy Technician & PCT Exam","Certified Nurses Aide and EKG Technician& PCT exam","Certified Nurses Aide and EKG Technician","Certified Patient Care Technician"],
+            "Patient Care Technician": ["certified patient care technician", "patient care technician","EKG Technician and Phlebotomy Technician & PCT Exam","Certified Nurses Aide and EKG Technician& PCT exam"],
             "CPT & EKG Technician": ["cpt & ekg technician"],
             "EKG Technician and Phlebotomy Technician":["EKG Technician and Phlebotomy Technician"],
             "CNA and Phlebotomy Technician": ["CNA/Phlebotomy","Certified Nurses Aide and Phlebotomy Technician"],
-            "Central Sterile Processing": ["Central Sterile Processing"],
-            "Emergency Medical Tech": ["Emergency Medical Tech"]
+            "CNA and EKG Technician": ["certified nurses aide and ekg technician"],
+            "CEntral Sterile Processing Technician": ["central sterile processing"],
+            "Emergency Medical Technician (EMT)": [
+                "emergency medical tech"
+            ]
         }
     },
         "required": True
 },
-    "Length of Program": {
+     "Length of Program": {
         "type": "categorical",
         "accepted_responses": [
             "Less than 3 months",
@@ -840,7 +861,10 @@ program_enrollment_accepted_responses_w_types = {
             "Putnam High School": ["putnam high school"],
             "New London High School": ["new london high school"],
             "CT STATE Three Rivers": ["ct state three rivers"],
-            "Community College Rhode Island": ["community college rhode island"]
+            "Community College Rhode Island": ["community college rhode island"],
+            "Lyman Memorial High School": ["lyman memorial high school"],
+            "Windham High School": ["windham high school"],
+            "Parish Hill High School": ["parish hill"]
         },
         "EWIB_HC": {
             "CT State Community College - Quinebaug Valley": [
@@ -881,7 +905,10 @@ program_enrollment_accepted_responses_w_types = {
             ],
             "Connecticut Center for Arts and Technology & Greater New Haven Chamber of Commerce": [
                 "connecticut center for arts and technology & greater new haven chamber of commerce"
-            ]
+            ],
+            "Northeast Medical Institute": ["northeast medical institute"],
+            "Southern Connecticut State University": ["southern connecticut state university"],
+            "Excel Academy": ["excel academy"]
         },
         "TWP": {
             "Southern Connecticut State University": ["southern connecticut state university"],
@@ -952,7 +979,10 @@ program_enrollment_accepted_responses_w_types = {
             "Manufacturing Essentials": ["manufacturing essentials"],
             "Optic Fabrication and Metrology": [
                 "optic fabrication and metrology"
-            ]
+            ],
+            "Swiss CNC Level 1": ["swiss cnc level 1"],
+            "Multi-Disciplinary Manufacturing Pre-Apprenticeship": [
+                "multi-disciplinary manufacturing pre-apprenticeship"]
         },
         "CWP": {
             # Health programs
@@ -963,7 +993,9 @@ program_enrollment_accepted_responses_w_types = {
             "Patient Care Technician": ["patient care technician"],
             "Pharmacy Technician": ["pharmacy technician"],
             "Central Sterile Processing Technician": [
-                "central sterile processing technician"
+                "central sterile processing technician",
+                "certified sterile processing technician"
+
             ],
             "Career Training": [
                 "strive (support and training result in valuable employees)"
@@ -1009,11 +1041,18 @@ program_enrollment_accepted_responses_w_types = {
         },
         "GNHCC": {
             "BioLaunch Basic Training Program": ["biolaunch basic training program"],
-            "Professional Skills Program": ["professional skills program"],
+            "Professional Skills Program": ["professional skills program", 
+                                            "professional skills training program"],
             "BioLaunch Basic Training Program & Professional Skills Program": [
-                "biolaunch basic training program & professional skills program"
+                "biolaunch basic training program & professional skills program",
+                "biolaunch basic training program professional skills training"
             ],
-            "BioLaunch Advanced Training Program": ["biolaunch advanced training program"]
+            "BioLaunch Advanced Training Program": ["biolaunch advanced training program"],
+            "Patient Care Technician": ["patient care technician training program"],
+            "Phlebotomy": ["phlebotomy"],
+            "Certified Nurses Aide":["cna training program",
+                                     "cna training program (8 week)",
+                                     "cna training program (11 week)"]
         },
         "TWP": {
             "Generative AI": ["generative ai"],
@@ -1059,10 +1098,15 @@ program_enrollment_accepted_responses_w_types = {
                 "phlebotomy technician",
                 "certified phlebotomy technician"
             ],
-            "Patient Care Technician": ["patient care technician","EKG Technician and Phlebotomy Technician & PCT Exam","Certified Nurses Aide and EKG Technician& PCT exam"],
+            "Patient Care Technician": ["certified patient care technician", "patient care technician","EKG Technician and Phlebotomy Technician & PCT Exam","Certified Nurses Aide and EKG Technician& PCT exam"],
             "CPT & EKG Technician": ["cpt & ekg technician"],
             "EKG Technician and Phlebotomy Technician":["EKG Technician and Phlebotomy Technician"],
-            "CNA and Phlebotomy Technician": ["CNA/Phlebotomy","Certified Nurses Aide and Phlebotomy Technician"]
+            "CNA and Phlebotomy Technician": ["CNA/Phlebotomy","Certified Nurses Aide and Phlebotomy Technician"],
+            "CNA and EKG Technician": ["certified nurses aide and ekg technician"],
+            "CEntral Sterile Processing Technician": ["central sterile processing"],
+            "Emergency Medical Technician (EMT)": [
+                "emergency medical tech"
+            ]
         }
     },
         "required": True
@@ -1137,7 +1181,7 @@ program_enrollment_accepted_responses_w_types = {
 }
 
     },
-    "Non-completion reason descriptor": {
+    "If other, please specify exit reason": {
         "type": "identifier",
         "accepted_responses": []
     }

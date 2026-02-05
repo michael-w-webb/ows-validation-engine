@@ -107,7 +107,12 @@ cc_file_directory = {
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\Y4Q1\CareerConneCT Import 10.10.25.xlsx",
         "format": "simple format",
-        "starting_row": 3
+        "starting row": 3
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\Y4Q2\CareerConneCT Import 1.6.26.xlsx",
+        "format": "simple format",
+        "starting row": 3
       }
     }
   },
@@ -153,8 +158,18 @@ cc_file_directory = {
                       r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4.Q1. CRI WR New London - Data Entry Spreadsheet Updated.xlsm",
                       r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4Q1. CRI We Rise. Bridgeport. Client Data Entry Spreadsheet.xlsm"],
         "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        ## this is currently missing transfers, need to talk to Dave about how he formats these.  
+        "file path": [r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. Bridgeport Client Data Entry Spreadsheet.xlsm",
+                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. Hartford Client Data Entry Spreadsheet.xlsm",
+                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. New Haven Client Data Entry Spreadsheet.xlsm",
+                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. New London Client Data Entry Spreadsheet.xlsm",
+                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. Waterbury Client Data Entry Sheet.xlsm"],
+        "format": "four sheet format"
       }
     }
+
   },
   "Career Resources Health Career": {
     "training data": {
@@ -192,6 +207,10 @@ cc_file_directory = {
       },
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\Y4Q1\NEW OWS. Y4 Q1.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\Y4Q2\To OWS. Y4 Q2.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
         "format": "four sheet format"
       }
     }
@@ -233,6 +252,10 @@ cc_file_directory = {
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\Y4Q1\CWP - CCT - CDL Data_20251010.xlsx",
         "format": "simple format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\Y4Q2\PY4Q2 CWP CDL Data_20260108.xlsx",
+        "format": "simple format"
       }
     }
   },
@@ -272,6 +295,10 @@ cc_file_directory = {
       },
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\Y4Q1\PY4Q1 - CWP - IT Data_20251010.xlsx",
+        "format": "simple format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\Y4Q2\PY4Q2 CWP IT Data_20260108.xlsx",
         "format": "simple format"
       }
     }
@@ -314,6 +341,10 @@ cc_file_directory = {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Eastern Workforce Investment Board\Y4Q1\EWIB - Data Entry Spreadsheet 10-9-25.xlsm",
         "format": "four sheet format"
       },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Eastern Workforce Investment Board\Y4Q2\EWIB - Data Entry Spreadsheet Updated 12-30-25.xlsm",
+        "format": "four sheet format"
+      }
     }
   },
   "TWP Health CareeRx Academy": {
@@ -352,6 +383,10 @@ cc_file_directory = {
       },
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\TWP Health CareeRx\Y4Q1\TWP HC - Data Entry Spreadsheet Updated (9) (1).xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\TWP Health CareeRx\Y4Q2\Y4Q2 - CareerConneCT Data Entry Spreadsheet (1).xlsx",
         "format": "four sheet format"
       }
     }
@@ -393,6 +428,10 @@ cc_file_directory = {
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\TWP Remote Works\Y4Q1\RemoteWorks CareerConneCT Staggered Data Entry Spreadsheet Y4 Q1.xlsm",
         "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\TWP Remote Works\Y4Q2\RemoteWorks CareerConneCT Staggered Data Entry Spreadsheet Y4 Q2.xlsm",
+        "format": "four sheet format"
       }
     }
   },
@@ -428,6 +467,10 @@ cc_file_directory = {
       },
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Charter Oak State College Foundation\Y4Q4 FINAL\CareerConneCT Staggered Data Entry Spreadsheet Charter Oak State College Foundation JUNE 2025 FINAL.xlsx",
+        "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Charter Oak State College Foundation\Y4Q2\Career ConneCT Staggered DataEntry Spreadsheet Charter OakState College Foundation December2025FINAL.xlsx",
         "format": "four sheet format"
       }
     }
@@ -465,6 +508,10 @@ cc_file_directory = {
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Connecticut State Buildings Trade Training Institute\Y4Q1\Connecticut_State_Building_Trades_Training_Institute_Y4Q1.xlsx",
         "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Connecticut State Buildings Trade Training Institute\Y4Q2\CSBTTI Data Entry Spreadsheet PY4 Q2 - MW Corrected.xlsm",
+        "format": "four sheet format"
       }
     }
   },
@@ -500,6 +547,14 @@ cc_file_directory = {
       },
       "PY3 Q4": {
         "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\Family_Centers_Y3Q4_FC_Data_Entry_Spreadsheet.xlsx",
+        "format": "four sheet format"
+      },
+      "PY4 Q1": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Family Centers\Y4Q1\FC - Data Entry Spreadsheet.xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Family Centers\Y4Q2\FC - Data Entry Spreadsheet Y4Q2.xlsm",
         "format": "four sheet format"
       }
     }
@@ -540,6 +595,10 @@ cc_file_directory = {
       },
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Havenly\Y4Q1\Havenly - Data Entry Spreadsheet_y4Q1.xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Havenly\Y4Q2\Havenly - Data Entry Spreadsheet Y4Q2.xlsm",
         "format": "four sheet format"
       }
 
@@ -582,6 +641,10 @@ cc_file_directory = {
       "PY4 Q1": {
         "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\ReadyCT\Y4Q1\ReadyCT - Student 5.0 SDE w Macros (10_10_25).xlsm",
         "format": "four sheet format"
+      },
+      "PY4 Q2": {
+        "file path": r"c:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\ReadyCT\Y4Q2\ReadyCT - Student 5.0 SDE w Macros (01_09_26).xlsm",
+        "format": "four sheet format"
       }
     }
   },
@@ -592,27 +655,27 @@ cc_file_directory = {
         "format": "four sheet format"
       },
       "PY2 Q2": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\OWS PII Storage - Documents\\Career_ConneCT\\.Programmatic_Data\\1 CBOs\\CCAT\\PY2 Q2\\CareerConneCT Staggered Data Entry Spreadsheet (Q4) .xlsx",
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\CCAT\PY2 Q2\CareerConneCT Staggered Data Entry Spreadsheet (Q4) .xlsx",
         "format": "four sheet format"
       },
       "PY2 Q3": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\OWS PII Storage - Documents\\Career_ConneCT\\.Programmatic_Data\\1 CBOs\\CCAT\\PY2 Q3\\CareerConneCT Staggered Data Entry Spreadsheet (Q1.24).xlsx",
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\CCAT\PY2 Q3\CareerConneCT Staggered Data Entry Spreadsheet (Q1.24).xlsx",
         "format": "four sheet format"
       },
       "PY2 Q4": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\OWS PII Storage - Documents\\Career_ConneCT\\.Programmatic_Data\\1 CBOs\\CCAT\\PY2 Q4\\CareerConneCT Staggered Data Entry Spreadsheet (Q3.24).xlsx",
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\CCAT\PY2 Q4\CareerConneCT Staggered Data Entry Spreadsheet (Q3.24).xlsx",
         "format": "four sheet format"
       },
       "PY3 Q1": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\OWS PII Storage - Documents\\Career_ConneCT\\.Programmatic_Data\\1 CBOs\\CCAT\\PY3 Q1\\CareerConneCT Staggered Data Entry Spreadsheet (Q3.24).xlsx",
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\CCAT\PY3 Q1\CareerConneCT Staggered Data Entry Spreadsheet (Q3.24).xlsx",
         "format": "four sheet format"
       },
       "PY3 Q2": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\OWS PII Storage - Documents\\Career_ConneCT\\.Programmatic_Data\\1 CBOs\\CCAT\\PY3Q2\\Y3Q2 CCT Staggered  Spreadsheet CCAT.xlsx",
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\CCAT\PY3Q2\Y3Q2 CCT Staggered  Spreadsheet CCAT.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q3": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\CCAT_Data_Entry_Spreadsheet_CCAT.xlsx",
+        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\CCAT\Y3Q3\Data Entry Spreadsheet CCAT.xlsx",
         "format": "four sheet format"
       }
     }

@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS validation_run (
 CREATE TABLE IF NOT EXISTS participant (
     participant_id TEXT PRIMARY KEY,
     person_id TEXT NOT NULL,
-    dataset_name TEXT NOT NULL,   -- e.g. "Training", "Enrollment", etc.
+    dataset_name TEXT NOT NULL,  -- "training data (CC)" or "TPI (GJC)" 
     org TEXT,                     -- EWIB, CWP, NCR, etc.
     
     created_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -3,8 +3,8 @@ from functools import reduce
 import pandas as pd
 import json
 
-from cc_cross_rule_descriptions import * 
-from cc_cross_rule_classes import BaseVariable, NumericVariable, DateVariable, CategoricalVariable
+from validation_engine.cross_rule_descriptions import * 
+from validation_engine.cross_rule_classes import BaseVariable, NumericVariable, DateVariable, CategoricalVariable
 
 class CrossRuleEngine:
     """
@@ -472,7 +472,9 @@ class CrossRuleEngine:
             op = logic_dict.get("op", "").lower()
 
             # Determine reference for description
-            if "values" in logic_dict:
+            if "language_substitute" in logic_dict:
+                ref = logic_dict["language_substitute"]
+            elif "values" in logic_dict:
                 ref = logic_dict["values"]
             elif "value" in logic_dict:
                 ref = logic_dict["value"]
@@ -509,7 +511,7 @@ class CrossRuleEngine:
                 subdescs = [antecedent_desc, then_desc, else_desc]
 
             elif op_upper == "NOT":
-                subdescs = self.describe_logic(subclauses[0], is_negated = True)
+                subdescs = self.describe_logic(subclauses[0], is_condition = is_condition, is_negated = True)
             else:
                 # Regular recursion for other operators (AND, OR, etc.)
                 subdescs = [self.describe_logic(sub, is_condition=is_condition) for sub in subclauses]

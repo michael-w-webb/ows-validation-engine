@@ -283,7 +283,7 @@ CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES = [
                 {
                     "var": ("Training", "Date of Program Exit"),
                     "op": "before",
-                    "value": "2025-09-30"  # static reference date
+                    "value": "2025-12-31"  # static reference date
                 },
                 {
                     "var":  [("Outcomes", "Employment Status at exit"),

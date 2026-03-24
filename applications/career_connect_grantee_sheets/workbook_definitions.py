@@ -821,23 +821,58 @@ four_sheet_personal_information_accepted_responses_w_types = {
     },
     "Highest Education Level Completed at Program Entry": {
         "type": "categorical",
-        "accepted_responses":["no education level completed",
-                              "attained secondary school diploma",
-                              "attained a secondary school equivalency",
-                              "completed one of more years of postsecondary education",
-                              "attained a bachelor's degree",
-                              "attained an associate's degree",
-                              "attained a postsecondary technical or vocational certificate (non-degree)",
-                              "attained a degree beyond a bachelor's degree"]
+        "accepted_responses": {
+            "no education level completed": [
+                "no education level completed"
+            ],
+            "attained secondary school diploma": [
+                "attained secondary school diploma",
+                "attained secondary diploma"
+            ],
+            "attained a secondary school equivalency": [
+                "attained a secondary school equivalency"
+            ],
+            "completed one or more years of postsecondary education": [
+                "completed one or more years of post secondary",
+                "completed one or more years of postsecondary education"
+            ],
+            "attained a bachelor's degree": [
+                "attained a bachelor's degree"
+            ],
+            "attained an associate's degree": [
+                "attained an associate's degree"
+            ],
+            "attained a postsecondary technical or vocational certificate (non-degree)": [
+                "attained a postsecondary technical or vocational certificate (non-degree)"
+            ],
+            "attained a degree beyond a bachelor's degree": [
+                "attained a degree beyond a bachelor's degree"
+            ]
+          }
     },
     "School Status at Program Entry": {
         "type": "categorical",
-        "accepted_responses":["not attending school or secondary school dropout",
-                              "not attending school; within age of compulsory school attendance",
-                              "not attending school; secondary school graduate or has a recognized equivalent",
-                              "in-school, postsecondary school",
-                              "in-school, alternative school",
-                              "in-school, secondary school or less"]
+        "accepted_responses": {
+            "not attending school or secondary school dropout": [
+                "not attending school or secondary school dropout"
+            ],
+            "not attending school; within age of compulsory school attendance": [
+                "not attending school; within age of compulsory school attendance"
+            ],
+            "not attending school; secondary school graduate or has a recognized equivalent": [
+                "not attending school; secondary school graduate or has a recognized equivalent"
+            ],
+            "in-school, postsecondary school": [
+                "in-school, postsecondary school"
+                "in school, postsecondary school"
+            ],
+            "in-school, alternative school": [
+                "in-school, alternative school"
+            ],
+            "in-school, secondary school or less": [
+                "in-school, secondary school or less"
+            ]
+          }
     },
     "TANF": {
         "type": "boolean"

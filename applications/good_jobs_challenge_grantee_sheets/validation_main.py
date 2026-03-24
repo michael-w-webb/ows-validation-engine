@@ -2,14 +2,11 @@ import pandas as pd
 
 from cc_validation_engine import ValidationEngine
 from cc_validation_workbook_loader import WorkbookLoader
-from gjc_column_label_lists import workbook_program_definitions, workbook_definitions
-from gjc_file_metadata_dicitionary import submission_files
+from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_definitions
+from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
 from cc_key_creator import KeyCreator
 from cc_standard_normalizations import strict_alphabetic_normalize
-from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
-
-workbook_definitions = workbook_definitions
-# Containers for results
+from applications.good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 
 
 cross_rules = [
@@ -17,14 +14,14 @@ cross_rules = [
     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 ]
 
-for target_period in ["PY4 Q2"]:
+for target_period in ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2"]:
                       #, "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
     all_normalized = []
     all_errors = []
     all_mismatches = []  
 
-    for org, data_types in submission_files.items():
+    for org, data_types in file_directory.items():
 
         target_book = "TPI"
 
@@ -114,7 +111,7 @@ for target_period in ["PY4 Q2"]:
 
         loader.preprocess_excel()
         dfs_by_sheet = loader.load_sheets()
-        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = False)
+        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
         
         file_id = f"{org}|{period}".replace(" ", "_")
 

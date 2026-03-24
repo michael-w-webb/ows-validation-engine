@@ -2,7 +2,7 @@ CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES = [
 
     {
         "rule_name": (
-            "Training end date before 2025-09-30 → "
+            "Training end date before 2025-12-31 → "
             "completion and exit statuses required"
         ),
         "logic": {
@@ -10,7 +10,7 @@ CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES = [
                 {
                     "var": ("Program_Enrollment", "Training End Date"),
                     "op": "before",
-                    "value": "2025-09-30"
+                    "value": "2025-12-31"
                 },
                 {
                     "var": [
@@ -63,7 +63,8 @@ CONDITIONALLY_REQUIRED_RULES = [
                         "Employed out of field",
                         "Employed not in-field",
                         "Employed in-field",
-                    ]
+                    ],
+                    "language_substitute": "an employment status indicating the participant is employed"
                 },
                 {
                     "var": [

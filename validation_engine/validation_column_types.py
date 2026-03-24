@@ -216,38 +216,21 @@ class categoricalColumn(BaseColumn):
         else:
             self.accepted = {self._clean(r): r for r in accepted_responses}
 
-    def _clean(self, text: str) -> str:
-        """
-        Normalize a raw value into a standardized string representation suitable
-        for comparison and downstream validation logic.
-
-        This helper performs lightweight canonicalization to ensure consistent
-        matching across different input formats.
-
-        Typical cleaning steps:
-            - Convert value to string if needed
-            - Convert to lowercase for case-insensitive comparison
-            - Collapse excessive internal whitespace
-            - Strip leading/trailing whitespace
-            - Treat sequences of zeros ("0", "00", etc.) or empty strings as missing
-
-        Args:
-            text (str or any):
-                Raw input value.
-
-        Returns:
-            str:
-                A normalized string representation, or an empty string if the value
-                is considered missing.
-        """
-
-        if text is None:
+    def _clean(self, text):
+        if text is None or pd.isna(text):
             return ""
-        if pd.isna(text):
-            return ""
+
+        text = str(text).strip()
+
+        # If numeric float like 1.0 → convert to integer string
+        if re.fullmatch(r"\d+\.0+", text):
+            text = text.split(".")[0]
+
+        # Treat sequences of zeros as missing
         if re.fullmatch(r"0+", text):
             return ""
-        return self._whitespace.sub(" ", str(text)).strip().casefold()
+
+        return self._whitespace.sub(" ", text).strip().casefold()
     
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
@@ -654,17 +637,31 @@ class booleanColumn(BaseColumn):
         
         self.required = required
         self.accepted = {
-            "yes": "Yes", "y": "Yes", "true": "Yes", "1": "Yes",
-            "no": "No", "n": "No", "false": "No", "0": "No"
+            "yes": "Yes", "y": "Yes", "true": "Yes", "1": "Yes", "1.0" : "Yes",
+            "no": "No", "n": "No", "false": "No", "0": "No", "0.0" : "No"
         }
         self.row_numbers = row_numbers
 
-    def normalize(self, s: pd.Series) -> pd.Series: 
+    def normalize(self, s: pd.Series) -> pd.Series:
 
         s = self.base_clean(s)
+
+        # --- NEW: normalize numeric-like values ---
+        def clean_numeric(x):
+            if pd.isna(x):
+                return x
+            if isinstance(x, (int, float)):
+                return int(x)  # 1.0 -> 1
+            return x
+
+        s = s.map(clean_numeric)
+
+        # now proceed as before
         s = s.astype("string").str.strip().str.lower()
+
         mapped = s.map(self.accepted)
-        return mapped 
+
+        return mapped
     
     def format(self, s_norm: pd.Series) -> pd.Series:
         return(
@@ -1061,14 +1058,20 @@ class zipCodeColumn(BaseColumn):
         
     # ---- Step 1: normalize (vectorized) ----
 
-    def normalize(self, 
-                  s: pd.Series) -> pd.Series: 
+    def normalize(self, s: pd.Series) -> pd.Series:
 
         s = self.base_clean(s)
-        s = s.astype("string").str.strip()
+
+        s = (
+            s.astype("string")
+            .str.replace(r"\s+", " ", regex=True)  # normalize whitespace
+            .str.strip()
+        )
+
         if self.strip_formatting:
-            s = s.fillna("").str.replace(self._non_digits,"",regex=True)
+            s = s.fillna("").str.replace(self._non_digits, "", regex=True)
             s = s.replace("", pd.NA)
+
         return s
     
     # ---- Step 2: validate (vectorized) ----
@@ -1119,8 +1122,10 @@ class zipCodeColumn(BaseColumn):
 
         masks = {
             "Required but missing": s_norm.isna() & raw.isna() if self.required else pd.Series(False, index = s_norm.index),
-            "Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)": s_norm.notna() & ~s_norm.str.fullmatch(r"\d{4,5}"),
-            "Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)": s_norm.isna() & raw.notna()
+            "Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)": (
+                (s_norm.notna() & ~s_norm.str.fullmatch(r"\d{4,5}")) |
+                (s_norm.isna() & raw.notna())
+            )
         }
 
         frames = []

@@ -2,8 +2,8 @@ import pandas as pd
 
 from cc_validation_engine import ValidationEngine
 from cc_validation_workbook_loader import WorkbookLoader
-from gjc_column_label_lists import workbook_program_definitions, workbook_definitions
-from gjc_file_metadata_dicitionary import submission_files
+from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_program_definitions
+from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
 from cc_key_creator import KeyCreator
 from cc_standard_normalizations import strict_alphabetic_normalize
 #from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
@@ -24,7 +24,7 @@ for target_period in ["PY4 Q2"]:
     all_errors = []
     all_mismatches = []  
 
-    for org, data_types in submission_files.items():
+    for org, data_types in file_directory.items():
 
         target_book = "TPI"
 

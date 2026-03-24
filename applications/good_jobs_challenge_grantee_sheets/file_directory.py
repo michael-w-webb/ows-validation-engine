@@ -1,4 +1,4 @@
-submission_files = {
+file_directory = {
     "NRWIB_HC": {
     "TPI": {
         "PY2 Q3": {

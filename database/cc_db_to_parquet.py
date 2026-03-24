@@ -74,7 +74,7 @@ sqlite_tables = [
 ]
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Python Work\ows_validation_engine\cc_db_parquet_output"
+OUTPUT_DIR = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Python Work\ows_validation_engine\database\cc_db_parquet_output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Export each table directly from sqlite_db.{table}

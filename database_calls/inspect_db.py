@@ -11,10 +11,46 @@ conn = sqlite3.connect(DB_PATH)
 
 print(f"\n🔍 Inspecting Validation DB: {DB_PATH}\n")
 
+crossover_check = pd.read_sql_query("""
+WITH person_datasets AS (
+    SELECT
+        person_id,
+        GROUP_CONCAT(DISTINCT dataset_name ORDER BY dataset_name) AS dataset_combo
+    FROM participant
+    GROUP BY person_id
+)
+SELECT
+    dataset_combo,
+    COUNT(*) AS person_count
+FROM person_datasets
+GROUP BY dataset_combo
+HAVING INSTR(dataset_combo, ',') > 0   -- only combos with >1 dataset
+ORDER BY person_count DESC;
+""", conn)
+
+print("==== current crossover =====")
+print(crossover_check)
 
 # ============================================================
 # 1️⃣ Recent validation runs
 # ============================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Returns the 20 most recent validation runs from the system.
+#
+# WHAT THIS SHOWS:
+# - run_id: unique identifier for each validation execution
+# - dataset_name: which dataset was validated
+# - organization: which org submitted it
+# - quarter: reporting quarter
+# - triggered_by: manual vs automated trigger
+# - run_timestamp: when the validation occurred
+#
+# WHY IT MATTERS:
+# Provides a high-level audit trail of uploads and validation activity.
+# Useful for confirming ingestion timing and debugging recent runs.
+# ------------------------------------------------------------
+
 runs = pd.read_sql_query("""
     SELECT run_id, dataset_name, organization, quarter, 
            triggered_by, run_timestamp
@@ -30,6 +66,21 @@ print(runs, "\n")
 # ============================================================
 # 2️⃣ People table
 # ============================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Displays the 20 most recently created canonical person records.
+#
+# WHAT THIS SHOWS:
+# - Core identity fields (name, DOB, ZIP)
+# - Multiple identity hash keys (strict → weak)
+# - Creation and last update timestamps
+#
+# WHY IT MATTERS:
+# Allows inspection of the deduplicated identity layer.
+# Confirms that participant rows are being consolidated into
+# stable "golden" person records correctly.
+# ------------------------------------------------------------
+
 people = pd.read_sql_query("""
     SELECT person_id,
            first_name, last_name, dob, zip,
@@ -50,6 +101,21 @@ print(people, "\n")
 # ============================================================
 # 3️⃣ Participant table
 # ============================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Shows the 20 most recently created participant records.
+#
+# WHAT THIS SHOWS:
+# - participant_id: row-level entity from an upload
+# - person_id: linked canonical identity
+# - dataset_name and org: source of the record
+# - created_timestamp: ingestion timing
+#
+# WHY IT MATTERS:
+# Confirms that uploaded rows are properly mapped to person records.
+# Useful for debugging identity linkage.
+# ------------------------------------------------------------
+
 participants = pd.read_sql_query("""
     SELECT participant_id,
            person_id,
@@ -68,6 +134,21 @@ print(participants, "\n")
 # ============================================================
 # 4️⃣ Participant presence per run
 # ============================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Displays recent participant presence logs across validation runs.
+#
+# WHAT THIS SHOWS:
+# - run_id: validation run
+# - participant_id: row-level entity
+# - status: present or missing
+# - timestamp: when status was recorded
+#
+# WHY IT MATTERS:
+# Tracks longitudinal presence across quarters and runs.
+# Helps identify drop-offs, reappearances, or data volatility.
+# ------------------------------------------------------------
+
 presence = pd.read_sql_query("""
     SELECT run_id, participant_id, status, timestamp
     FROM participant_presence_log
@@ -82,6 +163,22 @@ print(presence, "\n")
 # ============================================================
 # 5️⃣ Logged cell values
 # ============================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Retrieves recent normalized cell-level values captured during validation.
+#
+# WHAT THIS SHOWS:
+# - run_id and participant_id
+# - column_id: which field
+# - value_raw vs value_normalized
+# - timestamp
+#
+# WHY IT MATTERS:
+# Provides a historical snapshot of sheet-level data over time.
+# Critical for auditing normalization, transformations, and changes
+# between uploads.
+# ------------------------------------------------------------
+
 cell_history = pd.read_sql_query("""
     SELECT history_id,
            run_id,
@@ -102,6 +199,21 @@ print(cell_history, "\n")
 # ============================================================
 # 6️⃣ Dataset column registry
 # ============================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Lists registered dataset columns across datasets and sheets.
+#
+# WHAT THIS SHOWS:
+# - column_id: internal field identifier
+# - dataset_name
+# - sheet_name
+# - column_name
+#
+# WHY IT MATTERS:
+# Acts as the schema registry for validation logic.
+# Ensures column references are stable and centralized.
+# ------------------------------------------------------------
+
 columns = pd.read_sql_query("""
     SELECT column_id, dataset_name, sheet_name, column_name
     FROM dataset_column
@@ -116,7 +228,21 @@ print(columns, "\n")
 # ============================================================
 # 7️⃣ Validation violations (optional table)
 # ============================================================
-# Only show if the table exists
+# ------------------------------------------------------------
+# PURPOSE:
+# Retrieves the 20 most recent validation rule violations.
+#
+# WHAT THIS SHOWS:
+# - rule_id: which rule failed
+# - raw_value vs normalized value
+# - severity level
+# - timestamp
+#
+# WHY IT MATTERS:
+# Provides direct visibility into rule failures.
+# Useful for monitoring data quality and rule hit patterns.
+# ------------------------------------------------------------
+
 try:
     violations = pd.read_sql_query("""
         SELECT rule_id, normalized, raw_value, severity, timestamp
@@ -140,6 +266,26 @@ GROUP BY rule_id
 ORDER BY hits DESC;""", conn)
 
 print(error_count)
+
+# ===========================================================
+# 8 Participant by quartter Longitudinal 
+# ===========================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Produces a participant-by-quarter status matrix.
+#
+# HOW IT WORKS:
+# - Uses a window function to get the most recent presence
+#   status per participant per quarter.
+# - Pivots quarters into columns (PY2_Q1 → PY4_Q1).
+#
+# WHAT THIS SHOWS:
+# One row per participant with their latest status in each quarter.
+#
+# WHY IT MATTERS:
+# Enables longitudinal tracking across reporting periods.
+# Useful for retention, re-entry, and continuity analysis.
+# ------------------------------------------------------------
 
 find_participant = pd.read_sql_query("""WITH latest_presence AS (
     SELECT
@@ -181,6 +327,25 @@ GROUP BY
 
 find_participant.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\find_participant.csv", index=False)
 
+#======================================================
+# 9 - Value by Quarter Longitudinal 
+#======================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Tracks the normalized value of a specific column
+# ("CareerConneCT Training Provider") across quarters.
+#
+# HOW IT WORKS:
+# - Identifies the correct column_id from dataset_column.
+# - Pulls the latest normalized value per participant per quarter.
+# - Pivots quarters into columns.
+#
+# WHAT THIS SHOWS:
+# A participant-level timeline of provider values over time.
+#
+# WHY IT MATTERS:
+# Detects provider changes, corrections, or instability across uploads.
+# ------------------------------------------------------------
 
 find_value = pd.read_sql_query("""
 WITH provider_by_quarter AS (
@@ -199,7 +364,7 @@ WITH provider_by_quarter AS (
     WHERE cvh.column_id = (
         SELECT column_id
         FROM dataset_column
-        WHERE column_name = 'CareerConneCT Training Provider' -- column of interest
+        WHERE column_name = 'Client Date of Birth' -- column of interest
           AND dataset_name = 'training data' -- dataset of interest
           AND sheet_name = 'Training' -- sheet of interest
     )
@@ -236,6 +401,22 @@ ORDER BY
     p.participant_id;
 """, conn)
 
+#=====================================================
+# 10 - Multi-program Membership 
+#=====================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Identifies people appearing in more than one dataset.
+#
+# WHAT THIS SHOWS:
+# - person_id
+# - number of distinct datasets they appear in
+#
+# WHY IT MATTERS:
+# Surfaces cross-program participation.
+# Useful for overlap analysis and identity integrity checks.
+# ------------------------------------------------------------
+
 
 find_value.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\find_value.csv", index=False)
 
@@ -252,6 +433,22 @@ ORDER BY dataset_count DESC;
 print("=== Participants in both Programs ===")
 print(multimember, "\n")
 
+#=====================================================
+# 11 - Participant presence map 
+#=====================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Counts participants who were once present and later marked missing.
+#
+# HOW IT WORKS:
+# - Finds each participant’s first "present" timestamp.
+# - Counts later "missing" statuses.
+# - Groups by dataset and organization.
+#
+# WHY IT MATTERS:
+# Detects attrition or reporting inconsistencies over time.
+# Useful for organizational data stability analysis.
+# ------------------------------------------------------------
 
 presence_counts = pd.read_sql_query("""WITH first_present AS (
     SELECT
@@ -279,6 +476,24 @@ ORDER BY missing_count DESC;
 print("=== Presence by org over time ===")
 print(presence_counts, "\n")
 
+#==================================================
+# 12 - Case Counts by Run  
+#==================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Counts distinct participants marked present in each validation run.
+#
+# WHAT THIS SHOWS:
+# - run_id
+# - dataset_name
+# - quarter
+# - organization
+# - participants_present
+#
+# WHY IT MATTERS:
+# Tracks reported case volume over time.
+# Useful for identifying spikes, drops, or reporting changes.
+# ------------------------------------------------------------
 
 case_counts_by_run = pd.read_sql_query("""SELECT
     l.run_id,
@@ -298,6 +513,24 @@ print("=== case counts by run ===")
 print(case_counts_by_run[case_counts_by_run["organization"]=="Connecticut_State_Building_Trades_Training_Institute"], "\n")
 
 case_counts_by_run.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\case_counts_by_run.csv", index=False)
+
+#==================================================
+# 13 - Missing and Present By Run 
+#==================================================
+
+# ------------------------------------------------------------
+# PURPOSE:
+# Summarizes present vs missing counts per validation run.
+#
+# WHAT THIS SHOWS:
+# - present_count
+# - missing_count
+# - total distinct participants
+#
+# WHY IT MATTERS:
+# Provides run-level completeness diagnostics.
+# Useful for understanding data volatility quarter-over-quarter.
+# ------------------------------------------------------------
 
 missing_and_present_by_run = pd.read_sql_query("""
 SELECT
@@ -321,6 +554,26 @@ ORDER BY vr.run_timestamp;
 
 print("---- missing and present by quarter ---- ")
 print(missing_and_present_by_run[missing_and_present_by_run["organization"]=="CWP_IT"], "\n")
+
+#======================================================
+# 14 - Latest Runs by Org
+#======================================================
+# ------------------------------------------------------------
+# PURPOSE:
+# Identifies the most recent validation run for each
+# organization and dataset combination.
+#
+# WHAT THIS SHOWS:
+# - run_id
+# - organization
+# - dataset_name
+# - quarter
+# - run_timestamp
+#
+# WHY IT MATTERS:
+# Allows you to isolate the current authoritative snapshot
+# per org/dataset.
+# ------------------------------------------------------------
 
 latest_runs_by_org_dataset = pd.read_sql_query(
     """
@@ -352,6 +605,24 @@ print(latest_runs_by_org_dataset["run_id"])
 
 from rapidfuzz import process, fuzz
 
+#====================================================
+# 15 - Person with multiple participant IDs check 
+#====================================================
+
+# ------------------------------------------------------------
+# PURPOSE:
+# Retrieves detailed records for people linked to multiple participants.
+#
+# WHAT THIS SHOWS:
+# - person identity fields
+# - associated participant_ids
+# - org and dataset membership
+#
+# WHY IT MATTERS:
+# Supports manual review of cross-dataset linkage.
+# Useful for validating deduplication logic.
+# ------------------------------------------------------------
+
 person_check = pd.read_sql_query(
     """
     SELECT
@@ -381,6 +652,42 @@ person_check = pd.read_sql_query(
 
 
 person_check.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\person_check.csv", index=False)
+
+#======================================================
+# 16 - Fuzzy match present against missing to catch new participants generated from typos 
+#======================================================
+
+# ------------------------------------------------------------
+# PURPOSE:
+# For a single validation run, attempts to reconcile participants
+# marked "missing" against those marked "present" using fuzzy
+# name matching plus DOB and ZIP comparison.
+#
+# HOW IT WORKS:
+# 1. Pulls all participants for the given run_id with:
+#    - status (present/missing)
+#    - participant_id
+#    - canonical person identity fields (name, DOB, ZIP)
+# 2. Separates the dataframe into missing vs present groups.
+# 3. Builds a lowercase trimmed "name_key" (first + last).
+# 4. For each missing participant:
+#      - Finds the best fuzzy match among present names
+#        using token_sort_ratio.
+#      - Records similarity score.
+#      - Checks DOB match and ZIP match.
+#
+# OUTPUT:
+# Returns a dataframe of best candidate matches with:
+# - missing vs present participant IDs
+# - fuzzy score
+# - DOB/ZIP match flags
+# - org + dataset context
+#
+# WHY IT MATTERS:
+# Identifies likely identity continuity cases where a participant
+# appears "missing" in the run but may actually exist under a
+# slightly altered name or duplicate record.
+# ------------------------------------------------------------
 
 def fuzzy_missing_vs_present_for_run(conn, run_id, org=None, dataset=None):
     df = pd.read_sql_query(
@@ -454,6 +761,8 @@ def fuzzy_missing_vs_present_for_run(conn, run_id, org=None, dataset=None):
             })
 
     return pd.DataFrame(matches)
+
+### run the fuzzy match across the most recent org /  dataset 
 
 all_fuzzy_matches = []
 
@@ -607,16 +916,20 @@ summary = (
 
 print(summary)
 
-pariticpant_count_by_run = pd.read_sql_query("""SELECT
-    run_id,
-    COUNT(*) AS row_count
-FROM participant_presence_log
-GROUP BY run_id;""", conn)
-
-print(pariticpant_count_by_run.sort_values(by="row_count"))
-
 strong_matches = fuzzy_matches_all
 
 fuzzy_matches_all.to_excel(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\strong_matches_comparison.xlsx", index=False)
 
 conn.close()
+
+#### participant count by run 
+
+# pariticpant_count_by_run = pd.read_sql_query("""SELECT
+#     run_id,
+#     COUNT(*) AS row_count
+# FROM participant_presence_log
+# GROUP BY run_id;""", conn)
+
+# print(pariticpant_count_by_run.sort_values(by="row_count"))
+
+

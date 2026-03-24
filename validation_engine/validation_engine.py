@@ -112,11 +112,11 @@ execution.
 """
 
 import pandas as pd
-from cc_validation_column_types import *
-from cc_cross_rule_engine import CrossRuleEngine
+from validation_engine.validation_column_types import *
+from validation_engine.cross_rule_engine import CrossRuleEngine
 
 ### SQL Logging Related Imports 
-from validation_db_logger import ValidationDBLogger
+from validation_engine.db_logger import ValidationDBLogger
 from hashlib import sha256
 from datetime import datetime
 import uuid
@@ -170,7 +170,7 @@ class ValidationEngine:
         file (str or None):
             Identifier used when generating error reports (“org|quarter|filename”).
     """
-    def __init__(self, workbook_definitions, cross_rules=None, logging = False):
+    def __init__(self, workbook_definitions, cross_rules=None, logging = False, log_description = None, mismatch_check = True):
         
         ## file meta data navigation 
         self.workbook_definitions = workbook_definitions
@@ -185,12 +185,19 @@ class ValidationEngine:
         self._cross_checked = False
         self.file = None 
         self.logging = logging 
+        self.log_description = log_description
+        self.mismatch_check = mismatch_check
         self.mismatches = []
         self.single_sheet = []
         self.db_logger = None
         self.run_id = None
 
         if self.logging:
+
+            if not self.log_description:
+
+                raise ValueError("Engine call must include a log_description argument if Logging is True")
+
             self.db_logger = ValidationDBLogger()
             
 
@@ -269,6 +276,9 @@ class ValidationEngine:
 
         if f"row_number_{sheet_name}" in df.columns:
             normalized_cols[f"row_number_{sheet_name}"] = df[f"row_number_{sheet_name}"]
+            
+        if "source_file" in df.columns:
+            normalized_cols["source_file"] = df["source_file"]
 
         for col, spec in accepted_responses.items():
             if col not in df.columns:
@@ -293,6 +303,10 @@ class ValidationEngine:
                 file = self.file.split("|")[0],
                 row_numbers = df[f"row_number_{sheet_name}"]
                 )
+            elif col_type == "hourlyWage":
+                max_wage = spec.get("max_wage", 45)
+                min_wage = spec.get("min_wage", 0)
+                validator = cls(max_wage=max_wage, min_wage=min_wage, required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
             else:
                 validator = cls(required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
 
@@ -310,7 +324,8 @@ class ValidationEngine:
             
                 all_errors.append(errs)
 
-            normalized_cols[col] = s_fmt
+            normalized_cols[col] = raw
+            normalized_cols[f"{col}_normalized"] = s_fmt
 
         normalized_df = pd.DataFrame(normalized_cols, index=df.index)
 
@@ -621,13 +636,15 @@ class ValidationEngine:
         if self.logging:
             ## create a unique id connected to the information passed in the run table 
             self.run_id =  self.db_logger.start_run(workbook_type, self.org, self.quarter, triggered_by="mwebb")
-
+            self.db_logger.raw_data_points = dfs_by_sheet
+    
         # ============================================================
         # 1️⃣ Sheet-by-sheet validation
         # ============================================================
         print(f"{self.org} {workbook_type} - Starting Normalization @ {datetime.now()}")
 
         for sheet_name, df in dfs_by_sheet.items():
+
             accepted_responses = self.workbook_definitions[workbook_type][workbook_format][sheet_name]["accepted_responses"]
 
             norm_df, errs = self._validate_sheet(df, sheet_name, accepted_responses)
@@ -644,9 +661,15 @@ class ValidationEngine:
         # ============================================================
         
         if(workbook_format == "simple format"):
-            identity_sheet = "Report"
+            identity_sheet = sheet_name
             id_df = self.normalized_data.get(identity_sheet)
             id_df["id_key"] = (id_df["First Name"].fillna("") + "|" + id_df["Last Name"].fillna(""))
+             
+            raw_data = dfs_by_sheet.get(identity_sheet)
+            if raw_data is None:
+                raise KeyError(f"Identity sheet '{identity_sheet}' not found")
+
+            raw_data["id_key"] = (raw_data["First Name"].fillna("") + "|" + raw_data["Last Name"].fillna(""))
         else: 
             identity_sheet = passed_identity_sheet
             id_df = self.normalized_data.get(identity_sheet)
@@ -654,7 +677,8 @@ class ValidationEngine:
             raise ValueError(f"Identity sheet '{identity_sheet}' not found in workbook.")
         
         # Generate spreadsheet specific keys that can be used to map back to a universal person ID
-        
+
+
         print(f"{self.org} {workbook_type} - Recording Mismatches @ {datetime.now()}")
 
         def record_mismatches(keys, org, quarter, sheet, issue):
@@ -709,25 +733,60 @@ class ValidationEngine:
 
         id_df_valid = id_df[id_df["id_key"].isin(valid_id_keys)].copy()
 
+        # else: 
+
+        #     # All ids remain valid when mismatch checking is disabled
+        #     id_df_valid = id_df.copy()
+
+        #     cleaned_dfs = list(self.normalized_data.items())
+
+        #     if not cleaned_dfs:
+        #         merged = pd.DataFrame()
+        #     else:
+        #         base_name, base_df = cleaned_dfs[0]
+        #         merged = base_df.copy()
+
+        #         for sheet_name, df in cleaned_dfs[1:]:
+
+        #             if "id_key" not in df.columns:
+        #                 continue
+
+        #             merged = merged.merge(
+        #                 df,
+        #                 on="id_key",
+        #                 how="inner",
+        #                 suffixes=("", f"_{sheet_name}")
+        #             )
+
         print(f"{self.org} {workbook_type} - Starting Logging @ {datetime.now()}")
+
+        normalized_combined = merged
+
+        dedup_cols = ["id_key", "First Name", "Last Name", "source_file"]
+        mask = normalized_combined.columns.duplicated() & normalized_combined.columns.isin(dedup_cols)
+        normalized_combined = normalized_combined.loc[:, ~mask]
+
+        normalized_combined["org"] = self.org
+        normalized_combined["period"] = self.quarter
+        self.single_sheet = normalized_combined
 
         if self.logging:
 
             for kc, colname in keycreators:
-                id_df_valid[colname] = id_df_valid.apply(kc.create_key_from_row, axis=1)
+                self.single_sheet[colname] = self.single_sheet.apply(kc.create_key_from_row, axis=1)
 
             person_ids = []
 
             self.db_logger.load_person_maps()
 
-            for _, row in id_df_valid.iterrows():
+            for _, row in self.single_sheet.iterrows():
                 
                 pid = self.db_logger.resolve_person(row) ### checks keys, and resolves match or creates new person as needed
                 person_ids.append(pid) ## create list of recognized person ids to be added to participant table 
 
             self.db_logger.flush_new_people_buffer()
 
-            id_df_valid["person_id"] = person_ids
+            self.single_sheet["person_id"] = person_ids
 
             # Create or update dataset entries in the DB
 
@@ -735,7 +794,7 @@ class ValidationEngine:
 
             self.db_logger.load_participant_map(workbook_type, self.org)
 
-            for _, row in id_df_valid.iterrows():
+            for _, row in self.single_sheet.iterrows():
                 pid = row["person_id"]
 
                 participant_id = self.db_logger.get_or_create_participant(
@@ -748,13 +807,12 @@ class ValidationEngine:
             
             self.db_logger.flush_new_participants()
 
-            id_df_valid["participant_id"] = participant_ids
+            self.single_sheet["participant_id"] = participant_ids
             
             self.db_logger.log_all_normalized_cell_values(
                 run_id=self.run_id,
                 dataset_name=workbook_type,
-                normalized_data=self.normalized_data,
-                id_df=id_df_valid
+                df=self.single_sheet
             )
 
             ### if this is the first run for a given dataset, mark all participants as present. 
@@ -772,7 +830,7 @@ class ValidationEngine:
             row_col = f"row_number_{identity_sheet}"
 
             pid_to_row = (
-                id_df_valid
+                self.single_sheet
                 .set_index("participant_id")[row_col]
                 .to_dict()
             )
@@ -799,7 +857,7 @@ class ValidationEngine:
                 )
                 all_ids = [r[0] for r in cur.fetchall()]
 
-                print(f"There are {len(all_ids)} participant IDs to check presence for.")
+                #print(f"There are {len(all_ids)} participant IDs to check presence for.")
 
                 for pid in all_ids:
                     status = "present" if pid in pid_to_row else "missing"
@@ -827,15 +885,15 @@ class ValidationEngine:
                     mismatches=filtered
                 )
 
-        normalized_combined = merged
+        # normalized_combined = merged
 
-        dedup_cols = ["id_key", "First Name", "Last Name"]
-        mask = normalized_combined.columns.duplicated() & normalized_combined.columns.isin(dedup_cols)
-        normalized_combined = normalized_combined.loc[:, ~mask]
+        # dedup_cols = ["id_key", "First Name", "Last Name", "source_file"]
+        # mask = normalized_combined.columns.duplicated() & normalized_combined.columns.isin(dedup_cols)
+        # normalized_combined = normalized_combined.loc[:, ~mask]
 
-        normalized_combined["org"] = self.org
-        normalized_combined["period"] = self.quarter
-        self.single_sheet = normalized_combined
+        # normalized_combined["org"] = self.org
+        # normalized_combined["period"] = self.quarter
+        # self.single_sheet = normalized_combined
 
         # ============================================================
         # 4️⃣ Apply cross-sheet rules
@@ -856,7 +914,7 @@ class ValidationEngine:
 
                 # Build lookup: id_key → participant_id
                 id_lookup = (
-                    id_df_valid
+                    self.single_sheet
                     .dropna(subset=["id_key"])
                     .drop_duplicates(subset=["id_key"], keep="first")
                     .set_index("id_key")["participant_id"]
@@ -872,7 +930,7 @@ class ValidationEngine:
             # --------------------------------------------------------
             # Persist each violation
             # --------------------------------------------------------
-            print(f"There are {len(err_df)} to log in this run.")
+            #print(f"There are {len(err_df)} to log in this run.")
             
             for idx, row in err_df.iterrows():
 
@@ -901,7 +959,7 @@ class ValidationEngine:
                         severity=severity
                     )
 
-                print(f"Logging an error for {participant_id} at {col}.")
+                #print(f"Logging an error for {participant_id} at {col}.")
 
             self.db_logger.flush_violations()
 

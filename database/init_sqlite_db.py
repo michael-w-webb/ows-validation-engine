@@ -117,6 +117,18 @@ CREATE TABLE IF NOT EXISTS participant_key_mismatch (
     FOREIGN KEY (run_id) REFERENCES validation_run(run_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_ppl_run_status ON participant_presence_log(run_id, status);
+CREATE INDEX IF NOT EXISTS idx_ppl_participant_run ON participant_presence_log(participant_id, run_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_vr_org_dataset_quarter_ts ON validation_run(organization, dataset_name, quarter, run_timestamp);
+CREATE INDEX IF NOT EXISTS idx_vr_run_ts ON validation_run(run_id, run_timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_cvh_run_part_col ON cell_value_history(run_id, participant_id, column_id);
+CREATE INDEX IF NOT EXISTS idx_cvh_part_col_run ON cell_value_history(participant_id, column_id, run_id);
+
+CREATE INDEX IF NOT EXISTS idx_dc_dataset_sheet_colname ON dataset_column(dataset_name, sheet_name, column_name);
+CREATE INDEX IF NOT EXISTS idx_vv_run_rule ON validation_violation(run_id, rule_id);
+
 """
 
 def init_db():

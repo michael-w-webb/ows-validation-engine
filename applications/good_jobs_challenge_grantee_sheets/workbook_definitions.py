@@ -601,13 +601,13 @@ participant_info_accepted_responses = {
     },
     "Participant Attribute - Co-Enrollment (WIOA or WIP)": {
         "limited_response": True,
-        "accepted_responses": [
-            "Yes, WIOA",
-            "Yes, WP",
-            "Both WIOA and WP",
-            "No",
-            "CCT"
-        ],
+        "accepted_responses": {
+            "Yes, WIOA": ["Yes, WIOA", "WIOA"],
+            "Yes, WP": ["Yes, WP", "WP"],
+            "Both WIOA and WP": ["Both WIOA and WP"],
+            "No": ["No", "N"],
+            "CCT": ["CCT", "C"]
+        },
         "non_essential":"True"
     },
     "Participant Attribute - TANF recipient": {

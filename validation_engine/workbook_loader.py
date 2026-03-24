@@ -94,8 +94,8 @@ from datetime import datetime
 import pythoncom
 import win32com.client
 
-from cc_key_creator import KeyCreator
-from cc_standard_normalizations import strict_alphabetic_normalize
+from validation_engine.key_creator import KeyCreator
+from validation_engine.standard_normalizations import strict_alphabetic_normalize
 
 def ensure_unprotected_visible(excel, file_path, password="workforce"):
     """
@@ -358,6 +358,63 @@ def clean_text(val):
         return val.replace('\xa0', ' ').replace('Â', '').strip()
     return val
 
+def find_sheet_by_headers(file_obj, config, max_header_row=4, min_match_ratio=0.5):
+
+    xl = pd.ExcelFile(file_obj, engine="openpyxl")
+
+    expected_variants = {
+        str(v).strip().lower()
+        for variants in config["labels"].values()
+        for v in variants
+    }
+
+    best_sheet = None
+    best_row = None
+    best_score = 0
+
+    for sheet in xl.sheet_names:
+
+        preview = xl.parse(sheet, header=None, nrows=max_header_row + 5)
+
+        check_length = min(len(preview), max_header_row)
+
+        for row in range(check_length):
+
+            
+
+            headers = {
+                str(x).strip().lower()
+                for x in preview.iloc[row].tolist()
+                if pd.notna(x)
+            }
+
+            score = len(headers & expected_variants)
+
+            if score > best_score:
+                best_score = score
+                best_sheet = sheet
+                best_row = row
+
+    if best_sheet is None:
+        raise ValueError("No sheet with matching headers found")
+
+    expected_count = len(config["labels"])
+
+    match_ratio = best_score / max(expected_count, 1)
+
+    if match_ratio < min_match_ratio:
+        raise ValueError(
+            f"No reliable sheet match (best match {best_sheet}, ratio={match_ratio:.2f})"
+        )
+
+    print(
+        f"⚠️ Using sheet '{best_sheet}' with header row {best_row} "
+        f"(matched {best_score} columns)"
+    )
+
+    return best_sheet, best_row
+
+
 class WorkbookLoader:
     """
         Loader for a single Excel workbook using a schema-driven sheet definition.
@@ -424,8 +481,7 @@ class WorkbookLoader:
         self.multi_sheet_mode = multi_sheet_mode
 
         self.keycreator = keycreator
-
-    
+        
     def preprocess_excel(self):
         """
         Unprotect and unhide the workbook using Excel COM automation.
@@ -534,10 +590,8 @@ class WorkbookLoader:
         for sheet_key, config in sheet_defs_for_type.items():
             starting_col = config.get("starting_column", 0)
 
-            sheet_specific_starting_row = config.get("starting_row", None)
-
-            if sheet_specific_starting_row is not None and sheet_specific_starting_row != 0:
-                self.starting_row = sheet_specific_starting_row
+            sheet_specific_starting_row = config.get("starting_row", self.starting_row)
+            starting_row = sheet_specific_starting_row
 
             raw_df = None
             attempt = 0
@@ -550,13 +604,14 @@ class WorkbookLoader:
                     with open(self.file_path, "rb") as f:
 
                         read_kwargs = {
-                            "header": self.starting_row,
+                            "header": starting_row,
                             "engine": "openpyxl",
+                            "sheet_name":sheet_key,
                             "usecols": config.get("columns_used", None),
                         }
 
-                        if self.multi_sheet_mode:
-                            read_kwargs["sheet_name"] = sheet_key
+                        # if self.multi_sheet_mode:
+                        #     read_kwargs["sheet_name"] = sheet_key
 
                         raw_df = pd.read_excel(f, **read_kwargs).applymap(clean_text)
                         # raw_df = pd.read_excel(
@@ -581,6 +636,35 @@ class WorkbookLoader:
                     time.sleep(wait_time)
                     continue
 
+                except ValueError as e:
+
+                    # pandas throws ValueError when sheet_name does not exist
+                    if "Worksheet named" in str(e):
+
+                        print(
+                            f"⚠️ Sheet '{sheet_key}' not found in {self.file_path}. "
+                            "Searching workbook for matching headers."
+                        )
+
+                        with open(self.file_path, "rb") as f:
+                            found_sheet, found_row = find_sheet_by_headers(f, config)
+
+                        print(
+                            f"⚠️ Using fallback sheet '{found_sheet}' "
+                            f"(header row {found_row}) instead of '{sheet_key}'"
+                        )
+
+                        with open(self.file_path, "rb") as f:
+                            raw_df = pd.read_excel(
+                                f,
+                                sheet_name=found_sheet,
+                                header=found_row,
+                                engine="openpyxl",
+                                usecols=config.get("columns_used", None),
+                            ).applymap(clean_text)
+
+                        break
+
                 except Exception as e:
                     print(f"❌ Error loading sheet {sheet_key} from {self.file_path}: {e}")
                     traceback.print_exc()
@@ -592,6 +676,7 @@ class WorkbookLoader:
                         "workbook_type": self.workbook_type
                     })
                     break  # non-permission errors shouldn’t retry forever
+
 
             # Skip sheet if not successfully read
             if raw_df is None:
@@ -782,6 +867,8 @@ class MultiWorkbookLoader:
               may be added depending on program requirements.
         """
         all_sheets = {}
+
+        
 
         for file_path in self.file_paths:
             print(f"\n📘 Loading workbook: {file_path}")

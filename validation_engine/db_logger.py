@@ -1,6 +1,7 @@
 import os, uuid, sqlite3
 from datetime import datetime
 import pandas as pd
+import datetime as dt
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "validation_dev.db")
 
@@ -82,6 +83,8 @@ class ValidationDBLogger:
         self._person_by_med_zip = {}
 
         self._new_people_buffer = []
+
+        self.raw_data_points = {}
 
         self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
         self.conn.execute("PRAGMA foreign_keys = ON;")
@@ -180,6 +183,8 @@ class ValidationDBLogger:
             return None
         if isinstance(v, float) and pd.isna(v):
             return None
+        if isinstance(v, (pd.Timestamp, dt.datetime, dt.date)):
+            return v.isoformat()
         return v
 
     def start_run(self, dataset_name, org, quarter, triggered_by=None):
@@ -551,97 +556,227 @@ class ValidationDBLogger:
         finally:
             self._participant_presence_buffer.clear()   
 
+    # def log_all_normalized_cell_values(
+    #     self,
+    #     run_id,
+    #     dataset_name,
+    #     normalized_data,   # dict: sheet_name → normalized df
+    #     id_df              # identity df containing id_key, person_id, participant_id
+    # ):
+        
+    #     """
+    #     Log normalized cell values for all sheets in a dataset.
+
+    #     Aligns rows from normalized dataframes to participants using
+    #     identity keys, then records normalized values for each
+    #     non-metadata column.
+
+    #     Parameters
+    #     ----------
+    #     logger : ValidationDBLogger
+    #         Active logger instance.
+    #     run_id : str
+    #         Validation run identifier.
+    #     dataset_name : str
+    #         Dataset being logged.
+    #     normalized_data : dict
+    #         Mapping of ``sheet_name`` to normalized Pandas DataFrames.
+    #     id_df : pandas.DataFrame
+    #         DataFrame containing ``id_key`` to ``participant_id`` mappings.
+    #     """
+
+    #     # -------------------------------------------------------
+    #     # 1. Build a lookup table: id_key → participant_id
+    #     # -------------------------------------------------------
+    #     key_to_participant = (
+    #         id_df[["id_key", "participant_id"]]
+    #         .dropna(subset=["participant_id"])
+    #         .set_index("id_key")["participant_id"]
+    #         .to_dict()
+    #     )
+
+    #     # -------------------------------------------------------
+    #     # 2. Loop through each normalized sheet
+    #     # -------------------------------------------------------
+    #     for sheet_name, df_norm in normalized_data.items():
+
+    #         if "id_key" not in df_norm.columns:
+    #             print(f"[WARN] Sheet '{sheet_name}' has no id_key column; skipping logging.")
+    #             continue
+            
+    #         df_norm = df_norm[df_norm["id_key"].isin(key_to_participant)].copy()
+    #         df_raw = self.raw_data_points.get(sheet_name)
+
+    #         column_ids = {}
+
+    #         for col in df_norm.columns:
+    #                 if col in ("id_key", "row_number", "person_id", "participant_id"):
+    #                     continue
+
+    #                 column_ids[col] = self.get_or_create_column(
+    #                     dataset_name=dataset_name,
+    #                     sheet_name=sheet_name,
+    #                     column_name=col
+    #                 )
+
+    #         value_cols = [
+    #             c for c in df_norm.columns
+    #             if c not in ("id_key", "row_number", "person_id", "participant_id")
+    #         ]
+
+    #         long_df = df_norm.melt(
+    #             id_vars=["id_key"],
+    #             value_vars=value_cols,
+    #             var_name="column_name",
+    #             value_name="value_normalized"
+    #         )
+
+    #         df_raw = df_raw.drop_duplicates(subset=["id_key"])
+
+    #         long_raw = df_raw.melt(
+    #             id_vars = ["id_key"],
+    #             value_vars = value_cols,
+    #             var_name = "column_name",
+    #             value_name = "value_raw"
+    #         )
+            
+    #         long_raw["id_key"] = long_raw["id_key"].astype(str).str.strip().str.lower()
+
+    #         long_df = long_df.merge(
+    #             long_raw,
+    #             on = ["id_key", "column_name"],
+    #             how = "left",
+    #             validate = "one_to_one"
+    #         )
+
+    #         long_df["participant_id"] = long_df["id_key"].map(key_to_participant)
+    #         long_df["column_id"] = long_df["column_name"].map(column_ids)
+    #         long_df["run_id"] = run_id
+    #         long_df["history_id"] = [uuid.uuid4().hex for _ in range(len(long_df))]
+
+    #         long_df = long_df.drop(columns=["id_key", "column_name"])
+    #         long_df["value_raw"] = long_df["value_raw"].astype(str)
+    #         long_df["value_normalized"] = long_df["value_normalized"].astype(str)
+
+    #         long_df.to_sql(
+    #             "cell_value_history",
+    #             self.conn,
+    #             if_exists="append",
+    #             index=False,
+    #             chunksize=5_000
+    #         )
+    
+    
+
     def log_all_normalized_cell_values(
         self,
         run_id,
         dataset_name,
-        normalized_data,   # dict: sheet_name → normalized df
-        id_df              # identity df containing id_key, person_id, participant_id
+        df   # <- this is self.single_sheet
     ):
-        
-        """
-        Log normalized cell values for all sheets in a dataset.
 
-        Aligns rows from normalized dataframes to participants using
-        identity keys, then records normalized values for each
-        non-metadata column.
+        if "person_id" not in df.columns:
+            raise ValueError("single_sheet must contain person_id")
 
-        Parameters
-        ----------
-        logger : ValidationDBLogger
-            Active logger instance.
-        run_id : str
-            Validation run identifier.
-        dataset_name : str
-            Dataset being logged.
-        normalized_data : dict
-            Mapping of ``sheet_name`` to normalized Pandas DataFrames.
-        id_df : pandas.DataFrame
-            DataFrame containing ``id_key`` to ``participant_id`` mappings.
-        """
+        if "participant_id" not in df.columns:
+            raise ValueError("single_sheet must contain participant_id")
+
+        df = df[df["participant_id"].notna()].copy()
 
         # -------------------------------------------------------
-        # 1. Build a lookup table: id_key → participant_id
+        # Identify normalized columns
         # -------------------------------------------------------
-        key_to_participant = (
-            id_df[["id_key", "participant_id"]]
-            .dropna(subset=["participant_id"])
-            .set_index("id_key")["participant_id"]
-            .to_dict()
+        norm_cols = [c for c in df.columns if c.endswith("_normalized")]
+
+        if not norm_cols:
+            return
+
+        raw_cols = [c.replace("_normalized", "") for c in norm_cols]
+
+        # -------------------------------------------------------
+        # Melt normalized values
+        # -------------------------------------------------------
+        long_norm = df.melt(
+            id_vars=["person_id", "participant_id"],
+            value_vars=norm_cols,
+            var_name="column_name",
+            value_name="value_normalized"
+        )
+
+        long_norm["column_name"] = long_norm["column_name"].str.replace(
+            "_normalized", "", regex=False
         )
 
         # -------------------------------------------------------
-        # 2. Loop through each normalized sheet
+        # Melt raw values
         # -------------------------------------------------------
-        for sheet_name, df_norm in normalized_data.items():
+        raw_cols = [c for c in raw_cols if c in df.columns]
 
-            if "id_key" not in df_norm.columns:
-                print(f"[WARN] Sheet '{sheet_name}' has no id_key column; skipping logging.")
-                continue
-            
-            df_norm = df_norm[df_norm["id_key"].isin(key_to_participant)].copy()
+        long_raw = df.melt(
+            id_vars=["person_id", "participant_id"],
+            value_vars=raw_cols,
+            var_name="column_name",
+            value_name="value_raw"
+        )
 
+        # -------------------------------------------------------
+        # Combine
+        # -------------------------------------------------------
+        long_df = long_norm.copy()
+        long_df["value_raw"] = long_raw["value_raw"].values
 
-            column_ids = {}
-
-            for col in df_norm.columns:
-                    if col in ("id_key", "row_number", "person_id", "participant_id"):
-                        continue
-
-                    column_ids[col] = self.get_or_create_column(
-                        dataset_name=dataset_name,
-                        sheet_name=sheet_name,
-                        column_name=col
-                    )
-
-            value_cols = [
-                c for c in df_norm.columns
-                if c not in ("id_key", "row_number", "person_id", "participant_id")
-            ]
-
-            long_df = df_norm.melt(
-                id_vars=["id_key"],
-                value_vars=value_cols,
-                var_name="column_name",
-                value_name="value_normalized"
+        # -------------------------------------------------------
+        # Column ID mapping
+        # -------------------------------------------------------
+        column_ids = {
+            col: self.get_or_create_column(
+                dataset_name=dataset_name,
+                sheet_name="combined",
+                column_name=col
             )
+            for col in long_df["column_name"].unique()
+        }
 
-            long_df["participant_id"] = long_df["id_key"].map(key_to_participant)
-            long_df["column_id"] = long_df["column_name"].map(column_ids)
-            long_df["run_id"] = run_id
-            long_df["history_id"] = [uuid.uuid4().hex for _ in range(len(long_df))]
-            long_df["value_raw"] = None
+        long_df["column_id"] = long_df["column_name"].map(column_ids)
 
-            long_df = long_df.drop(columns=["id_key", "column_name"])
+        # -------------------------------------------------------
+        # Metadata
+        # -------------------------------------------------------
+        long_df["run_id"] = run_id
+        long_df["history_id"] = [uuid.uuid4().hex for _ in range(len(long_df))]
 
-            long_df.to_sql(
-                "cell_value_history",
-                self.conn,
-                if_exists="append",
-                index=False,
-                chunksize=5_000
-            )
-    
+        clean = self._clean_sql_value
+
+        long_df["value_raw"] = long_df["value_raw"].map(clean)
+        long_df["value_normalized"] = long_df["value_normalized"].map(clean)
+
+        records = list(
+            long_df[
+                [
+                    "history_id",
+                    "run_id",
+                    "participant_id",
+                    "column_id",
+                    "value_raw",
+                    "value_normalized",
+                ]
+            ].itertuples(index=False, name=None)
+        )
+
+        insert_sql = """
+            INSERT INTO cell_value_history
+            (history_id, run_id, participant_id, column_id, value_raw, value_normalized)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+
+        batch_size = 10000
+        cur = self.conn.cursor()
+
+        for i in range(0, len(records), batch_size):
+            cur.executemany(insert_sql, records[i:i + batch_size])
+
+        self.conn.commit()
+
     def log_violation(self, run_id, rule_id, participant_id,
                     column_id, normalized, raw_value, severity="error"):
 

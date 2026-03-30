@@ -1,5 +1,5 @@
-from career_connect_grantee_sheets.workbook_definitions import workbook_definitions
-from career_connect_grantee_sheets.file_directory import file_directory
+from applications.career_connect_grantee_sheets.workbook_definitions import workbook_definitions
+from applications.career_connect_grantee_sheets.file_directory import file_directory
 import sqlite3
 import pandas as pd
 from pathlib import Path
@@ -1085,8 +1085,7 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
 from pathlib import Path
 import sqlite3
 import pandas as pd
-
-DB_PATH = Path("validation_dev.db")
+from config import DB_PATH, OUTPUT_DIRECTORY
 
 dataset_name = "training data"
 quarter = "PY4_Q2"
@@ -1130,7 +1129,7 @@ for org in orgs["organization"]:
     print(f"Rebuilding {org} ({quarter}) using run_id {run_id}")
 
     output_path = Path(
-        rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\{org}_{quarter}_rebuilt_2.xlsx"
+         OUTPUT_DIRECTORY / f"{org}_{quarter}_rebuilt_2.xlsx"
     )
 
     rebuild_submission(

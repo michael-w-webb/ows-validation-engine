@@ -1,6 +1,6 @@
 """
 ==============================
-Career ConneCT Validation Main Script
+Career ConneCT Supportive Services Validation Main Script
 ==============================
 
 This is the Career ConneCT validation main script. It instatiates the validation engine / workbook
@@ -34,22 +34,20 @@ Outputs:
     - Key Mismatches: log of key presence/absence/duplication issues across sheets
 
 """
-
-import pandas as pd
-from datetime import datetime
-from config import OUTPUT_DIRECTORY
+### dataframe import
+import pandas as pd 
 
 ### Engine Imports 
 from validation_engine.validation_engine import ValidationEngine
 from validation_engine.workbook_loader import WorkbookLoader, MultiWorkbookLoader
-from applications.ct_hires_demographic_data_pull.workbook_definitions import workbook_definitions
-from applications.ct_hires_demographic_data_pull.file_directory import file_directory
+from career_connect_supportive_services.workbook_definitions import workbook_definitions
+from career_connect_supportive_services.file_directory import file_directory
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
-# from cc_validation_cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
 
-
-
+from dotenv import load_dotenv
+from datetime import datetime
+import os
 
 ### Specify absolute path for file loading. Need to build out directory for this to work effectively. 
 # load_dotenv()
@@ -60,24 +58,125 @@ from validation_engine.standard_normalizations import strict_alphabetic_normaliz
 
 ### specify cross rule sets, these are dataset specific and should be adjusted for each program (e.g. GJC, CC, etc.)
 
-# cross_rules = [
-#             ("Connected Presence", CONNECTED_PRESENCE_RULES),
-#             ("Conditionally Blank", CONDITIONALLY_BLANK_UNLESS_RULES),
-#             ("Conditionally Allowed", CONDITIONALLY_ALLOWED_RULES),
-#             ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
-#             ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES),
-#     ]
+import re
+import pandas as pd
 
-cross_rules = []
+
+def collapse_duplicate_expense_triplets(df):
+
+    id_cols = ["First Name", "Last Name", "CT Hires Username"]
+
+    # -----------------------------------------
+    # Identify expense triplet numbers
+    # -----------------------------------------
+    expense_numbers = sorted(
+        {
+            int(re.search(r"\d+$", c).group())
+            for c in df.columns
+            if re.search(r"Dollar Amount.*\d+$", c)
+        }
+    )
+
+    triplets = [
+        (
+            f"Category of Support {i}",
+            f"Specific Use of Funds {i}",
+            f"Dollar Amount ($) {i}",
+        )
+        for i in expense_numbers
+    ]
+
+    audit_rows = []
+
+    def merge_group(group):
+
+        base = group.iloc[0].copy()
+
+        expenses = []
+
+        for idx, row in group.iterrows():
+            for cat, use, amt in triplets:
+
+                if amt in row and pd.notna(row[amt]):
+                    expenses.append(
+                        (
+                            row.get(cat, pd.NA),
+                            row.get(use, pd.NA),
+                            row.get(amt, pd.NA),
+                        )
+                    )
+
+        # record audit if duplicates exist
+        if len(group) > 1:
+
+            audit_rows.append({
+                "First Name": base["First Name"],
+                "Last Name": base["Last Name"],
+                "CT Hires Username": base["CT Hires Username"],
+                "rows_merged": len(group),
+                "expenses_found": len(expenses),
+                "source_rows": list(group.index)
+            })
+
+        MAX_EXPENSES = len(triplets)
+
+        if len(expenses) > MAX_EXPENSES:
+
+            raise ValueError(
+                f"Participant {base['First Name']} {base['Last Name']} "
+                f"({base['CT Hires Username']}) has {len(expenses)} expenses "
+                f"after consolidation, exceeding the maximum allowed ({MAX_EXPENSES})."
+            )
+
+        # clear existing values
+        for cat, use, amt in triplets:
+            base[cat] = pd.NA
+            base[use] = pd.NA
+            base[amt] = pd.NA
+
+        # refill sequentially
+        for i, (cat_val, use_val, amt_val) in enumerate(expenses):
+
+            if i >= len(triplets):
+                break
+
+            cat, use, amt = triplets[i]
+
+            base[cat] = cat_val
+            base[use] = use_val
+            base[amt] = amt_val
+
+        return base
+
+    collapsed = (
+        df.groupby(id_cols, dropna=False, as_index=False)
+        .apply(merge_group)
+        .reset_index(drop=True)
+    )
+
+    audit_df = pd.DataFrame(audit_rows)
+
+    return collapsed, audit_df
+
+
+GRAB_LATEST = True
+LOGGING = True
+START_ORG = None # set if you need to jump to a problematic document
 
 for target_period in ["PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
-
+## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 
         # Containers for results
     all_normalized = []
     all_errors = []
     all_mismatches = []
+    duplicate_logs = []
 
     for org, data_types in file_directory.items():
+
+        if START_ORG and org != START_ORG:
+            continue
+
+        START_ORG = None
 
         ##### Start - File selection ##### 
 
@@ -90,19 +189,44 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
         ## Current file types are:
         # 
         # For Career ConneCT - "training data" 
-        # For Good Jobs Challenge - "TPI" and "SSI"  
-
-        file_type = "cc_demo_pull"
+        # For Good Jobs Challenge - "TPI" and "SSI" 
         
+
+        file_type = "cc_supportive_services"
+        
+        available_periods = list(data_types[file_type].keys())
+
+        if not available_periods:
+            continue  # no files available
+
+        if target_period in available_periods:
+            selected_period = target_period
+
+        elif GRAB_LATEST:
+            current_period = list(data_types[file_type].keys())[-1]
+
+            print(
+                f"{org}: {target_period} not found. "
+                f"Using latest available period {current_period}."
+            )
+
+            selected_period = current_period
+
+        else:
+            print(
+                f"{org}: {target_period} not found and GRAB_LATEST=False. Skipping."
+            )
+            continue
+
         print(f"Starting a run on {org} {file_type} @ {datetime.now()}")
 
         if file_type not in data_types:
             continue
 
-        if data_types[file_type].get(target_period) is None:
+        if data_types[file_type].get(selected_period) is None:
             continue
 
-        file_meta = data_types[file_type][target_period]
+        file_meta = data_types[file_type][selected_period]
         file_path = file_meta["file path"]
         workbook_format = file_meta["format"]
 
@@ -134,26 +258,26 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
         # No normalization because this is called after normalization is completed.  
 
         kc_strict = KeyCreator(
-        key_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
-        required_fields=["First Name, Last Name", "Client Date of Birth", "Zip Code"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
+        required_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
         return_unhashed=True,
         )
 
         kc_med_name_dob = KeyCreator(
-        key_fields=["First Name", "Last Name", "Client Date of Birth"],
-        required_fields=["First Name, Last Name","Client Date of Birth"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized"],
+        required_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized"],
         return_unhashed=True,
         )
 
         kc_med_name_zip = KeyCreator(
-        key_fields=["First Name", "Last Name", "Zip Code"],
-        required_fields=["First Name, Last Name","Zip Code"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Zip Code_normalized"],
+        required_fields=["First Name_normalized", "Last Name_normalized", "Zip Code_normalized"],
         return_unhashed=True,
         )
 
         kc_weak = KeyCreator(
-        key_fields=["First Name","Last Name"],
-        required_fields =["First Name","Last Name"],
+        key_fields=["First Name_normalized","Last Name_normalized"],
+        required_fields =["First Name_normalized","Last Name_normalized"],
         return_unhashed=True,
         )
 
@@ -203,6 +327,40 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
 
         print(f"{org} {file_type} - Finishing File Load @ {datetime.now()}")
 
+        dollar_cols = [f"Dollar Amount ($) {i}" for i in range(1, 13)]
+
+        for sheet_name, df in dfs_by_sheet.items():
+
+            collapsed_df, audit_df = collapse_duplicate_expense_triplets(df)
+
+            dfs_by_sheet[sheet_name] = collapsed_df
+
+            if not audit_df.empty:
+                audit_df["sheet"] = sheet_name
+                audit_df["org"] = org
+                audit_df["period"] = target_period
+                duplicate_logs.append(audit_df)
+
+        for sheet_name, df in dfs_by_sheet.items():
+
+            existing = [c for c in dollar_cols if c in df.columns]
+
+            if not existing:
+                continue
+
+            before = len(df)
+
+            df = df.dropna(subset=existing, how="all").copy()
+
+            after = len(df)
+
+            if before != after:
+                print(
+                    f"{org} {sheet_name}: dropped {before-after} rows with no dollar amounts"
+                )
+
+            dfs_by_sheet[sheet_name] = df
+
         ###### End - Workbook Loading ######
 
         ###### Start - Validation ######
@@ -213,7 +371,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
 
         ## Section produces both the normalized data sets (dfs) and the error list generated by normalization (errs).
 
-        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
+        engine = ValidationEngine(workbook_definitions, logging = LOGGING)
         
         file_id = f"{org}|{target_period}".replace(" ", "_")
 
@@ -227,7 +385,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
             workbook_format=workbook_format,
             dfs_by_sheet=dfs_by_sheet,
             keycreators=keycreators,
-            passed_identity_sheet= "ct_hires_cc_demo_match"
+            passed_identity_sheet= "Personal Information"
         )
 
         ##### Start - Key Evaluation  ##### 
@@ -254,13 +412,15 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
             all_errors.append(errs)
 
         mismatches = pd.DataFrame(engine.mismatches)    
+        
         if not mismatches.empty:
             mismatches["org"] = org
             mismatches["period"] = target_period
 
         all_mismatches.append(engine.mismatches)
+        
         all_normalized.append(engine.single_sheet)
-        ##### End - Key Evaluation #####
+            ##### End - Key Evaluation #####
 
     ###### Start - Print Out ###### 
 
@@ -274,6 +434,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
     # --- Combine everything ---
     normalized_final = pd.concat(all_normalized, ignore_index=True)
     errors_final = pd.concat(all_errors, ignore_index=True) if all_errors else pd.DataFrame()
+    duplicates_final = pd.concat(duplicate_logs, ignore_index=True) if duplicate_logs else pd.DataFrame()
 
     flat_rows = [
         row
@@ -284,13 +445,15 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = OUTPUT_DIRECTORY / f"ct_hires_validation_results_{target_period}.xlsx"
+    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\cc_supportive_services_all_orgs_{target_period}.xlsx"
 
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
         errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)
-        if not mismatches_final.empty:
+        duplicates_final.to_excel(writer, sheet_name="Merged Expense Logs", index=False)
+        
+        if mismatches_final is not None and not mismatches_final.empty:
             mismatches_final.to_excel(writer, sheet_name="Key Mismatches", index=False)
 
     print(f"✅ Results written to {output_file}")

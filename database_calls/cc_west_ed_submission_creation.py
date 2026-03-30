@@ -1,20 +1,20 @@
 import pandas as pd
 
-from cc_workbook_definitions import workbook_definitions as td_defs
-from ct_hires_west_ed_workbook_definitions import workbook_definitions as full_pull_defs
-from cc_ss_workbook_definitions import workbook_definitions as ss_defs
+from applications.career_connect_grantee_sheets.workbook_definitions import workbook_definitions as td_defs
+from applications.ct_hires_west_ed_request.workbook_definitions import workbook_definitions as full_pull_defs
+from applications.career_connect_supportive_services.workbook_definitions import workbook_definitions as ss_defs
 
 from pathlib import Path
 import sqlite3
 from dotenv import load_dotenv
 import hmac
 import hashlib
-
+from config import LINKING_ID_PEPPER, DB_PATH, FILE_DIRECTORY_ROOT
 import os
 
 load_dotenv()  # loads .env file
 
-PEPPER = os.environ.get("LINKING_ID_PEPPER")
+PEPPER = LINKING_ID_PEPPER
 
 DATASET_SALT = {
     "training data": "td_v1",
@@ -421,16 +421,12 @@ def resolve_run_id(conn, run_id=None, grab_latest=False, organization=None, data
     #   "DOB"
     # ],
 
-
-
-DB_PATH = Path("validation_dev.db")
-
 conn = sqlite3.connect(DB_PATH)
 conn.execute("PRAGMA foreign_keys = ON;")
 
 outputs = rebuild_datasets(conn)
 
-output_dir = Path(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\outputs")
+output_dir = Path(FILE_DIRECTORY_ROOT / "outputs")
 output_dir.mkdir(exist_ok=True)
 
 for name, df in outputs.items():

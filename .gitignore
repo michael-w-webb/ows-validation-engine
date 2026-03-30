@@ -21,7 +21,7 @@ env/
 *.log
 
 # --- VS Code ---
-.vscode/
+#.vscode/
 
 # --- Node/Electron (for later UI) ---
 node_modules/

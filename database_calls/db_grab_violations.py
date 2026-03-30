@@ -3,8 +3,9 @@ import pandas as pd
 from pathlib import Path
 import argparse
 import sys
+from config import DB_PATH, OUTPUT_DIRECTORY
 
-DB_PATH = Path("validation_dev.db")
+DB_PATH = Path(__file__).resolve().parent.parent / "database" / "validation_dev.db"
 
 
 def main():
@@ -158,7 +159,7 @@ def main():
     if org != "*" and org is not None:
         output_name += f"_{org}"
 
-    output_path = Path(f"{output_name}.csv")
+    output_path = OUTPUT_DIRECTORY / f"{output_name}.csv"
 
     if errors.empty:
         print("No validation errors found.")

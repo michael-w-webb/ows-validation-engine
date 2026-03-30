@@ -119,7 +119,6 @@ from validation_engine.cross_rule_engine import CrossRuleEngine
 from validation_engine.db_logger import ValidationDBLogger
 from hashlib import sha256
 from datetime import datetime
-import uuid
 import warnings
 
 COLUMN_CLASS_MAP = {
@@ -450,7 +449,7 @@ class ValidationEngine:
         ### if logging is enabled, create a new run entry in the database and pass the run id to the engine for later use
         if self.logging and self.run_id is None:
             ## create a unique id connected to the information passed in the run table 
-            self.run_id =  self.db_logger.start_run(self.workbook_type, self.org, self.quarter, triggered_by="mwebb")
+            self.run_id =  self.db_logger.start_run(self.workbook_type, self.org, self.quarter, triggered_by="mwebb", run_desription = self.run_description)
 
         # ============================================================
         # 1️⃣ Sheet-by-sheet validation
@@ -962,6 +961,10 @@ class ValidationEngine:
                 #print(f"Logging an error for {participant_id} at {col}.")
 
             self.db_logger.flush_violations()
+
+        if self.logging:
+
+            self.db_logger.complete_run(self.run_id)
 
     def _apply_cross_rules(self, workbook_type, workbook_format, file=None, row_offset=1):
         

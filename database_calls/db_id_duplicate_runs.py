@@ -1,11 +1,9 @@
 import sqlite3
 import pandas as pd
-from pathlib import Path
-import os
+from config import DB_PATH, OUTPUT_DIRECTORY
 
-DOCUMENTS = Path(os.environ["DOCUMENTS"])
 
-DB_PATH = Path(__file__).parent / "validation_dev.db"
+
 conn = sqlite3.connect(DB_PATH)
 
 df = pd.read_sql_query("""
@@ -38,7 +36,7 @@ ORDER BY row_count ASC;""", conn)
 
 print(df_row_count)
 
-output_path = DOCUMENTS / "dfs_with_row_count.csv"
+output_path = OUTPUT_DIRECTORY / "dfs_with_row_count.csv"
 
 df_row_count.to_csv(output_path)
 

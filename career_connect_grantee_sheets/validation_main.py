@@ -34,21 +34,23 @@ Outputs:
     - Key Mismatches: log of key presence/absence/duplication issues across sheets
 
 """
-
-import pandas as pd
+### dataframe import
+import pandas as pd 
+from dotenv import load_dotenv
 from datetime import datetime
-from config import OUTPUT_DIRECTORY
+import os
 
-### Engine Imports 
+
+### General Engine Imports 
 from validation_engine.validation_engine import ValidationEngine
 from validation_engine.workbook_loader import WorkbookLoader, MultiWorkbookLoader
-from applications.ct_hires_demographic_data_pull.workbook_definitions import workbook_definitions
-from applications.ct_hires_demographic_data_pull.file_directory import file_directory
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
-# from cc_validation_cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
 
-
+### Application Specific Imports
+from career_connect_grantee_sheets.workbook_definitions import workbook_definitions
+from career_connect_grantee_sheets.file_directory import file_directory
+from career_connect_grantee_sheets.cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
 
 
 ### Specify absolute path for file loading. Need to build out directory for this to work effectively. 
@@ -60,18 +62,19 @@ from validation_engine.standard_normalizations import strict_alphabetic_normaliz
 
 ### specify cross rule sets, these are dataset specific and should be adjusted for each program (e.g. GJC, CC, etc.)
 
-# cross_rules = [
-#             ("Connected Presence", CONNECTED_PRESENCE_RULES),
-#             ("Conditionally Blank", CONDITIONALLY_BLANK_UNLESS_RULES),
-#             ("Conditionally Allowed", CONDITIONALLY_ALLOWED_RULES),
-#             ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
-#             ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES),
-#     ]
+cross_rules = [
+            ("Connected Presence", CONNECTED_PRESENCE_RULES),
+            ("Conditionally Blank", CONDITIONALLY_BLANK_UNLESS_RULES),
+            ("Conditionally Allowed", CONDITIONALLY_ALLOWED_RULES),
+            ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
+            ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES),
+    ]
 
-cross_rules = []
+GRAB_LATEST = False
+LOGGING = False
 
-for target_period in ["PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
-
+for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1","PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
+## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 
         # Containers for results
     all_normalized = []
     all_errors = []
@@ -90,19 +93,42 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
         ## Current file types are:
         # 
         # For Career ConneCT - "training data" 
-        # For Good Jobs Challenge - "TPI" and "SSI"  
-
-        file_type = "cc_demo_pull"
+        # For Good Jobs Challenge - "TPI" and "SSI" 
         
+
+        file_type = "training data"
+        
+        available_periods = list(data_types[file_type].keys())
+
+        if not available_periods:
+            continue  # no files available
+
+        if target_period in available_periods:
+            selected_period = target_period
+
+        elif GRAB_LATEST:
+            current_period = list(data_types[file_type].keys())[-1]
+
+            print(
+                f"{org}: {target_period} not found. "
+                f"Using latest available period {current_period}."
+            )
+
+        else:
+            print(
+                f"{org}: {target_period} not found and GRAB_LATEST=False. Skipping."
+            )
+            continue
+
         print(f"Starting a run on {org} {file_type} @ {datetime.now()}")
 
         if file_type not in data_types:
             continue
 
-        if data_types[file_type].get(target_period) is None:
+        if data_types[file_type].get(selected_period) is None:
             continue
 
-        file_meta = data_types[file_type][target_period]
+        file_meta = data_types[file_type][selected_period]
         file_path = file_meta["file path"]
         workbook_format = file_meta["format"]
 
@@ -213,7 +239,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
 
         ## Section produces both the normalized data sets (dfs) and the error list generated by normalization (errs).
 
-        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
+        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = LOGGING)
         
         file_id = f"{org}|{target_period}".replace(" ", "_")
 
@@ -227,7 +253,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
             workbook_format=workbook_format,
             dfs_by_sheet=dfs_by_sheet,
             keycreators=keycreators,
-            passed_identity_sheet= "ct_hires_cc_demo_match"
+            passed_identity_sheet= "Personal Information"
         )
 
         ##### Start - Key Evaluation  ##### 
@@ -284,7 +310,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = OUTPUT_DIRECTORY / f"ct_hires_validation_results_{target_period}.xlsx"
+    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\cc_validation_results_all_orgs_{target_period}.xlsx"
 
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:

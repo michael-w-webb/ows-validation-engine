@@ -1,12 +1,14 @@
 import sqlite3
 import pandas as pd
-from pathlib import Path
+from rapidfuzz import process, fuzz
+from config import DB_PATH, OUTPUT_DIRECTORY
+
+## This file is a running list of queries from early development stage. Switched to one off named queries at some point, which are the other files in this directory. 
 
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.width", 0)
 pd.set_option("display.max_columns", None)
 
-DB_PATH = Path(__file__).parent / "validation_dev.db"
 conn = sqlite3.connect(DB_PATH)
 
 print(f"\n🔍 Inspecting Validation DB: {DB_PATH}\n")
@@ -325,7 +327,7 @@ GROUP BY
 
 """, conn)
 
-find_participant.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\find_participant.csv", index=False)
+find_participant.to_csv(OUTPUT_DIRECTORY / "find_participant.csv", index=False)
 
 #======================================================
 # 9 - Value by Quarter Longitudinal 
@@ -418,7 +420,7 @@ ORDER BY
 # ------------------------------------------------------------
 
 
-find_value.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\find_value.csv", index=False)
+find_value.to_csv(OUTPUT_DIRECTORY / "find_value.csv", index=False)
 
 multimember = pd.read_sql_query("""
     SELECT
@@ -512,7 +514,7 @@ ORDER BY vr.run_timestamp;""", conn)
 print("=== case counts by run ===")
 print(case_counts_by_run[case_counts_by_run["organization"]=="Connecticut_State_Building_Trades_Training_Institute"], "\n")
 
-case_counts_by_run.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\case_counts_by_run.csv", index=False)
+case_counts_by_run.to_csv(OUTPUT_DIRECTORY / "case_counts_by_run.csv", index=False)
 
 #==================================================
 # 13 - Missing and Present By Run 
@@ -603,7 +605,7 @@ latest_runs_by_org_dataset = pd.read_sql_query(
 print("=== Latest runs by organization and dataset ===")
 print(latest_runs_by_org_dataset["run_id"])
 
-from rapidfuzz import process, fuzz
+
 
 #====================================================
 # 15 - Person with multiple participant IDs check 
@@ -651,7 +653,7 @@ person_check = pd.read_sql_query(
 )
 
 
-person_check.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\person_check.csv", index=False)
+person_check.to_csv(OUTPUT_DIRECTORY / "person_check.csv", index=False)
 
 #======================================================
 # 16 - Fuzzy match present against missing to catch new participants generated from typos 
@@ -918,7 +920,7 @@ print(summary)
 
 strong_matches = fuzzy_matches_all
 
-fuzzy_matches_all.to_excel(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\strong_matches_comparison.xlsx", index=False)
+fuzzy_matches_all.to_excel(OUTPUT_DIRECTORY / "strong_matches_comparison.xlsx", index=False)
 
 conn.close()
 

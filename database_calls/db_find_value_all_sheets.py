@@ -1,8 +1,9 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
+from config import DB_PATH, OUTPUT_DIRECTORY
 
-DB_PATH = Path(__file__).parent / "validation_dev.db"
+
 conn = sqlite3.connect(DB_PATH)
 
 find_value = pd.read_sql_query("""
@@ -96,4 +97,4 @@ ORDER BY
     participant_id;
 """, conn)
 
-find_value.to_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\find_value_all_sheets_report.csv", index=False)
+find_value.to_csv(OUTPUT_DIRECTORY / "find_value_all_sheets_report.csv", index=False)

@@ -2,8 +2,7 @@ import os, uuid, sqlite3
 from datetime import datetime
 import pandas as pd
 import datetime as dt
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "validation_dev.db")
+from config import DB_PATH
 
 class ValidationDBLogger:
 
@@ -187,7 +186,7 @@ class ValidationDBLogger:
             return v.isoformat()
         return v
 
-    def start_run(self, dataset_name, org, quarter, triggered_by=None):
+    def start_run(self, dataset_name, org, quarter, triggered_by=None, run_description=None):
 
         """
         Create and persist a new validation run.
@@ -206,6 +205,8 @@ class ValidationDBLogger:
             Reporting quarter (e.g. ``"2025Q2"``).
         triggered_by : str, optional
             Identifier for the process or user that initiated the run.
+        run_description : str, optional
+            Free-text description of the run.
 
         Returns
         -------
@@ -214,12 +215,42 @@ class ValidationDBLogger:
         """
 
         run_id = str(uuid.uuid4())
+
         self.conn.execute(
-            "INSERT INTO validation_run (run_id, dataset_name, organization, quarter, triggered_by) VALUES (?, ?, ?, ?, ?)",
-            (run_id, dataset_name, org, quarter, triggered_by),
+            """
+            INSERT INTO validation_run (
+                run_id, dataset_name, organization, quarter, triggered_by, completed, run_description
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (run_id, dataset_name, org, quarter, triggered_by, 0, run_description),
         )
+
         self.conn.commit()
         return run_id
+        
+    def complete_run(self, run_id):
+        """
+        Mark a validation run as completed.
+
+        Parameters
+        ----------
+        run_id : str
+            UUID of the validation run to update.
+        """
+
+        cursor = self.conn.execute(
+            """
+            UPDATE validation_run
+            SET completed = 1
+            WHERE run_id = ?
+            """,
+            (run_id,),
+        )
+
+        if cursor.rowcount == 0:
+            raise ValueError(f"No validation_run found for run_id={run_id}")
+
+        self.conn.commit()
 
     def get_or_create_column(self, dataset_name, sheet_name, column_name):
 
@@ -554,119 +585,7 @@ class ValidationDBLogger:
             self.conn.rollback()
             raise
         finally:
-            self._participant_presence_buffer.clear()   
-
-    # def log_all_normalized_cell_values(
-    #     self,
-    #     run_id,
-    #     dataset_name,
-    #     normalized_data,   # dict: sheet_name → normalized df
-    #     id_df              # identity df containing id_key, person_id, participant_id
-    # ):
-        
-    #     """
-    #     Log normalized cell values for all sheets in a dataset.
-
-    #     Aligns rows from normalized dataframes to participants using
-    #     identity keys, then records normalized values for each
-    #     non-metadata column.
-
-    #     Parameters
-    #     ----------
-    #     logger : ValidationDBLogger
-    #         Active logger instance.
-    #     run_id : str
-    #         Validation run identifier.
-    #     dataset_name : str
-    #         Dataset being logged.
-    #     normalized_data : dict
-    #         Mapping of ``sheet_name`` to normalized Pandas DataFrames.
-    #     id_df : pandas.DataFrame
-    #         DataFrame containing ``id_key`` to ``participant_id`` mappings.
-    #     """
-
-    #     # -------------------------------------------------------
-    #     # 1. Build a lookup table: id_key → participant_id
-    #     # -------------------------------------------------------
-    #     key_to_participant = (
-    #         id_df[["id_key", "participant_id"]]
-    #         .dropna(subset=["participant_id"])
-    #         .set_index("id_key")["participant_id"]
-    #         .to_dict()
-    #     )
-
-    #     # -------------------------------------------------------
-    #     # 2. Loop through each normalized sheet
-    #     # -------------------------------------------------------
-    #     for sheet_name, df_norm in normalized_data.items():
-
-    #         if "id_key" not in df_norm.columns:
-    #             print(f"[WARN] Sheet '{sheet_name}' has no id_key column; skipping logging.")
-    #             continue
-            
-    #         df_norm = df_norm[df_norm["id_key"].isin(key_to_participant)].copy()
-    #         df_raw = self.raw_data_points.get(sheet_name)
-
-    #         column_ids = {}
-
-    #         for col in df_norm.columns:
-    #                 if col in ("id_key", "row_number", "person_id", "participant_id"):
-    #                     continue
-
-    #                 column_ids[col] = self.get_or_create_column(
-    #                     dataset_name=dataset_name,
-    #                     sheet_name=sheet_name,
-    #                     column_name=col
-    #                 )
-
-    #         value_cols = [
-    #             c for c in df_norm.columns
-    #             if c not in ("id_key", "row_number", "person_id", "participant_id")
-    #         ]
-
-    #         long_df = df_norm.melt(
-    #             id_vars=["id_key"],
-    #             value_vars=value_cols,
-    #             var_name="column_name",
-    #             value_name="value_normalized"
-    #         )
-
-    #         df_raw = df_raw.drop_duplicates(subset=["id_key"])
-
-    #         long_raw = df_raw.melt(
-    #             id_vars = ["id_key"],
-    #             value_vars = value_cols,
-    #             var_name = "column_name",
-    #             value_name = "value_raw"
-    #         )
-            
-    #         long_raw["id_key"] = long_raw["id_key"].astype(str).str.strip().str.lower()
-
-    #         long_df = long_df.merge(
-    #             long_raw,
-    #             on = ["id_key", "column_name"],
-    #             how = "left",
-    #             validate = "one_to_one"
-    #         )
-
-    #         long_df["participant_id"] = long_df["id_key"].map(key_to_participant)
-    #         long_df["column_id"] = long_df["column_name"].map(column_ids)
-    #         long_df["run_id"] = run_id
-    #         long_df["history_id"] = [uuid.uuid4().hex for _ in range(len(long_df))]
-
-    #         long_df = long_df.drop(columns=["id_key", "column_name"])
-    #         long_df["value_raw"] = long_df["value_raw"].astype(str)
-    #         long_df["value_normalized"] = long_df["value_normalized"].astype(str)
-
-    #         long_df.to_sql(
-    #             "cell_value_history",
-    #             self.conn,
-    #             if_exists="append",
-    #             index=False,
-    #             chunksize=5_000
-    #         )
-    
-    
+            self._participant_presence_buffer.clear()    
 
     def log_all_normalized_cell_values(
         self,

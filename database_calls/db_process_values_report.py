@@ -1,6 +1,7 @@
 import pandas as pd
+from config import OUTPUT_DIRECTORY
 
-df = pd.read_csv(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\find_value_all_sheets_report.csv")
+df = pd.read_csv(OUTPUT_DIRECTORY / "find_value_all_sheets_report.csv")
 
 # ---------------------------
 # 1. Filter to target column
@@ -80,14 +81,12 @@ print(summary)
 
 from pathlib import Path
 
-output_dir = Path(r"C:\Users\webbm\OneDrive - State of Connecticut\Documents")
-
 # Detailed transition records
-transitions_path = output_dir / "employment_status_transitions_to_unemployed.csv"
+transitions_path = OUTPUT_DIRECTORY / "employment_status_transitions_to_unemployed.csv"
 transitions.to_csv(transitions_path, index=False)
 
 # Org-level summary
-summary_path = output_dir / "employment_status_transition_summary.csv"
+summary_path = OUTPUT_DIRECTORY / "employment_status_transition_summary.csv"
 summary.to_csv(summary_path, index=False)
 
 print(f"Detailed transitions written to: {transitions_path}")

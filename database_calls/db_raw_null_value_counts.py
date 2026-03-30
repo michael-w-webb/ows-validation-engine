@@ -1,12 +1,12 @@
 import sqlite3
 import pandas as pd
-from pathlib import Path
+from config import DB_PATH, OUTPUT_DIRECTORY
 
 # ----------------------------
 # CONFIG
 # ----------------------------
-DB_PATH = Path(__file__).resolve().parent / "validation_dev.db"
-OUTPUT_PATH = Path(__file__).resolve().parent / "raw_null_audit_by_run.xlsx"
+
+OUTPUT_PATH = OUTPUT_DIRECTORY / "raw_null_audit_by_run.xlsx"
 
 QUERY = """
 SELECT

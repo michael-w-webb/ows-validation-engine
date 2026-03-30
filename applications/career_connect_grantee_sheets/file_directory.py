@@ -74,48 +74,47 @@ This module is strictly configuration data and defines no executable logic.
 from dotenv import load_dotenv
 from pathlib import Path
 import os
-
-DATA_DIR = Path(os.environ["CC_DATA_DIR"])
+from config import FILE_DIRECTORY_ROOT
 
 # Auto-generated results module
 file_directory = {
   "Marrakech": {
     "training data": {
       "PY2 Q2":{
-          "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\PY2 Q2\CareerConneCT CBO Data Entry Spreadsheet as of 1.16.2024 (Uploaded to SFTP 1.16.2024).xlsx",
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY2 Q2" / "CareerConneCT CBO Data Entry Spreadsheet as of 1.16.2024 (Uploaded to SFTP 1.16.2024).xlsx",
           "format": "simple format"
       }, 
       "PY2 Q3":{
-          "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\PY2 Q3\CareerConneCT CBO Data Entry Spreadsheet as of 3.31.2024 (Uploaded to SFTP 4.11.2024).xlsx",
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY2 Q3" / "CareerConneCT CBO Data Entry Spreadsheet as of 3.31.2024 (Uploaded to SFTP 4.11.2024).xlsx",
           "format": "simple format"
       }, 
       "PY2 Q4":{
-          "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\PY2 Q4\CareerConneCT CBO Data Entry Spreadsheet as of 6.30.2024 (Uploaded to SFTP 7.10.2024).xlsx",
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY2 Q4" / "CareerConneCT CBO Data Entry Spreadsheet as of 6.30.2024 (Uploaded to SFTP 7.10.2024).xlsx",
           "format": "simple format"
       }, 
       "PY3 Q1":{
-          "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\PY3 Q1\Marrakech_PY3Q1_SS_Cleaned.xlsx",
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY3 Q1" / "Marrakech_PY3Q1_SS_Cleaned.xlsx",
           "format": "simple format"
       }, 
       "PY3 Q2":{
-          "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\PY3Q2\Y3Q2 participant spreadsheet.xlsx",
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY3 Q2" / "Y3Q2 participant spreadsheet.xlsx",
           "format": "simple format"
       },  
       "PY3 Q3":{
-          "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\cc - copies\Marrakech\PY3 Q3\Y2Q2 Marrakech Data Entry Spreadsheet.xlsx",
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY3 Q3" / "Y2Q2 Marrakech Data Entry Spreadsheet.xlsx",
           "format": "simple format"
       },
       "PY3 Q4": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\Marrakech_CareerConneCT_Import_7.9.25.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY3 Q4" / "Marrakech_CareerConneCT_Import_7.9.25.xlsx",
         "format": "simple format"
       },
       "PY4 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\Y4Q1\CareerConneCT Import 10.10.25.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY4 Q1" / "CareerConneCT Import 10.10.25.xlsx",
         "format": "simple format",
         "starting row": 3
       },
       "PY4 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Marrakech\Y4Q2\CareerConneCT Import 1.6.26.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "PY4 Q2" / "CareerConneCT Import 1.6.26.xlsx",
         "format": "simple format",
         "starting row": 3
       }
@@ -124,53 +123,53 @@ file_directory = {
   "Career Resources We Rise": {
     "training data": {
       "PY2 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY2 Q1\2023-10-10_CRI_WeRise_Participants.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q1" / "2023-10-10_CRI_WeRise_Participants.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY2 Q2\CRI. WE RISE. CareerConneCT Client Data Entry Spreadsheet Y2.Q2..xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q2" / "CRI. WE RISE. CareerConneCT Client Data Entry Spreadsheet Y2.Q2..xlsx",
         "format": "four sheet format"
       },
       "PY2 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY2 Q3\CRI. Y2. Q3. WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q3" / "CRI. Y2. Q3. WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q4": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY2 Q4\Y2 Q4 CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q4" / "Y2 Q4 CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },      
       "PY3 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY3 Q1\CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3 Q1" / "CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY3Q2\Y3Q2 Staggered Spreadsheet CRI WR.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3 Q2" / "Y3Q2 Staggered Spreadsheet CRI WR.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\PY3Q3\Y3Q3 Data Entry Spreadsheet CRI WR.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3 Q3" / "Y3Q3 Data Entry Spreadsheet CRI WR.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q4": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\Career_Resources_We_Rise_WERISE_Y3Q4__Data_Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3 Q4" / "Career_Resources_We_Rise_WERISE_Y3Q4__Data_Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY4 Q1": {
         ## this is currently missing transfers, need to talk to Dave about how he formats these.  
-        "file path": [r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4.Q1. CRI We Rise. Hartford Client Data Entry Spreadsheet.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4.Q1. CRI We Rise. Waterbury Client Data Entry Sheetsheet.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4.Q1. CRI WR New Haven - Data Entry Spreadsheet Updated.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4.Q1. CRI WR New London - Data Entry Spreadsheet Updated.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q1\Y4Q1. CRI We Rise. Bridgeport. Client Data Entry Spreadsheet.xlsm"],
+        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q1" / "Y4.Q1. CRI We Rise. Hartford Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q1" / "Y4.Q1. CRI We Rise. Waterbury Client Data Entry Sheetsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q1" / "Y4.Q1. CRI WR New Haven - Data Entry Spreadsheet Updated.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q1" / "Y4.Q1. CRI WR New London - Data Entry Spreadsheet Updated.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q1" / "Y4Q1. CRI We Rise. Bridgeport. Client Data Entry Spreadsheet.xlsm"],
         "format": "four sheet format"
       },
       "PY4 Q2": {
         ## this is currently missing transfers, need to talk to Dave about how he formats these.  
-        "file path": [r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. Bridgeport Client Data Entry Spreadsheet.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. Hartford Client Data Entry Spreadsheet.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. New Haven Client Data Entry Spreadsheet.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. New London Client Data Entry Spreadsheet.xlsm",
-                      r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources WeRise\Y4Q2\To OWS. Waterbury Client Data Entry Sheet.xlsm"],
+        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q2" / "To OWS. Bridgeport Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q2" / "To OWS. Hartford Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q2" / "To OWS. New Haven Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q2" / "To OWS. New London Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY4 Q2" / "To OWS. Waterbury Client Data Entry Sheet.xlsm"],
         "format": "four sheet format"
       }
     }
@@ -179,43 +178,43 @@ file_directory = {
   "Career Resources Health Career": {
     "training data": {
       "PY2 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY2 Q1\2023-10-10_CRI_HCTP_Participants.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY2 Q1" / "2023-10-10_CRI_HCTP_Participants.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY2 Q2\Y2. Q2. Healthcare Careers. Client Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY2 Q2" / "Y2. Q2. Healthcare Careers. Client Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY2 Q3\Healthcare Careers. Client Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY2 Q3" / "Healthcare Careers. Client Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q4": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY2 Q4\Y2. Q4. Healthcare Careers. Client Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY2 Q4" / "Y2. Q4. Healthcare Careers. Client Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY3 Q1\Y3. Q1 Healthcare Careers. Client Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY3 Q1" / "Y3. Q1 Healthcare Careers. Client Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY3 Q2\Y3Q2 Staggered Spreadsheet CRI HC.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY3 Q2" / "Y3Q2 Staggered Spreadsheet CRI HC.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\PY3Q3\CRI HC Client Entry Spreadsheet Y3 Q3.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY3 Q3" / "CRI HC Client Entry Spreadsheet Y3 Q3.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q4": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\Career_Resources_Health_Career_Y3Q4_CRI_HC_Data_Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY3 Q4" / "Career_Resources_Health_Career_Y3Q4_CRI_HC_Data_Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY4 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\Y4Q1\NEW OWS. Y4 Q1.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY4 Q1" / "NEW OWS. Y4 Q1.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
         "format": "four sheet format"
       },
       "PY4 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Career Resources Health Career Training Program\Y4Q2\To OWS. Y4 Q2.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "PY4 Q2" / "To OWS. Y4 Q2.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
         "format": "four sheet format"
       }
     }
@@ -223,43 +222,43 @@ file_directory = {
   "CWP CDL": {
     "training data": {
       "PY2 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\PY2\Q1\PY2Q1 - CWP - CDL Data_20231010 -.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "PY2" / "Q1" / "PY2Q1 - CWP - CDL Data_20231010 -.xlsx",
         "format": "simple format"
       },
       "PY2 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\PY2\Q2\PY2Q2 - CWP - CDL Data_20240109.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "PY2" / "Q2" / "PY2Q2 - CWP - CDL Data_20240109.xlsx",
         "format": "simple format"
       },
       "PY2 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\PY2\Q3\PY2Q3 - CWP - CDL Data_20240412.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "PY2" / "Q3" / "PY2Q3 - CWP - CDL Data_20240412.xlsx",
         "format": "simple format"
       },
       "PY2 Q4": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\PY2\Q4\PY2Q4 - CWP - CDL Data_20240711.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "PY2" / "Q4" / "PY2Q4 - CWP - CDL Data_20240711.xlsx",
         "format": "simple format"
       },
       "PY3 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\PY3 Q1\PY3Q1 - CWP - CDL Data_20241007.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "PY3" / "Q1" / "PY3Q1 - CWP - CDL Data_20241007.xlsx",
         "format": "simple format"
       },
       "PY3 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\Y3Q2\Y3Q2  CWP CDL staggered spreadsheer.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y3Q2" / "Y3Q2  CWP CDL staggered spreadsheer.xlsx",
         "format": "simple format"
       },
       "PY3 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\Y3Q3\Y3Q3  Data Entry Sheet CWP CDL.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y3Q3" / "Y3Q3  Data Entry Sheet CWP CDL.xlsx",
         "format": "simple format"
       },
       "PY3 Q4": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\CWP_CDL_PY3Q4_CWP_CDL_Data_2025710.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y3Q4" / "CWP_CDL_PY3Q4_CWP_CDL_Data_2025710.xlsx",
         "format": "simple format"
       },
       "PY4 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\Y4Q1\CWP - CCT - CDL Data_20251010.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y4Q1" / "CWP - CCT - CDL Data_20251010.xlsx",
         "format": "simple format"
       },
       "PY4 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners CDL\Y4Q2\PY4Q2 CWP CDL Data_20260108.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y4Q2" / "PY4Q2 CWP CDL Data_20260108.xlsx",
         "format": "simple format"
       }
     }
@@ -267,43 +266,43 @@ file_directory = {
   "CWP IT": {
     "training data": {
       "PY2 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\PY2\Q1\PY2Q1 - CWP - IT Data_20231010.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "PY2" / "Q1" / "PY2Q1 - CWP - IT Data_20231010.xlsx",
         "format": "simple format"
       },
       "PY2 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\PY2\Q2\PY2Q2 - CWP - IT Data_20240109.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "PY2" / "Q2" / "PY2Q2 - CWP - IT Data_20240109.xlsx",
         "format": "simple format"
       },
       "PY2 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\PY2\Q3\PY2Q3 - CWP - IT Data_20240412.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "PY2" / "Q3" / "PY2Q3 - CWP - IT Data_20240412.xlsx",
         "format": "simple format"
       },
       "PY2 Q4": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\PY2\Q4\PY2Q4 - CWP - IT Data_20240711.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "PY2" / "Q4" / "PY2Q4 - CWP - IT Data_20240711.xlsx",
         "format": "simple format"
       },
       "PY3 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\PY3 Q1\PY3Q1 - CWP - IT Data_20241007.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "PY3 Q1" / "PY3Q1 - CWP - IT Data_20241007.xlsx",
         "format": "simple format"
       },
       "PY3 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\Y3Q2\Y3Q2 CWP  IT staggered spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y3Q2" / "Y3Q2 CWP  IT staggered spreadsheet.xlsx",
         "format": "simple format"
       },
       "PY3 Q3": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\Y3Q3\Y3Q3 data entry CWP IT.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y3Q3" / "Y3Q3 data entry CWP IT.xlsx",
         "format": "simple format"
       },
       "PY3 Q4": {
-        "file path": "C:\\Users\\webbm\\OneDrive - State of Connecticut\\Documents\\cc - copies\\CWP_IT_PY3Q4_CWP_IT_Data_2025710.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y3Q4" / "CWP_IT_PY3Q4_CWP_IT_Data_2025710.xlsx",
         "format": "simple format"
       },
       "PY4 Q1": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\Y4Q1\PY4Q1 - CWP - IT Data_20251010.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y4Q1" / "PY4Q1 - CWP - IT Data_20251010.xlsx",
         "format": "simple format"
       },
       "PY4 Q2": {
-        "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Career Connect\Capital Workforce Partners\Capital Workforce Partners IT\Y4Q2\PY4Q2 CWP IT Data_20260108.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y4Q2" / "PY4Q2 CWP IT Data_20260108.xlsx",
         "format": "simple format"
       }
     }

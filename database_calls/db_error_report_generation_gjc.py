@@ -1,7 +1,7 @@
-from logging import config
 import sqlite3
 import pandas as pd
 from pathlib import Path
+from config import DB_PATH, OUTPUT_DIRECTORY
 
 
 #### GJC CONFIG #### 
@@ -14,7 +14,7 @@ quarter = "PY4_Q2"
 
 if config_key == "GJC":
 
-    from gjc_column_label_lists import workbook_definitions
+    from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_definitions
 
     dataset_name = "TPI"
 
@@ -83,7 +83,7 @@ if config_key == "GJC":
     
 if config_key == "CC":
 
-    from cc_workbook_definitions import workbook_definitions
+    from applications.career_connect_grantee_sheets.workbook_definitions import workbook_definitions
 
     dataset_name = "training data"
 
@@ -1206,8 +1206,6 @@ from pathlib import Path
 import sqlite3
 import pandas as pd
 
-DB_PATH = Path("validation_dev.db")
-
 conn = sqlite3.connect(DB_PATH)
 conn.execute("PRAGMA foreign_keys = ON;")
 
@@ -1246,9 +1244,7 @@ for org in orgs["organization"]:
 
     print(f"Rebuilding {org} ({quarter}) using run_id {run_id}")
 
-    output_path = Path(
-        rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\{config_key}_{org}_{quarter}_Data_Refinement_Report.xlsx"
-    )
+    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report.xlsx"
 
     rebuild_submission(
         run_id=run_id,

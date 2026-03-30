@@ -1,12 +1,11 @@
 import sqlite3
 import pandas as pd
-from pathlib import Path
+from config import DB_PATH, OUTPUT_DIRECTORY
 
 # ======================
 # CONFIG
 # ======================
 
-DB_PATH = Path("validation_dev.db")
 ORG = "TWP"
 
 # ======================
@@ -60,7 +59,7 @@ print(f"\nCross-rule violations for most recent {ORG} run:\n")
 print(df)
 
 # Optional export
-output_path = Path(f"{ORG}_latest_cross_rule_errors.xlsx")
+output_path = OUTPUT_DIRECTORY / f"{ORG}_latest_cross_rule_errors.xlsx"
 df.to_excel(output_path, index=False)
 
 print(f"\nSaved to: {output_path}")

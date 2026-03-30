@@ -1,7 +1,6 @@
 import sqlite3
 from pathlib import Path
-
-DB_PATH = Path(__file__).resolve().parent / "validation_dev.db"
+from config import DB_PATH
 
 SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
@@ -33,7 +32,9 @@ CREATE TABLE IF NOT EXISTS validation_run (
     run_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     organization TEXT,
     quarter TEXT,
-    triggered_by TEXT
+    triggered_by TEXT,
+    completed INTEGER CHECK (completed IN (0, 1)),
+    run_description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS participant (

@@ -35,31 +35,20 @@ Outputs:
 
 """
 ### dataframe import
-import pandas as pd 
+from datetime import datetime
+import pandas as pd
+import re 
+
+from config import OUTPUT_DIRECTORY
 
 ### Engine Imports 
-from cc_validation_engine import ValidationEngine
-from cc_validation_workbook_loader import WorkbookLoader, MultiWorkbookLoader
-from cc_ss_workbook_definitions import workbook_definitions
-from cc_ss_file_directory import cc_ss_file_directory
-from cc_key_creator import KeyCreator
-from cc_standard_normalizations import strict_alphabetic_normalize
+from validation_engine.validation_engine import ValidationEngine
+from validation_engine.workbook_loader import WorkbookLoader, MultiWorkbookLoader
+from applications.career_connect_supportive_services.workbook_definitions import workbook_definitions
+from applications.career_connect_supportive_services.file_directory import file_directory
+from validation_engine.key_creator import KeyCreator
+from validation_engine.standard_normalizations import strict_alphabetic_normalize
 
-from dotenv import load_dotenv
-from datetime import datetime
-import os
-
-### Specify absolute path for file loading. Need to build out directory for this to work effectively. 
-# load_dotenv()
-# BASE_DIR = os.getenv("CC_DATA_DIR")
-
-# if not BASE_DIR:
-#     raise RuntimeError("CC_DATA_DIR is not set in the .env file.")
-
-### specify cross rule sets, these are dataset specific and should be adjusted for each program (e.g. GJC, CC, etc.)
-
-import re
-import pandas as pd
 
 
 def collapse_duplicate_expense_triplets(df):
@@ -171,7 +160,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
     all_mismatches = []
     duplicate_logs = []
 
-    for org, data_types in cc_ss_file_directory.items():
+    for org, data_types in file_directory.items():
 
         if START_ORG and org != START_ORG:
             continue
@@ -445,7 +434,7 @@ for target_period in ["PY4 Q2"]:   ### specify period for file selection here. C
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\cc_supportive_services_all_orgs_{target_period}.xlsx"
+    output_file = OUTPUT_DIRECTORY / f"cc_supportive_services_all_orgs_{target_period}.xlsx"
 
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:

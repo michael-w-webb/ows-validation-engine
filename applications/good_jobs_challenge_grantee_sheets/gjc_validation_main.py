@@ -2,29 +2,29 @@ import pandas as pd
 
 from validation_engine.validation_engine import ValidationEngine
 from validation_engine.workbook_loader import WorkbookLoader
-from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_program_definitions
-from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
+from good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_program_definitions, workbook_definitions
+from good_jobs_challenge_grantee_sheets.file_directory import submission_files
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
-#from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
+from good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 
-workbook_definitions = workbook_program_definitions
+workbook_definitions = workbook_definitions
 # Containers for results
 
 
-cross_rules = []
-#     ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
-#     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
-# ]
+cross_rules = [
+    ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
+    ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
+]
 
-for target_period in ["PY4 Q2"]:
+for target_period in ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2"]:
                       #, "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
     all_normalized = []
     all_errors = []
     all_mismatches = []  
 
-    for org, data_types in file_directory.items():
+    for org, data_types in submission_files.items():
 
         target_book = "TPI"
 
@@ -58,12 +58,12 @@ for target_period in ["PY4 Q2"]:
         ## Before loading workbooks, instantiate key creator and provide specifications 
 
         sheetlink_keycreator = KeyCreator(
-        key_fields=["Training Provider Name", "Training Program Name"],     # minimal for now
+        key_fields=["First Name", "Last Name"],     # minimal for now
         normalizers={
-            "Training Provider Name": strict_alphabetic_normalize,
-            "Training Program Name": strict_alphabetic_normalize,
+            "First Name": strict_alphabetic_normalize,
+            "Last Name": strict_alphabetic_normalize,
         },
-        required_fields=["Training Provider Name", "Training Program Name"],  # will drop invalid rows
+        required_fields=["First Name", "Last Name"],  # will drop invalid rows
         return_unhashed=True,                       # unhashed for easier debugging
     )
         
@@ -94,14 +94,13 @@ for target_period in ["PY4 Q2"]:
         return_unhashed=True,
         )
 
-        keycreators = []
-        
-        # [(kc_strict, "id_key_strict_name_dob_zip"),
-        #             (kc_med_name_dob, "id_key_medium_name_dob"),
-        #             (kc_med_name_zip, "id_key_medium_name_zip"),
-        #             (kc_weak, "id_key_weak_name")]
+        keycreators = [(kc_strict, "id_key_strict_name_dob_zip"),
+                    (kc_med_name_dob, "id_key_medium_name_dob"),
+                    (kc_med_name_zip, "id_key_medium_name_zip"),
+                    (kc_weak, "id_key_weak_name")]
 
-        multi_sheet_mode = True
+
+        multi_sheet_mode = len(workbook_definitions[target_book][workbook_format]) > 1
 
         loader = WorkbookLoader(
             file_path=file_path,
@@ -115,7 +114,7 @@ for target_period in ["PY4 Q2"]:
 
         loader.preprocess_excel()
         dfs_by_sheet = loader.load_sheets()
-        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = False)
+        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
         
         file_id = f"{org}|{period}".replace(" ", "_")
 
@@ -125,7 +124,7 @@ for target_period in ["PY4 Q2"]:
             workbook_format=workbook_format,
             dfs_by_sheet=dfs_by_sheet,
             keycreators= keycreators,
-            passed_identity_sheet="Institutional_Information"
+            passed_identity_sheet="Participant_Info"
         )
 
         dfs = list(engine.normalized_data.items())  # [(sheet_name, df), ...]
@@ -160,7 +159,7 @@ for target_period in ["PY4 Q2"]:
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\gjc_validation_results_all_orgs_program_level_{target_period}.xlsx"
+    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\gjc_validation_results_all_orgs_{target_period}.xlsx"
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
         errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)

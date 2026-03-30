@@ -1,12 +1,7 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
-
-# ----------------------------
-# CONFIG
-# ----------------------------
-DB_PATH = Path(__file__).resolve().parent / "validation_dev.db"
-OUTPUT_DIR = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents"
+from config import DB_PATH, OUTPUT_DIRECTORY
 
 # ----------------------------
 # QUERY
@@ -132,7 +127,7 @@ def main():
 
         safe_org = org.replace(" ", "_")
         output_path = Path(
-            OUTPUT_DIR + rf"\{safe_org}_six_months_post_training.xlsx"
+            OUTPUT_DIRECTORY / rf"{safe_org}_six_months_post_training.xlsx"
         )
 
         # Add blank columns
@@ -194,7 +189,7 @@ def main():
         total_written += 1
 
     print(f"\nCreated {total_written} org files in:")
-    print(OUTPUT_DIR)
+    print(OUTPUT_DIRECTORY)
 
 
 if __name__ == "__main__":

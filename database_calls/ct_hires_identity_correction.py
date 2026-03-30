@@ -1,7 +1,7 @@
 import sqlite3
 import pandas as pd
 from pathlib import Path
-from dotenv import load_dotenv
+from config import DB_PATH
 import sqlite3
 import pandas as pd
 
@@ -42,9 +42,6 @@ def apply_confirmed_matches(conn, match_df):
 
 def main():
     
-    load_dotenv()
-
-    DB_PATH = Path(__file__).parent / "validation_dev.db"
     MATCH_FILE = Path("cc_to_ct_hires_resolved_matches.csv")
 
     conn = sqlite3.connect(DB_PATH)

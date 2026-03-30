@@ -1,11 +1,7 @@
 import duckdb
 import os
 import sqlite3
-
-# ---------------------------------------------------------------------
-# 0. Define DB path (EDIT THIS!)
-# ---------------------------------------------------------------------
-DB_PATH = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Python Work\ows_validation_engine\validation_dev.db"
+from config import DB_PATH, PROJECT_ROOT
 
 print("Working directory:", os.getcwd())
 print("DB exists:", os.path.exists(DB_PATH))
@@ -74,7 +70,7 @@ sqlite_tables = [
 ]
 
 # Output directory
-OUTPUT_DIR = r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Python Work\ows_validation_engine\database\cc_db_parquet_output"
+OUTPUT_DIR = PROJECT_ROOT / "database" / "cc_db_parquet_output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Export each table directly from sqlite_db.{table}

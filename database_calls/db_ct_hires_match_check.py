@@ -1,8 +1,6 @@
 import sqlite3
 import pandas as pd
-from pathlib import Path
-import os
-from dotenv import load_dotenv
+from config import DB_PATH, OUTPUT_DIRECTORY
 import sqlite3
 import pandas as pd
 from rapidfuzz import process, fuzz
@@ -115,11 +113,6 @@ def fuzzy_match(cc_df, train_df, min_score=90):
 
 def main():
 
-    load_dotenv()
-
-    DOCUMENTS = Path(os.environ["DOCUMENTS"])
-
-    DB_PATH = Path(__file__).parent / "validation_dev.db"
     conn = sqlite3.connect(DB_PATH)
 
     cc_df = get_cc_demo_singletons(conn)
@@ -128,8 +121,8 @@ def main():
     match_df = fuzzy_match(cc_df, train_df, min_score=92)
 
     print(match_df.head())
-    match_df.to_csv("cc_to_training_fuzzy_matches.csv", index=False)
-    train_df.to_csv("cc_singletons.csv", index=False)
+    match_df.to_csv(OUTPUT_DIRECTORY / "cc_to_training_fuzzy_matches.csv", index=False)
+    train_df.to_csv(OUTPUT_DIRECTORY / "cc_singletons.csv", index=False)
 
     conn.close()
 

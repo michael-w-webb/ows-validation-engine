@@ -1,11 +1,11 @@
 import pandas as pd 
 
-from cc_validation_engine import ValidationEngine
-from cc_validation_workbook_loader import WorkbookLoader
+from validation_engine.validation_engine import ValidationEngine
+from validation_engine.workbook_loader import WorkbookLoader
 from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_definitions
 from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
-from cc_key_creator import KeyCreator
-from cc_standard_normalizations import strict_alphabetic_normalize
+from validation_engine.key_creator import KeyCreator
+from validation_engine.standard_normalizations import strict_alphabetic_normalize
 from applications.good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 
 

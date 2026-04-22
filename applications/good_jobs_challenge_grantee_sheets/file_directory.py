@@ -32,6 +32,10 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q2\NRWIB_HC_TPI_12-31-25_final (1).xlsm",
             "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q3\NRWIB_HC_TPI_03-31-26_final.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -65,6 +69,10 @@ file_directory = {
         },
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q2\NRWIB_HC_SSI_ 12_31_25_final.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q3":{
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q3\NRWIB_HC_SSI_ 03_31_26_final.xlsm",
             "format": "standard"
         }
     }
@@ -108,6 +116,10 @@ file_directory = {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q2\NRWIB_MFG_TPI_12-31-25_final.xlsm",
             "format": "standard"
         },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q3\NRWIB_MFG_TPI_03-31-26_final.xlsm",
+            "format": "standard"
+        },
     },
     "SSI": {
         "PY2 Q2": {
@@ -145,7 +157,11 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q2\NRWIB_MFG_SSI_12_31_25_final.xlsm",
             "format": "standard"
-        }
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\NRWIB\PY4 Q3\NRWIB_MFG_SSI_03_31_26_final.xlsm",
+            "format": "standard"
+        },
     }
 },
     "EWIB_HC": {
@@ -184,6 +200,10 @@ file_directory = {
         },
         "PY4 Q2":{
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\EWIB\PY4 Q2\EWIB_HC_TPI_12-31-25.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q3":{
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\EWIB\PY4 Q3\EWIB_HC_TPI_3-31-26.xlsm",
             "format": "standard"
         }
     }
@@ -226,6 +246,10 @@ file_directory = {
         "PY4 Q2":{
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\EWIB\PY4 Q2\EWIB_MAN_TPI_12-31-25.xlsm",
             "format": "standard"
+        },
+        "PY4 Q3":{
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\EWIB\PY4 Q3\EWIB_MAN_TPI_3-31-26.xlsm",
+            "format": "standard"
         }
     }
 },
@@ -256,6 +280,10 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\CWP\PY4 Q2\2026-01-09_CWP_TPI (2).xlsm",
             "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\CWP\PY4 Q3\2026-04-08_CWP_TPI.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -278,6 +306,10 @@ file_directory = {
         },
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\CWP\PY4 Q2\2026-01-09_CWP_SSW.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\CWP\PY4 Q3\2026-04-08_CWP_SSW.xlsm",
             "format": "standard"
         }
     }},
@@ -309,6 +341,10 @@ file_directory = {
         },
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\The WorkPlace, Inc\PY4 Q2\TWP_TPI PY4 Q1 10-25-25 with correct job numbers2.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\The WorkPlace, Inc\PY4 Q3\TWP_TPI_Updated (3)For Michael.xlsm",
             "format": "standard"
         }
     }
@@ -343,6 +379,10 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\WA\PY4 Q2\2026-01-08_WA_TPI_Updated  1.8.26.xlsm",
             "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\WA\PY4 Q3\2026-03-31_WA_TPI_Updated.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -364,6 +404,10 @@ file_directory = {
         },
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\WA\PY4 Q2\Copy of OWS SSPI Supportive Services Workbook for Jan 2026.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Workforce Development Boards (WDBs)\WA\PY4 Q3\Copy of OWS SSPI Supportive Services Workbook for April 2026.xlsm",
             "format": "standard"
         }
     }
@@ -394,6 +438,10 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\GNHCC\PY4 Q2\GNHCC_TPI_Updated January 2026 Submission.xlsm",
             "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\GNHCC\PY4 Q3\GNHCC_TPI_Updated March 2026 Submission.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -415,6 +463,10 @@ file_directory = {
         },
         "PY4 Q1": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\GNHCC\PY4 Q1\GNHCC_SS PY4 Q1 10-10-25.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q3":{
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\GNHCC\PY4 Q3\GNHCC_TPI_Updated March 2026 Submission.xlsm",
             "format": "standard"
         }
     }
@@ -441,6 +493,10 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\BRBC\PY4 Q2\2025-12_31_BRBC_OWS SSPI Training Provider Instrument - Training_Provider_List For Q4 Submission.xlsm",
             "format": "standard"
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\BRBC\PY4 Q3\2026-Mar_31_BRBC_OWS SSPI Training Provider Instrument - Q1 Submission.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -463,8 +519,12 @@ file_directory = {
         "PY4 Q2": {
             "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\Documents\Good_Jobs_Challenge\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\BRBC\PY4 Q2\2025-12_31_BRBC_OWS_SSPI Supportive Services Workbook.xlsm",
             "format": "standard"
-        }
+        },
+        "PY4 Q3": {
+            "file path": r"C:\Users\webbm\OneDrive - State of Connecticut\OWS PII Storage - Documents\Datasets for Validation\Good_Jobs_Challenge\Economic Development Organizations (EDOs)\BRBC\PY4 Q3\2026_Mar_31_BRBC_OWS_SSPI Supportive Services Workbook.xlsm",
+            "format": "standard"
     }
 }
 
+}
 }

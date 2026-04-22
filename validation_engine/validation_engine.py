@@ -634,7 +634,7 @@ class ValidationEngine:
 
         if self.logging:
             ## create a unique id connected to the information passed in the run table 
-            self.run_id =  self.db_logger.start_run(workbook_type, self.org, self.quarter, triggered_by="mwebb")
+            self.run_id =  self.db_logger.start_run(workbook_type, self.org, self.quarter, triggered_by="mwebb", run_description = self.log_description)
             self.db_logger.raw_data_points = dfs_by_sheet
     
         # ============================================================

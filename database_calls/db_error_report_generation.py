@@ -5,6 +5,8 @@ from config import DB_PATH, OUTPUT_DIRECTORY
 
 
 #### CONFIG #### 
+# Daly added hard-coded path on 4/23 b/c PATH was not working with sqlite3.connect. TODO: Investigate why.
+DB_PATH = "C:/Users/DalyRob/OneDrive - State of Connecticut/Documents/GitHub Repos/ows-validation-engine/database/validation_dev.db"
 
 config_key = "CC"
 # config_key = "GJC"
@@ -1171,40 +1173,6 @@ ORDER BY dc.sheet_name, dc.column_name, vv.participant_id
             worksheet.set_column(i, i, max_len)
 
 
-# DB_PATH = Path("validation_dev.db")
-
-# org = "CWP_CDL"
-# dataset_name = "training data"
-# quarter = "PY4_Q2"
-
-# conn = sqlite3.connect(DB_PATH)
-# conn.execute("PRAGMA foreign_keys = ON;")
-
-# runs = pd.read_sql_query("""
-#     SELECT run_id, run_timestamp
-#     FROM validation_run
-#     WHERE organization = ?
-#       AND dataset_name = ?
-#       AND quarter = ?
-#     ORDER BY run_timestamp DESC
-# """, conn, params=[org, dataset_name, quarter])
-
-# if runs.empty:
-#     raise ValueError("No runs found.")
-
-# run_id = runs.iloc[0]["run_id"]
-
-# rebuild_submission(
-#     run_id=run_id,
-#     output_path=Path(rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\{org}_{quarter}_rebuilt.xlsx"),
-#     conn=conn
-# )
-
-# conn.close()
-
-from pathlib import Path
-import sqlite3
-import pandas as pd
 
 conn = sqlite3.connect(DB_PATH)
 conn.execute("PRAGMA foreign_keys = ON;")
@@ -1244,7 +1212,7 @@ for org in orgs["organization"]:
 
     print(f"Rebuilding {org} ({quarter}) using run_id {run_id}")
 
-    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report.xlsx"
+    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report_4_20.xlsx"
 
     rebuild_submission(
         run_id=run_id,

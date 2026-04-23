@@ -1,12 +1,16 @@
 import pandas as pd 
 
+<<<<<<< HEAD
 <<<<<<< HEAD:applications/good_jobs_challenge_grantee_sheets/gjc_validation_main.py
+=======
+from config import OUTPUT_DIRECTORY
+
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
 from validation_engine.validation_engine import ValidationEngine
 from validation_engine.workbook_loader import WorkbookLoader
-from good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_program_definitions, workbook_definitions
-from good_jobs_challenge_grantee_sheets.file_directory import submission_files
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
+<<<<<<< HEAD
 from good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 =======
 from cc_validation_engine import ValidationEngine
@@ -18,28 +22,40 @@ from cc_standard_normalizations import strict_alphabetic_normalize
 from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 from cc_file_directory import DATA_DIR
 >>>>>>> daly:gjc_validation_main.py
+=======
+
+from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_definitions
+from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
+from applications.good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
 
 workbook_definitions = workbook_definitions
 # Containers for results
 
+LOGGING = True
+LOG_DESCRIPTION = " 4/22 - Updated data from Mark"
 
 cross_rules = [
     ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 ]
 
+<<<<<<< HEAD
 <<<<<<< HEAD:applications/good_jobs_challenge_grantee_sheets/gjc_validation_main.py
 for target_period in ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2"]:
 =======
 for target_period in ["PY4 Q3"]:
 >>>>>>> daly:gjc_validation_main.py
+=======
+for target_period in ["PY4 Q3"]:
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
                       #, "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
     all_normalized = []
     all_errors = []
     all_mismatches = []  
 
-    for org, data_types in submission_files.items():
+    for org, data_types in file_directory.items():
 
         target_book = "TPI"
 
@@ -86,26 +102,26 @@ for target_period in ["PY4 Q3"]:
         # No normalization because this is called after normalization is completed.  
 
         kc_strict = KeyCreator(
-        key_fields=["First Name", "Last Name", "Date of Birth", "Zip Code"],
-        required_fields=["First Name, Last Name", "Date of Birth", "Zip Code"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Date of Birth_normalized", "Zip Code_normalized"],
+        required_fields=["First Name_normalized", "Last Name_normalized", "Date of Birth_normalized", "Zip Code_normalized"],
         return_unhashed=True,
         )
 
         kc_med_name_dob = KeyCreator(
-        key_fields=["First Name", "Last Name", "Date of Birth"],
-        required_fields=["First Name, Last Name","Date of Birth"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Date of Birth_normalized"],
+        required_fields=["First Name_normalized", "Last Name_normalized", "Date of Birth_normalized"],
         return_unhashed=True,
         )
 
         kc_med_name_zip = KeyCreator(
-        key_fields=["First Name", "Last Name", "Zip Code"],
-        required_fields=["First Name, Last Name","Zip Code"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Zip Code_normalized"],
+        required_fields=["First Name_normalized", "Last Name_normalized", "Zip Code_normalized"],
         return_unhashed=True,
         )
 
         kc_weak = KeyCreator(
-        key_fields=["First Name","Last Name"],
-        required_fields =["First Name","Last Name"],
+        key_fields=["First Name_normalized","Last Name_normalized"],
+        required_fields =["First Name_normalized","Last Name_normalized"],
         return_unhashed=True,
         )
 
@@ -129,7 +145,7 @@ for target_period in ["PY4 Q3"]:
 
         loader.preprocess_excel()
         dfs_by_sheet = loader.load_sheets()
-        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = True)
+        engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = LOGGING, log_description = LOG_DESCRIPTION)
         
         file_id = f"{org}|{period}".replace(" ", "_")
 
@@ -174,7 +190,11 @@ for target_period in ["PY4 Q3"]:
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
+<<<<<<< HEAD
     output_file = rf"{DATA_DIR}\Good_Jobs_Challenge\Cleaned Programmatic Data\gjc_validation_results_all_orgs_{target_period}.xlsx"
+=======
+    output_file = OUTPUT_DIRECTORY / f"gjc_validation_results_all_orgs_{target_period}.xlsx"
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
         errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)

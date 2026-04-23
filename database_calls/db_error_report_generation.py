@@ -4,13 +4,13 @@ from pathlib import Path
 from config import DB_PATH, OUTPUT_DIRECTORY
 
 
-#### GJC CONFIG #### 
+#### CONFIG #### 
 
-#config_key = "CC"
-config_key = "GJC"
+config_key = "CC"
+# config_key = "GJC"
 
 
-quarter = "PY4_Q2"
+quarter = "PY4_Q3"
 
 if config_key == "GJC":
 

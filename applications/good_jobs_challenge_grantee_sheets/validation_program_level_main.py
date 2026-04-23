@@ -1,11 +1,20 @@
 import pandas as pd 
 
+<<<<<<< HEAD:applications/good_jobs_challenge_grantee_sheets/validation_program_level_main.py
 from validation_engine.validation_engine import ValidationEngine
 from validation_engine.workbook_loader import WorkbookLoader
 from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_program_definitions
 from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
+=======
+from cc_validation_engine import ValidationEngine
+from cc_validation_workbook_loader import WorkbookLoader
+from gjc_column_label_lists import workbook_program_definitions, workbook_definitions
+from gjc_file_metadata_dictionary import submission_files
+from cc_key_creator import KeyCreator
+from cc_standard_normalizations import strict_alphabetic_normalize
+>>>>>>> daly:gjc_validation_program_level_main.py
 #from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
 
 workbook_definitions = workbook_program_definitions
@@ -160,7 +169,7 @@ for target_period in ["PY4 Q2"]:
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = rf"C:\Users\webbm\OneDrive - State of Connecticut\Documents\gjc_validation_results_all_orgs_program_level_{target_period}.xlsx"
+    output_file = rf"C:\Users\DalyRob\State of Connecticut\OWS PII Storage - Documents\Good_Jobs_Challenge\Cleaned Programmatic Data\gjc_validation_results_all_orgs_program_level_{target_period}.xlsx"
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
         errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)

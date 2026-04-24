@@ -63,7 +63,7 @@ cross_rules = [
 
 GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "5/5 PY4 Q3 Reporting"
+LOG_DESCRIPTION = "PY4 Q3 4/24"
 
 # TARGET_ORGS = ["Charter Oak State College Foundation"]
 TARGET_ORGS = None
@@ -161,6 +161,7 @@ for target_period in periods_to_run:
         ### key creator for entry level and linking to person database
         # No normalization because this is called after normalization is completed.  
 
+        
         kc_strict = KeyCreator(
         key_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
         required_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],

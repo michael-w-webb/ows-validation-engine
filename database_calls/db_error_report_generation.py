@@ -5,8 +5,8 @@ from config import DB_PATH, OUTPUT_DIRECTORY
 
 
 #### CONFIG #### 
-# Daly added hard-coded path on 4/23 b/c PATH was not working with sqlite3.connect. TODO: Investigate why.
-DB_PATH = "C:/Users/DalyRob/OneDrive - State of Connecticut/Documents/GitHub Repos/ows-validation-engine/database/validation_dev.db"
+# Daly added hard-coded path on 4/23 b/c PATH was not working with sqlite3.connect. TODO: Investigate why. This should be fixed and should not need the ""'s now. The issue was that the .env file had "" around the file path and that's not needed.
+# DB_PATH = "C:/Users/DalyRob/OneDrive - State of Connecticut/Documents/GitHub Repos/ows-validation-engine/database/validation_dev.db"
 
 config_key = "CC"
 # config_key = "GJC"

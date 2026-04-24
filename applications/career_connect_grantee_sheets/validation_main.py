@@ -63,7 +63,7 @@ cross_rules = [
 
 GRAB_LATEST = False
 LOGGING = True
-LOG_DESCRIPTION = "PY4 Q3 4/23"
+LOG_DESCRIPTION = "PY4 Q3 4/24"
 
 # Daly commented this for testing purposes. 4/22 -> for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1","PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
 ## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 
@@ -153,6 +153,7 @@ for target_period in ["PY4 Q3"]:
         ### key creator for entry level and linking to person database
         # No normalization because this is called after normalization is completed.  
 
+        
         kc_strict = KeyCreator(
         key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
         required_fields=["First Name_normalized, Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],

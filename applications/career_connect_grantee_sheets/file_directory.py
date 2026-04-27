@@ -71,8 +71,6 @@ directory mapping in a private environment.
 
 This module is strictly configuration data and defines no executable logic.
 """
-from pathlib import Path
-import os
 from config import FILE_DIRECTORY_ROOT
 
 # Auto-generated results module
@@ -474,6 +472,10 @@ file_directory = {
       },
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y4Q2" / "Career ConneCT Staggered DataEntry Spreadsheet Charter OakState College Foundation December2025FINAL.xlsx",
+        "format": "four sheet format"
+      },
+      "PY4 Q3": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y4Q3" / "CareerConneCT Staggered Data Entry Spreadsheet Charter Oak State College FoundationApril152026FINAL.xlsx",
         "format": "four sheet format"
       }
     }

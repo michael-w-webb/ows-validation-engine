@@ -182,7 +182,7 @@ class ValidationDBLogger:
             return None
         if isinstance(v, float) and pd.isna(v):
             return None
-        if isinstance(v, (pd.Timestamp, dt.datetime, dt.date)):
+        if isinstance(v, (pd.Timestamp, dt.datetime, dt.date, dt.time)):
             return v.isoformat()
         return v
 

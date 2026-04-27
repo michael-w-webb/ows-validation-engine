@@ -9,7 +9,7 @@ from config import DB_PATH, OUTPUT_DIRECTORY
 # DB_PATH = "C:/Users/DalyRob/OneDrive - State of Connecticut/Documents/GitHub Repos/ows-validation-engine/database/validation_dev.db"
 
 config_key = "CC"
-# config_key = "GJC"
+#config_key = "GJC"
 
 
 quarter = "PY4_Q3"
@@ -93,7 +93,7 @@ if config_key == "CC":
                 "CT Hires Username": {"type": "any"},
                 "Training Completed?": {"type": "forbidden_value_change", 
                                         "initial_value_set":["1", "yes", "true"], 
-                                        "current_value_set":["0", "no", "false""","<na>","nan",None]},
+                                        "current_value_set":["0", "no", "false","<na>","nan",None]},
                 "Client Date of Birth": {"type": "date_change","tolerance_days": 30},
                 "Date Attained Recognized Credential": {"type": "date_change","tolerance_days": 30},
                 "Date Completed or Withdrew From Training #1": {"type": "date_change","tolerance_days": 30},
@@ -610,14 +610,20 @@ base_values AS (
         cvh.run_id,
         cvh.participant_id,
         cvh.column_id,
-        cvh.value_normalized,
+
+        CASE
+            WHEN cvh.value_normalized IS NULL THEN NULL
+            WHEN LOWER(TRIM(cvh.value_normalized)) IN ('nan', '<na>', '<nat>', '') THEN NULL
+            ELSE cvh.value_normalized
+        END AS value_normalized,
+
         vr.organization,
         vr.dataset_name,
         vr.run_timestamp
     FROM cell_value_history cvh
     JOIN validation_run vr
         ON vr.run_id = cvh.run_id
-    JOIN current_run cr 
+    JOIN current_run cr
         ON vr.run_timestamp <= cr.run_timestamp
     WHERE vr.organization = ?
       AND vr.dataset_name = ?
@@ -633,44 +639,29 @@ target_columns AS (
       AND sheet_name IN ({sheetname_placeholders})
 ),
 
-source_files AS (
+/* ----------------------------
+   NAME VALUES (FLATTENED)
+---------------------------- */
+name_values AS (
     SELECT
+        bv.run_id,
         bv.participant_id,
-        MAX(bv.value_normalized) AS source_file
+        MAX(CASE WHEN dc.column_name = 'First Name'
+                 THEN bv.value_normalized END) AS first_name,
+        MAX(CASE WHEN dc.column_name = 'Last Name'
+                 THEN bv.value_normalized END) AS last_name
     FROM base_values bv
     JOIN dataset_column dc
         ON bv.column_id = dc.column_id
-    JOIN (
-        SELECT
-            participant_id,
-            MAX(run_timestamp) AS latest_run
-        FROM base_values
-        GROUP BY participant_id
-    ) lr
-        ON bv.participant_id = lr.participant_id
-       AND bv.run_timestamp = lr.latest_run
-    WHERE dc.column_name = 'source_file'
-    GROUP BY bv.participant_id
+    WHERE dc.dataset_name = ?
+      AND dc.column_name IN ('First Name', 'Last Name')
+    GROUP BY bv.run_id, bv.participant_id
 ),
 
+/* ----------------------------
+   ORDERED VALUES (MAIN LOGIC)
+---------------------------- */
 ordered_values AS (
-
-    WITH name_values AS (
-        SELECT
-            bv.run_id,
-            bv.participant_id,
-            MAX(CASE WHEN dc.column_name = 'First Name'
-                    THEN bv.value_normalized END) AS first_name,
-            MAX(CASE WHEN dc.column_name = 'Last Name'
-                    THEN bv.value_normalized END) AS last_name
-        FROM base_values bv
-        JOIN dataset_column dc
-            ON bv.column_id = dc.column_id
-        WHERE dc.dataset_name = ?
-        AND dc.column_name IN ('First Name', 'Last Name')
-        GROUP BY bv.run_id, bv.participant_id
-    )
-
     SELECT
         bv.organization AS org,
         bv.participant_id,
@@ -683,7 +674,7 @@ ordered_values AS (
 
         LAG(bv.value_normalized) OVER (
             PARTITION BY bv.participant_id, tc.sheet_name, tc.column_name
-            ORDER BY bv.run_timestamp
+            ORDER BY bv.run_timestamp, bv.run_id
         ) AS previous_value,
 
         bv.run_timestamp
@@ -699,6 +690,9 @@ ordered_values AS (
        AND nv.participant_id = bv.participant_id
 ),
 
+/* ----------------------------
+   LATEST VALUE PER CELL
+---------------------------- */
 latest_values AS (
     SELECT
         bv.participant_id,
@@ -707,60 +701,48 @@ latest_values AS (
         bv.value_normalized AS current_value,
         ROW_NUMBER() OVER (
             PARTITION BY bv.participant_id, tc.sheet_name, tc.column_name
-            ORDER BY bv.run_timestamp DESC
+            ORDER BY bv.run_timestamp DESC, bv.run_id DESC
         ) AS rn
     FROM base_values bv
     JOIN target_columns tc
         ON bv.column_id = tc.column_id
 ),
 
+/* ----------------------------
+   HISTORY (NO OVER-FILTERING)
+---------------------------- */
 previous_values_agg AS (
     SELECT
-        participant_id,
-        sheet_name,
-        column_name,
-        GROUP_CONCAT(value_normalized, '|') AS previous_values
-    FROM (
-        SELECT DISTINCT
-            bv.participant_id,
-            tc.sheet_name,
-            tc.column_name,
-            bv.value_normalized
-        FROM base_values bv
-        JOIN target_columns tc
-            ON bv.column_id = tc.column_id
-        JOIN current_run cr
-            ON bv.run_timestamp < cr.run_timestamp
-        WHERE bv.value_normalized IS NOT NULL
-        AND TRIM(bv.value_normalized) <> ''
-        AND LOWER(TRIM(bv.value_normalized)) <> 'nan'
-    )
-    GROUP BY participant_id, sheet_name, column_name
+        bv.participant_id,
+        tc.sheet_name,
+        tc.column_name,
+        GROUP_CONCAT(bv.value_normalized, '|') AS previous_values
+    FROM base_values bv
+    JOIN target_columns tc
+        ON bv.column_id = tc.column_id
+    JOIN current_run cr
+        ON bv.run_timestamp < cr.run_timestamp
+    WHERE bv.value_normalized IS NOT NULL
+    GROUP BY bv.participant_id, tc.sheet_name, tc.column_name
 ),
 
-cleaned_values AS (
-    SELECT *
-    FROM ordered_values
-    WHERE
-        value_of_interest IS NOT NULL
-        AND TRIM(value_of_interest) <> ''
-        AND LOWER(TRIM(value_of_interest)) <> 'nan'
-        AND previous_value IS NOT NULL
-        AND TRIM(previous_value) <> ''
-        AND LOWER(TRIM(previous_value)) <> 'nan'
-),
-
+/* ----------------------------
+   CHANGE DETECTION
+---------------------------- */
 changes AS (
     SELECT *
-    FROM cleaned_values
-    WHERE LOWER(value_of_interest) <> LOWER(previous_value)
+    FROM ordered_values
+    WHERE NOT (
+        COALESCE(value_of_interest, '__NULL__') =
+        COALESCE(previous_value, '__NULL__')
+    )
 ),
 
 first_change AS (
     SELECT *,
            ROW_NUMBER() OVER (
                PARTITION BY participant_id, sheet_name, column_name
-               ORDER BY run_timestamp
+               ORDER BY run_timestamp, participant_id
            ) AS change_rank
     FROM changes
 )
@@ -779,22 +761,35 @@ SELECT
     sf.source_file
 
 FROM first_change fc
+
 LEFT JOIN latest_values lv
     ON fc.participant_id = lv.participant_id
     AND fc.sheet_name = lv.sheet_name
     AND fc.column_name = lv.column_name
     AND lv.rn = 1
+
 LEFT JOIN previous_values_agg pva
     ON fc.participant_id = pva.participant_id
     AND fc.sheet_name = pva.sheet_name
     AND fc.column_name = pva.column_name
-LEFT JOIN source_files sf
+
+LEFT JOIN (
+    SELECT
+        cvh.participant_id,
+        cvh.run_id,
+        cvh.value_normalized AS source_file
+    FROM cell_value_history cvh
+    JOIN dataset_column dc
+        ON cvh.column_id = dc.column_id
+    WHERE dc.column_name = 'source_file'
+) sf
     ON fc.participant_id = sf.participant_id
 
 WHERE fc.change_rank = 1
+
 ORDER BY fc.sheet_name, fc.column_name, fc.participant_id;
 
-""", conn, params = [
+""", conn, params=[
     run_id,
     org,
     dataset_name,
@@ -1201,6 +1196,7 @@ for org in orgs["organization"]:
         WHERE organization = ?
           AND dataset_name = ?
           AND quarter = ?
+          AND completed = 1
         ORDER BY run_timestamp DESC
     """, conn, params=[org, dataset_name, quarter])
 
@@ -1212,7 +1208,7 @@ for org in orgs["organization"]:
 
     print(f"Rebuilding {org} ({quarter}) using run_id {run_id}")
 
-    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report_4_20.xlsx"
+    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report_4_24.xlsx"
 
     rebuild_submission(
         run_id=run_id,

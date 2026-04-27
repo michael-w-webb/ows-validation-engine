@@ -71,8 +71,6 @@ directory mapping in a private environment.
 
 This module is strictly configuration data and defines no executable logic.
 """
-from pathlib import Path
-import os
 from config import FILE_DIRECTORY_ROOT
 
 # Auto-generated results module

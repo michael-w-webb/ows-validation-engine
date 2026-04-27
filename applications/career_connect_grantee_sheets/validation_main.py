@@ -63,10 +63,11 @@ cross_rules = [
 
 GRAB_LATEST = False
 LOGGING = True
-LOG_DESCRIPTION = "TRIAL RUN 3/25"
+LOG_DESCRIPTION = "PY4 Q3 4/24"
 
-for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1","PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
+# Daly commented this for testing purposes. 4/22 -> for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1","PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
 ## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 
+for target_period in ["PY4 Q3"]:
         # Containers for results
     all_normalized = []
     all_errors = []
@@ -128,9 +129,10 @@ for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3"
         #### as it does here (if available), but it can also take a sheet specific value from the workbook_definitions object inside of 
         #### workbook loader if one is specified there. The order of precedence is goings to be : workbook_definitions -> file_meta -> default (0)
 
+        # Daly 4/21: changed "starting row" to "starting_row" b/c that's how it is in cc_file_directory.
         starting_row = 0  # default starting row
-        if "starting row" in file_meta and file_meta["starting row"] is not None:
-            starting_row = file_meta["starting row"]
+        if "starting_row" in file_meta and file_meta["starting_row"] is not None:
+            starting_row = file_meta["starting_row"]
 
         ##### End - File Selection #####
 
@@ -151,27 +153,28 @@ for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3"
         ### key creator for entry level and linking to person database
         # No normalization because this is called after normalization is completed.  
 
+        
         kc_strict = KeyCreator(
-        key_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
-        required_fields=["First Name, Last Name", "Client Date of Birth", "Zip Code"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
+        required_fields=["First Name_normalized, Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
         return_unhashed=True,
         )
 
         kc_med_name_dob = KeyCreator(
-        key_fields=["First Name", "Last Name", "Client Date of Birth"],
-        required_fields=["First Name, Last Name","Client Date of Birth"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized"],
+        required_fields=["First Name_normalized, Last Name_normalized","Client Date of Birth_normalized"],
         return_unhashed=True,
         )
 
         kc_med_name_zip = KeyCreator(
-        key_fields=["First Name", "Last Name", "Zip Code"],
-        required_fields=["First Name, Last Name","Zip Code"],
+        key_fields=["First Name_normalized", "Last Name_normalized", "Zip Code_normalized"],
+        required_fields=["First Name_normalized, Last Name_normalized","Zip Code_normalized"],
         return_unhashed=True,
         )
 
         kc_weak = KeyCreator(
-        key_fields=["First Name","Last Name"],
-        required_fields =["First Name","Last Name"],
+        key_fields=["First Name_normalized","Last Name_normalized"],
+        required_fields =["First Name_normalized","Last Name_normalized"],
         return_unhashed=True,
         )
 
@@ -302,7 +305,7 @@ for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3"
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = OUTPUT_DIRECTORY / f"cc_validation_results_all_orgs_{target_period}.xlsx"
+    output_file = OUTPUT_DIRECTORY / "Career_ConneCT" / ".Programmatic_Data" / "Cleaned Programmatic Data" /  f"cc_validation_results_all_orgs_{target_period}.xlsx"
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)

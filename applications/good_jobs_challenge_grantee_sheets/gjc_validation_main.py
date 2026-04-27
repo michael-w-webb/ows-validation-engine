@@ -1,15 +1,33 @@
 import pandas as pd 
 
+<<<<<<< HEAD
+<<<<<<< HEAD:applications/good_jobs_challenge_grantee_sheets/gjc_validation_main.py
+=======
 from config import OUTPUT_DIRECTORY
 
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
 from validation_engine.validation_engine import ValidationEngine
 from validation_engine.workbook_loader import WorkbookLoader
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
+<<<<<<< HEAD
+from good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
+=======
+from cc_validation_engine import ValidationEngine
+from cc_validation_workbook_loader import WorkbookLoader
+from gjc_column_label_lists import workbook_program_definitions, workbook_definitions
+from gjc_file_metadata_dictionary import submission_files
+from cc_key_creator import KeyCreator
+from cc_standard_normalizations import strict_alphabetic_normalize
+from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
+from cc_file_directory import DATA_DIR
+>>>>>>> daly:gjc_validation_main.py
+=======
 
 from applications.good_jobs_challenge_grantee_sheets.workbook_definitions import workbook_definitions
 from applications.good_jobs_challenge_grantee_sheets.file_directory import file_directory
 from applications.good_jobs_challenge_grantee_sheets.cross_rule_sets import CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONDITIONALLY_REQUIRED_RULES
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
 
 workbook_definitions = workbook_definitions
 # Containers for results
@@ -22,7 +40,15 @@ cross_rules = [
     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 ]
 
+<<<<<<< HEAD
+<<<<<<< HEAD:applications/good_jobs_challenge_grantee_sheets/gjc_validation_main.py
+for target_period in ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2"]:
+=======
 for target_period in ["PY4 Q3"]:
+>>>>>>> daly:gjc_validation_main.py
+=======
+for target_period in ["PY4 Q3"]:
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
                       #, "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
     all_normalized = []
@@ -164,7 +190,11 @@ for target_period in ["PY4 Q3"]:
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
+<<<<<<< HEAD
+    output_file = rf"{DATA_DIR}\Good_Jobs_Challenge\Cleaned Programmatic Data\gjc_validation_results_all_orgs_{target_period}.xlsx"
+=======
     output_file = OUTPUT_DIRECTORY / f"gjc_validation_results_all_orgs_{target_period}.xlsx"
+>>>>>>> c2ca03ab9cb185ba35e976d4f78c71ea7a20c8ec
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)
         errors_final.to_excel(writer, sheet_name="Validation Errors", index=False)

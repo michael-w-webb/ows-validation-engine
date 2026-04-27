@@ -4,10 +4,12 @@ from pathlib import Path
 from config import DB_PATH, OUTPUT_DIRECTORY
 
 
-#### GJC CONFIG #### 
+#### CONFIG #### 
+# Daly added hard-coded path on 4/23 b/c PATH was not working with sqlite3.connect. TODO: Investigate why. This should be fixed and should not need the ""'s now. The issue was that the .env file had "" around the file path and that's not needed.
+# DB_PATH = "C:/Users/DalyRob/OneDrive - State of Connecticut/Documents/GitHub Repos/ows-validation-engine/database/validation_dev.db"
 
-#config_key = "CC"
-config_key = "GJC"
+config_key = "CC"
+# config_key = "GJC"
 
 
 quarter = "PY4_Q3"

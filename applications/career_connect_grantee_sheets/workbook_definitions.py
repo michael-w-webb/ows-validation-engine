@@ -141,7 +141,38 @@ This module is therefore the **single source of truth** for schema
 consistency across every component of the CareerConneCT validation
 pipeline.
 """
-
+simple_format_portal_data_labels = {  "First Name": [
+      "First Name"
+    ],
+    "Last Name": [
+      "Last Name"
+    ],
+    "Email": [
+      "Email"
+      ],
+    "Phone Number": [
+      "Phone Number"
+      ],
+    "Location": [
+      "Location"],
+    "Client Zip Code": [
+      "Zip/Postal Code"
+    ],
+    "Client Date Of Birth": [
+      "Client_Date_Of_Birth"
+    ],
+    # "If you are currently working, what is your hourly wage?": [ # How to handly multiple columns?
+    #   "If you are currently working, what is your hourly wage?"
+      # "If you are not currently working, what was your hourly wage in your most recent job?" # If we add this I think we need to add code to merge these columns
+      # BQ1 has cleanest data but some erroneous annual salary entries. BT1 as well
+    # ]
+    "Gender": [
+      "How do you currently identify your gender?"
+    ],
+    "Race/Ethnicity": [
+      "What is your race/ethnicity? (Check all that apply)"
+    ]
+}
 
 simple_format_training_data_labels = {  "First Name": [
       "First Name"
@@ -211,11 +242,13 @@ simple_format_training_data_labels = {  "First Name": [
       "Is the participant receiving any other forms of public assistance not listed here?_12070"
     ],
     "Hourly Wage in most recent employment prior to participation": [
-      "Hours worked per week most recent employment prior to participation:_12081",
-      "Hourly Wage in most recent employment prior to participation"
+      "Hourly Wage in most recent employment prior to participation",
+      "Hourly wage in most recent employment prior to participation:_12129"
+      # "Hours worked per week most recent employment prior to participation:_12081"
     ],
     "Hours worked per week most recent employment prior to participation (Only go back 9 months.)": [
-      "Hours worked per week most recent employment prior to participation"
+      "Hours worked per week most recent employment prior to participation",
+      "Hours worked per week most recent employment prior to participation:_12081"
     ],
     "Occupational Code of Most Recent Employment Prior to Participation": [
       "Occupational Code of Most Recent Employment Prior to Participation"
@@ -1321,6 +1354,21 @@ four_sheet_outcomes_accepted_responses_w_types = {
 }
 
 workbook_definitions = {
+
+"cc_portal_data":{
+  "simple format": {
+  
+    "Report":{
+    "labels": simple_format_training_data_labels,
+    "accepted_responses": simple_format_training_data_accepted_responses_w_types,
+    "columns_used": None,
+    "starting_row": 0,
+    "sheet_name": "Report",
+    "starting_column": 0 # zero covers whole df
+    }
+  }
+},
+
 
 "training data":{
   "simple format": {

@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS person (
     last_name            TEXT,
     dob                  TEXT,
     zip                  TEXT,
+    gender               TEXT,
+    race                 TEXT,
+    ethnicity            TEXT,
 
     -- Multi-tier hashed keys (deterministic, stored for matching)
     id_key_strict_name_dob_zip        TEXT UNIQUE,   -- first|last|dob|zip

@@ -63,7 +63,7 @@ cross_rules = [
 
 GRAB_LATEST = False
 LOGGING = True
-LOG_DESCRIPTION = "4/28 Investigating Issue #6"
+LOG_DESCRIPTION = "TRIAL RUN 4/24"
 
 for target_period in ["PY4 Q3"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
 ## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 

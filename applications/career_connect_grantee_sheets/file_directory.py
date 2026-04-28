@@ -162,6 +162,7 @@ file_directory = {
       },
       "PY4 Q2": {
         ## this is currently missing transfers, need to talk to Dave about how he formats these.  
+        
         "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. Bridgeport Client Data Entry Spreadsheet.xlsm",
                       FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. Hartford Client Data Entry Spreadsheet.xlsm",
                       FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. New Haven Client Data Entry Spreadsheet.xlsm",
@@ -463,7 +464,7 @@ file_directory = {
         "format": "four sheet format"
       },
       "PY3 Q4": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y3Q4" / "COSCF_Y3Q4_Data_Entry_Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y3Q4" / "Y3Q4 COSCF Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY4 Q1": {

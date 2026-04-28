@@ -593,320 +593,236 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
                 worksheet.set_column(i, i, max_len)
 
         # ---------------------------------------------------
-        
-        # VALUE CHANGES (for this run's organization)
+        # VALUE CHANGES (NEW APPROACH - RUN_ID SCOPED)
         # ---------------------------------------------------
-        value_changes = pd.read_sql_query(f"""
-WITH current_run AS (
-    SELECT run_timestamp
-    FROM validation_run
-    WHERE run_id = ?
-),
 
-base_values AS (
-    SELECT
-        cvh.run_id,
-        cvh.participant_id,
-        cvh.column_id,
+# --- Get run metadata ---
+        run_meta = pd.read_sql_query("""
+            SELECT organization, dataset_name, run_timestamp
+            FROM validation_run
+            WHERE run_id = ?
+        """, conn, params=[run_id])
 
-        CASE
-            WHEN cvh.value_normalized IS NULL THEN NULL
-            WHEN LOWER(TRIM(cvh.value_normalized)) IN ('nan', '<na>', '<nat>', '') THEN NULL
-            ELSE cvh.value_normalized
-        END AS value_normalized,
-
-        vr.organization,
-        vr.dataset_name,
-        vr.run_timestamp
-    FROM cell_value_history cvh
-    JOIN validation_run vr
-        ON vr.run_id = cvh.run_id
-    JOIN current_run cr
-        ON vr.run_timestamp <= cr.run_timestamp
-    WHERE vr.organization = ?
-      AND vr.dataset_name = ?
-),
-
-target_columns AS (
-    SELECT
-        column_id,
-        column_name,
-        sheet_name
-    FROM dataset_column
-    WHERE dataset_name = ?
-      AND sheet_name IN ({sheetname_placeholders})
-),
-
-/* ----------------------------
-   NAME VALUES (FLATTENED)
----------------------------- */
-name_values AS (
-    SELECT
-        bv.run_id,
-        bv.participant_id,
-        MAX(CASE WHEN dc.column_name = 'First Name'
-                 THEN bv.value_normalized END) AS first_name,
-        MAX(CASE WHEN dc.column_name = 'Last Name'
-                 THEN bv.value_normalized END) AS last_name
-    FROM base_values bv
-    JOIN dataset_column dc
-        ON bv.column_id = dc.column_id
-    WHERE dc.dataset_name = ?
-      AND dc.column_name IN ('First Name', 'Last Name')
-    GROUP BY bv.run_id, bv.participant_id
-),
-
-/* ----------------------------
-   ORDERED VALUES (MAIN LOGIC)
----------------------------- */
-ordered_values AS (
-    SELECT
-        bv.organization AS org,
-        bv.participant_id,
-        nv.first_name,
-        nv.last_name,
-        tc.sheet_name,
-        tc.column_name,
-        ppl.quarter,
-        bv.value_normalized AS value_of_interest,
-
-        LAG(bv.value_normalized) OVER (
-            PARTITION BY bv.participant_id, tc.sheet_name, tc.column_name
-            ORDER BY bv.run_timestamp, bv.run_id
-        ) AS previous_value,
-
-        bv.run_timestamp
-
-    FROM base_values bv
-    JOIN target_columns tc
-        ON bv.column_id = tc.column_id
-    JOIN participant_presence_log ppl
-        ON ppl.run_id = bv.run_id
-       AND ppl.participant_id = bv.participant_id
-    LEFT JOIN name_values nv
-        ON nv.run_id = bv.run_id
-       AND nv.participant_id = bv.participant_id
-),
-
-/* ----------------------------
-   LATEST VALUE PER CELL
----------------------------- */
-latest_values AS (
-    SELECT
-        bv.participant_id,
-        tc.sheet_name,
-        tc.column_name,
-        bv.value_normalized AS current_value,
-        ROW_NUMBER() OVER (
-            PARTITION BY bv.participant_id, tc.sheet_name, tc.column_name
-            ORDER BY bv.run_timestamp DESC, bv.run_id DESC
-        ) AS rn
-    FROM base_values bv
-    JOIN target_columns tc
-        ON bv.column_id = tc.column_id
-),
-
-/* ----------------------------
-   HISTORY (NO OVER-FILTERING)
----------------------------- */
-previous_values_agg AS (
-    SELECT
-        bv.participant_id,
-        tc.sheet_name,
-        tc.column_name,
-        GROUP_CONCAT(bv.value_normalized, '|') AS previous_values
-    FROM base_values bv
-    JOIN target_columns tc
-        ON bv.column_id = tc.column_id
-    JOIN current_run cr
-        ON bv.run_timestamp < cr.run_timestamp
-    WHERE bv.value_normalized IS NOT NULL
-    GROUP BY bv.participant_id, tc.sheet_name, tc.column_name
-),
-
-/* ----------------------------
-   CHANGE DETECTION
----------------------------- */
-changes AS (
-    SELECT *
-    FROM ordered_values
-    WHERE NOT (
-        COALESCE(value_of_interest, '__NULL__') =
-        COALESCE(previous_value, '__NULL__')
-    )
-),
-
-first_change AS (
-    SELECT *,
-           ROW_NUMBER() OVER (
-               PARTITION BY participant_id, sheet_name, column_name
-               ORDER BY run_timestamp, participant_id
-           ) AS change_rank
-    FROM changes
-)
-
-SELECT
-    fc.org,
-    fc.participant_id,
-    fc.first_name,
-    fc.last_name,
-    fc.sheet_name,
-    fc.column_name,
-    pva.previous_values,
-    fc.value_of_interest AS new_value,
-    lv.current_value,
-    fc.quarter AS change_quarter,
-    sf.source_file
-
-FROM first_change fc
-
-LEFT JOIN latest_values lv
-    ON fc.participant_id = lv.participant_id
-    AND fc.sheet_name = lv.sheet_name
-    AND fc.column_name = lv.column_name
-    AND lv.rn = 1
-
-LEFT JOIN previous_values_agg pva
-    ON fc.participant_id = pva.participant_id
-    AND fc.sheet_name = pva.sheet_name
-    AND fc.column_name = pva.column_name
-
-LEFT JOIN (
-    SELECT
-        cvh.participant_id,
-        cvh.run_id,
-        cvh.value_normalized AS source_file
-    FROM cell_value_history cvh
-    JOIN dataset_column dc
-        ON cvh.column_id = dc.column_id
-    WHERE dc.column_name = 'source_file'
-) sf
-    ON fc.participant_id = sf.participant_id
-
-WHERE fc.change_rank = 1
-
-ORDER BY fc.sheet_name, fc.column_name, fc.participant_id;
-
-""", conn, params=[
-    run_id,
-    org,
-    dataset_name,
-    dataset_name
-] + sheet_order + [
-    dataset_name
-])
-
-        if value_changes.empty:
-            value_changes = pd.DataFrame({
-                "Message": [f"No value changes detected for {org}."]
-            })
+        if run_meta.empty:
+            value_changes = pd.DataFrame({"Message": ["Run not found."]})
         else:
+            org = run_meta.loc[0, "organization"]
+            dataset_name = run_meta.loc[0, "dataset_name"]
+            run_ts = run_meta.loc[0, "run_timestamp"]
 
-             # Filter to only relevant columns
-            value_changes = value_changes[
-                value_changes["column_name"].isin(value_change_rules.keys())
-            ].copy()   # important to avoid SettingWithCopy issues
+            # --- Get all completed runs up to this run for this org ---
+            run_lookup = pd.read_sql_query("""
+                SELECT run_id, quarter, run_timestamp
+                FROM validation_run
+                WHERE organization = ?
+                AND dataset_name = ?
+                AND completed = 1
+                ORDER BY run_timestamp
+            """, conn, params=[org, dataset_name])
 
-            for column_name in value_changes.columns:
+            if run_lookup.empty or len(run_lookup) < 2:
+                value_changes = pd.DataFrame({
+                    "Message": [f"No prior runs available for comparison for {org}."]
+                })
+            else:
 
-                if column_name in ["new_value", "participant_id","rule_type"]:
+                # keep latest run per quarter
+                latest_runs = (
+                    run_lookup
+                    .sort_values("run_timestamp")
+                    .drop_duplicates("quarter", keep="last")
+                    .sort_values("quarter")
+                    .reset_index(drop=True)
+                )
 
-                    value_changes = value_changes.drop(columns=[column_name])
-            def trim_previous_values(val):
-                if pd.isna(val):
-                    return val
+                # --- helper to get diffs ---
+                def get_value_changes(conn, curr_id, prev_id):
+                    return pd.read_sql_query("""
+                        WITH current_run AS (
+                            SELECT participant_id, column_id,
+                                CASE
+                                    WHEN value_normalized IS NULL THEN NULL
+                                    WHEN LOWER(TRIM(value_normalized)) IN ('', 'nan', '<na>', '<nat>', 'none') THEN NULL
+                                    ELSE TRIM(value_normalized)
+                                END AS val
+                            FROM cell_value_history
+                            WHERE run_id = :curr_id
+                        ),
+                        previous_run AS (
+                            SELECT participant_id, column_id,
+                                CASE
+                                    WHEN value_normalized IS NULL THEN NULL
+                                    WHEN LOWER(TRIM(value_normalized)) IN ('', 'nan', '<na>', '<nat>', 'none') THEN NULL
+                                    ELSE TRIM(value_normalized)
+                                END AS val
+                            FROM cell_value_history
+                            WHERE run_id = :prev_id
+                        )
+                        SELECT 
+                            COALESCE(c.participant_id, p.participant_id) AS participant_id,
+                            COALESCE(c.column_id, p.column_id) AS column_id,
+                            dc.column_name,
+                            p.val AS old_value,
+                            c.val AS new_value
+                        FROM current_run c
+                        FULL OUTER JOIN previous_run p 
+                            ON c.participant_id = p.participant_id 
+                        AND c.column_id = p.column_id
+                        LEFT JOIN dataset_column dc
+                            ON dc.column_id = COALESCE(c.column_id, p.column_id)
+                        WHERE c.val IS NOT p.val;
+                    """, conn, params={"curr_id": curr_id, "prev_id": prev_id})
 
-                parts = [v.strip() for v in str(val).split("|") if v.strip()]
+                # --- collect all changes ---
+                all_dfs = []
 
-                # Only remove last element if more than one exists
-                if len(parts) > 1:
-                    return "|".join(parts[:-1])
+                for i in range(1, len(latest_runs)):
+                    prev_row = latest_runs.iloc[i - 1]
+                    curr_row = latest_runs.iloc[i]
 
-                # Otherwise keep original single value
-                return parts[0] if parts else val
+                    df = get_value_changes(conn, curr_row["run_id"], prev_row["run_id"])
 
-            value_changes["previous_values"] = (
-                value_changes["previous_values"]
-                .apply(trim_previous_values)
-            )
+                    if df.empty:
+                        continue
 
+                    df["organization"] = org
+                    df["from_quarter"] = prev_row["quarter"]
+                    df["to_quarter"] = curr_row["quarter"]
 
-            def is_blank(val):
+                    all_dfs.append(df)
 
-                if pd.isna(val):
-                    return True
-                s = str(val).strip().lower()
-                return s in {"", "nan", "<na>", "<nat>", "none"}
+                final_df = pd.concat(all_dfs, ignore_index=True) if all_dfs else pd.DataFrame()
 
-            def passes_rule(row):
-                rule_config = value_change_rules.get(row["column_name"])
-                if not rule_config:
-                    return False
-
-                rule_type = rule_config.get("type")
-
-                prev_raw = str(row.get("previous_values", "")).strip()
-
-                if prev_raw:
-                    history_parts = [v.strip() for v in prev_raw.split("|") if v.strip()]
+                if final_df.empty:
+                    value_changes = pd.DataFrame({
+                        "Message": [f"No value changes detected for {org}."]
+                    })
                 else:
-                    history_parts = []
 
-                old = history_parts[-2] if len(history_parts) >= 2 else (history_parts[0] if history_parts else None)
+                    # --- quarter ordering ---
+                    def quarter_key(q):
+                        py, qtr = q.split("_")
+                        return int(py.replace("PY", "")) * 10 + int(qtr.replace("Q", ""))
 
-                new = row.get("current_value", None)
+                    final_df["quarter_order"] = final_df["to_quarter"].apply(quarter_key)
 
-                old_blank = is_blank(old)
-                new_blank = is_blank(new)
+                    # --- latest change per field ---
+                    latest_changes = (
+                        final_df
+                        .sort_values("quarter_order")
+                        .drop_duplicates(
+                            subset=["organization", "participant_id", "column_id"],
+                            keep="last"
+                        )
+                    )
 
-                old = "" if old_blank else str(old).strip()
-                new = "" if new_blank else str(new).strip()
+                    # --- rule evaluation ---
+                    def clean(v):
+                        if pd.isna(v):
+                            return None
+                        v = str(v).strip().lower()
+                        if v in ["", "nan", "<na>", "<nat>", "none"]:
+                            return None
+                        return v
 
-                if is_blank(old) and not is_blank(new):
-                    return False
-                
-                if is_blank(old) and is_blank(new):
-                    return False
+                    def evaluate_change(row):
+                        col = row["column_name"]
+                        if col not in value_change_rules:
+                            return False
 
-                # ---------------------------
-                # Rule logic
-                # ---------------------------
+                        rule = value_change_rules[col]
+                        old = clean(row["old_value"])
+                        new = clean(row["new_value"])
 
-                if rule_type == "any":
-                    return True
+                        if rule["type"] == "any":
+                            return old != new
 
-                if rule_type == "date_change":
+                        if rule["type"] == "date_change":
+                            if old is None or new is None:
+                                return False
+                            try:
+                                diff = abs((pd.to_datetime(new) - pd.to_datetime(old)).days)
+                                return diff > rule["tolerance_days"]
+                            except:
+                                return False
 
-                    tolerance = rule_config.get("tolerance_days", 0)
+                        if rule["type"] == "forbidden_value_change":
+                            return (
+                                old in [clean(v) for v in rule["initial_value_set"]]
+                                and new in [clean(v) for v in rule["current_value_set"]]
+                            )
 
-                    old_dt = pd.to_datetime(old, errors="coerce")
-                    new_dt = pd.to_datetime(new, errors="coerce")
+                        return False
 
-                    if pd.notna(old_dt) and pd.notna(new_dt):
-                        diff = abs((new_dt - old_dt).days)
-                        if diff < tolerance:
-                            return False  # ignore small date shifts
+                    latest_changes["flagged"] = latest_changes.apply(evaluate_change, axis=1)
+                    flagged_df = latest_changes[latest_changes["flagged"]].copy()
 
-                if rule_type == "forbidden_value_change":
+                    if flagged_df.empty:
+                        value_changes = pd.DataFrame({
+                            "Message": [f"No rule-breaking value changes for {org}."]
+                        })
+                    else:
 
-                    initial_value_set = rule_config.get("initial_value_set", None)
-                    current_value_set = rule_config.get("current_value_set", None)
+                        # --- filter full history to flagged keys ---
+                        flagged_keys = flagged_df[
+                            ["organization", "participant_id", "column_id"]
+                        ].drop_duplicates()
 
-                    current = str(row.get("current_value", "")).strip().lower()
+                        filtered_final_df = final_df.merge(
+                            flagged_keys,
+                            on=["organization", "participant_id", "column_id"],
+                            how="inner"
+                        ).sort_values(
+                            ["organization", "participant_id", "column_id", "quarter_order"]
+                        )
 
-                    history_values = [v.lower() for v in history_parts]
+                        filtered_final_df["new_value_clean"] = filtered_final_df["new_value"].map(clean)
 
-                    in_current_value_set = current in current_value_set
-                    historic_values_in_initial_value_set = bool(set(history_values) & set(initial_value_set))
+                        # --- build full history ---
+                        def build_history(group):
+                            history = []
+                            first_old = clean(group.iloc[0]["old_value"])
+                            history.append(first_old)
+                            history.extend(group["new_value_clean"].tolist())
+                            return history
 
-                    return in_current_value_set and historic_values_in_initial_value_set
+                        history_df = (
+                            filtered_final_df
+                            .groupby(["organization", "participant_id", "column_id"])
+                            .apply(build_history)
+                            .reset_index(name="value_history")
+                        )
 
-                return False
+                        # --- merge history ---
+                        value_changes = filtered_final_df.merge(
+                            history_df,
+                            on=["organization", "participant_id", "column_id"],
+                            how="left"
+                        )
 
+                        # --- format for report ---
+                        value_changes["current_value"] = value_changes["new_value"]
 
-            # Apply filter WITHOUT dropping any columns
-            mask = value_changes.apply(passes_rule, axis=1)
-            value_changes = value_changes[mask]
+                        value_changes["previous_values"] = value_changes["value_history"].apply(
+                            lambda x: "|".join(
+                                [str(v) for v in x[:-1]]
+                            ) if isinstance(x, list) else ""
+                        )
+
+                        # cleanup
+                        value_changes = value_changes.drop(
+                            columns=["new_value", "old_value", "value_history", "column_id"],
+                            errors="ignore"
+                        )
+
+                        value_changes["list_length"] = value_changes["previous_values"].apply(lambda x: len(x.split("|")) if x else 0)
+
+                        cond_length = value_changes['list_length'] == 1
+                        cond_none = value_changes['previous_values'].astype(str).str.split('|').str[0] == None
+
+                        mask = ~(cond_length & cond_none)
+
+                        filtered_value_changes = value_changes[mask]
 
         mp_title = "Changed Values"
         mp_body = (
@@ -915,25 +831,38 @@ ORDER BY fc.sheet_name, fc.column_name, fc.participant_id;
             "• The previous values column provides a '|' delimited list of all prior non-blank values for that cell, with the most recent values listed last. In many cases there will only be one historical value, but in some cases there may be multiple if the value has changed multiple times across submissions.\n"
         )
 
-        value_changes.insert(0, "confirmed_correct", "")
-
-        if "source_file" in value_changes.columns:
-            if value_changes["source_file"].fillna("").str.strip().eq("").all():
-                value_changes.drop(columns=["source_file"], inplace=True)
-
-
-        worksheet, startrow = write_sheet_with_banner(
+        if filtered_value_changes.empty:
+            filtered_value_changes = pd.DataFrame(columns=["organization", "participant_id", "current_value", "previous_values"])
+            worksheet, startrow = write_sheet_with_banner(
             writer,
             sheet_name="Changed Values",
-            df=value_changes,
+            df=filtered_value_changes,
             title=mp_title,
             body=mp_body,
             banner_rows=3
         )
+            
+        else:
+            filtered_value_changes.insert(0, "confirmed_correct", "")
+
+            if "source_file" in filtered_value_changes.columns:
+                if filtered_value_changes["source_file"].fillna("").str.strip().eq("").all():
+                    filtered_value_changes.drop(columns=["source_file"], inplace=True)
+
+            filtered_value_changes.drop(columns=["list_length"], inplace=True)
+
+            worksheet, startrow = write_sheet_with_banner(
+                writer,
+                sheet_name="Changed Values",
+                df=filtered_value_changes,
+                title=mp_title,
+                body=mp_body,
+                banner_rows=3
+            )
 
         # Auto-fit columns (same as before)
-        for i, col in enumerate(value_changes.columns):
-            column_series = value_changes[col].astype(str)
+        for i, col in enumerate(filtered_value_changes.columns):
+            column_series = filtered_value_changes[col].astype(str)
             max_len = max(
                 column_series.map(len).max(),
                 len(col)
@@ -1035,13 +964,12 @@ ORDER BY dc.sheet_name, dc.column_name, vv.participant_id
                         ON cvh.column_id = dc.column_id
                     WHERE cvh.run_id = ?
                     AND cvh.participant_id = ?
-                    AND dc.sheet_name = ?
                     AND dc.column_name = ?
                     ORDER BY cvh.timestamp DESC
                     LIMIT 1
                     """,
                     conn,
-                    params=[run_id, participant_id, sheet_name, column_name]
+                    params=[run_id, participant_id, column_name]
                 )
 
                 if not raw.empty:

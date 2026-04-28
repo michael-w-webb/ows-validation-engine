@@ -707,6 +707,8 @@ class ValidationEngine:
 
         # --- Step 3: do matching/missing/extra on the cleaned data ---
         base_name, base_df = cleaned_dfs[0]
+        base_df = base_df.rename(columns=lambda c: f"{c}_|_|_{base_name}" if c != "id_key" else c)
+
         merged = base_df.copy()
 
         for sheet_name, df in cleaned_dfs[1:]:
@@ -724,10 +726,25 @@ class ValidationEngine:
             if extra_in_sheet:
                 record_mismatches(extra_in_sheet, self.org, self.quarter, sheet_name, "extra_in_sheet")
 
-            ### inner merge is catching any stray single participant entries and removing from the dataset that will be processed
-            merged = merged.merge(df, on="id_key", how="inner", suffixes=("", f"_{sheet_name}"))
+            df = df.rename(columns=lambda c: f"{c}_|_|_{sheet_name}" if c != "id_key" else c)
 
+            ### inner merge is catching any stray single participant entries and removing from the dataset that will be processed
+            merged = merged.merge(df, on="id_key", how="inner", suffixes=("", f"_|_|_{sheet_name}"))
+
+        
+        DELIM = "_|_|_"
+
+        def split_col(col):
+            col = col.replace("_normalized", "")
             
+            if DELIM in col:
+                base, sheet = col.split(DELIM, 1)
+            else:
+                base, sheet = col, "combined"
+
+            return base, sheet
+
+
         valid_id_keys = set(merged["id_key"])
 
         id_df_valid = id_df[id_df["id_key"].isin(valid_id_keys)].copy()
@@ -826,7 +843,7 @@ class ValidationEngine:
             prior_count = cur.fetchone()[0]
             is_first_run = prior_count == 0
             
-            row_col = f"row_number_{identity_sheet}"
+            row_col = f"row_number_{identity_sheet}_|_|_{identity_sheet}"
 
             pid_to_row = (
                 self.single_sheet

@@ -63,16 +63,25 @@ cross_rules = [
 
 GRAB_LATEST = False
 LOGGING = True
-LOG_DESCRIPTION = "TRIAL RUN 4/24"
+LOG_DESCRIPTION = "Running for Charter Oak Reference"
 
-for target_period in ["PY4 Q3"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
-## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 
-        # Containers for results
+TARGET_ORGS = ["Charter Oak State College Foundation"]
+TARGET_PERIODS = ["PY4 Q3"]
+
+ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
+
+periods_to_run = TARGET_PERIODS if TARGET_PERIODS else ALL_PERIODS
+
+for target_period in periods_to_run:    
+
     all_normalized = []
     all_errors = []
     all_mismatches = []
 
     for org, data_types in file_directory.items():
+
+        if TARGET_ORGS and org not in TARGET_ORGS:
+            continue
 
         ##### Start - File selection ##### 
 
@@ -152,26 +161,26 @@ for target_period in ["PY4 Q3"]:   ### specify period for file selection here. C
         # No normalization because this is called after normalization is completed.  
 
         kc_strict = KeyCreator(
-        key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
-        required_fields=["First Name_normalized, Last Name_normalized", "Client Date of Birth_normalized", "Zip Code_normalized"],
+        key_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
+        required_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
         return_unhashed=True,
         )
 
         kc_med_name_dob = KeyCreator(
-        key_fields=["First Name_normalized", "Last Name_normalized", "Client Date of Birth_normalized"],
-        required_fields=["First Name_normalized, Last Name_normalized","Client Date of Birth_normalized"],
+        key_fields=["First Name", "Last Name", "Client Date of Birth"],
+        required_fields=["First Name", "Last Name", "Client Date of Birth"],
         return_unhashed=True,
         )
 
         kc_med_name_zip = KeyCreator(
-        key_fields=["First Name_normalized", "Last Name_normalized", "Zip Code_normalized"],
-        required_fields=["First Name_normalized, Last Name_normalized","Zip Code_normalized"],
+        key_fields=["First Name", "Last Name", "Zip Code"],
+        required_fields=["First Name", "Last Name", "Zip Code"],
         return_unhashed=True,
         )
 
         kc_weak = KeyCreator(
-        key_fields=["First Name_normalized","Last Name_normalized"],
-        required_fields =["First Name_normalized","Last Name_normalized"],
+        key_fields=["First Name","Last Name"],
+        required_fields =["First Name","Last Name"],
         return_unhashed=True,
         )
 

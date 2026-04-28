@@ -243,7 +243,7 @@ class ValidationEngine:
                 
                 • errors_df (pd.DataFrame):
                     Structured validation errors with columns:
-                    ["file","sheet","row_number","column","rule","raw_value","normalized"]
+                    ["file","sheet","row_number","column","rule","severity", "raw_value","normalized"]
 
                     Empty if no errors detected.
 
@@ -318,7 +318,7 @@ class ValidationEngine:
             if not errs.empty:
 
                 if "id_key" in df.columns:
-            
+                    errs["severity"] = "Normalization" # label violation as Normalization error
                     errs["id_key"] = df.loc[errs.index, "id_key"].values
             
                 all_errors.append(errs)
@@ -329,7 +329,7 @@ class ValidationEngine:
         normalized_df = pd.DataFrame(normalized_cols, index=df.index)
 
         errors_df = pd.concat(all_errors) if all_errors else pd.DataFrame(
-            columns=["file","sheet",f"row_number_{sheet_name}","column","rule","raw_value","normalized"]
+            columns=["file","sheet",f"row_number_{sheet_name}","column","rule", "severity", "raw_value","normalized"]
         )
 
         #         ### Moved this to the column type classes, inappropriate for the engine to be normalizing, leaving here for reference in case changes broke stuff 
@@ -938,8 +938,7 @@ class ValidationEngine:
                 normalized = row.get("normalized", "")
                 raw_value = row.get("raw_value", "")
                 participant_id = row.get("participant_id")
-
-                severity = "error"   # or dynamic based on rule definition
+                severity = row.get("severity", "error") # fall back of "error" if a severity can't be found so that users aren't confused but we know we need to troubleshoot.
 
                 column_id = self.db_logger.get_or_create_column(
                     dataset_name = workbook_type, 
@@ -991,7 +990,7 @@ class ValidationEngine:
         Returns:
             pd.DataFrame:
                 Combined DataFrame of all cross-sheet rule violations with columns:
-                ["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"].
+                ["file", "sheet", "row_number", "column", "rule", "severity", "raw_value", "normalized"].
                 Returns an empty DataFrame with the same schema if no violations occur.
 
         Behavior:
@@ -1030,6 +1029,7 @@ class ValidationEngine:
             violations = engine.run_all_rules(ruleset)
 
             if violations is not None and not violations.empty:
+                violations["severity"] = "Cross" # label violation as Cross
                 all_violations.append(violations)
 
         # 3️⃣ Combine all violation DataFrames
@@ -1038,7 +1038,7 @@ class ValidationEngine:
         
         else:
             combined = pd.DataFrame(
-                columns=["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"]
+                columns=["file", "sheet", "row_number", "column", "rule", "severity", "raw_value", "normalized"]
             )
 
         self._cross_checked = True
@@ -1064,7 +1064,7 @@ class ValidationEngine:
         Returns:
             pandas.DataFrame:
                 A DataFrame with the standardized columns:
-                ["file", "sheet", "row_number", "column", "rule",
+                ["file", "sheet", "row_number", "column", "rule", "severity",
                  "raw_value", "normalized"]
 
                 If no errors have been recorded, an empty DataFrame with
@@ -1076,5 +1076,5 @@ class ValidationEngine:
             • Calling this multiple times is inexpensive and safe.
         """
         if not self.errors:
-            return pd.DataFrame(columns=["file","sheet","row_number","column","rule","raw_value","normalized"])
+            return pd.DataFrame(columns=["file","sheet","row_number","column","rule", "severity", "raw_value","normalized"])
         return pd.concat(self.errors, ignore_index=True)

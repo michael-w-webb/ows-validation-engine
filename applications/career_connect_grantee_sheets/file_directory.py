@@ -547,7 +547,7 @@ file_directory = {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Connecticut State Building Trades Training Institute" / "Y4Q2" / "CSBTTI Data Entry Spreadsheet PY4 Q2 - MW Corrected.xlsm",
         "format": "four sheet format"
       },
-      "PY4 Q3": { # Placeholder until the data comes in for Y4 Q3
+      "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Connecticut State Building Trades Training Institute" / "Y4Q3" / "CSBTTI Data Entry Spreadsheet PY4 Q3 - MW Corrected (1).xlsm",
         "format": "four sheet format"
       }

@@ -61,9 +61,9 @@ cross_rules = [
             ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES),
     ]
 
-GRAB_LATEST = False
+GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "PY4 Q3 4/27 TESTING CODE MERGE"
+LOG_DESCRIPTION = "PY4 Q3 Reporting - daly branch"
 
 # Daly commented this for testing purposes. 4/22 -> for target_period in ["PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1","PY4 Q2"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired. "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", 
 ## "PY2 Q2", "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4","PY4 Q1", 

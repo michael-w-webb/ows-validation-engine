@@ -61,11 +61,12 @@ cross_rules = [
             ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES),
     ]
 
-GRAB_LATEST = False
+GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "Running for Charter Oak Reference"
+LOG_DESCRIPTION = "4/30 PY4 Q3 Reporting"
 
-TARGET_ORGS = ["Charter Oak State College Foundation"]
+# TARGET_ORGS = ["Charter Oak State College Foundation"]
+TARGET_ORGS = None
 TARGET_PERIODS = ["PY4 Q3"]
 
 ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]

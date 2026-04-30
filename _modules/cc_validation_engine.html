@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cc_validation_engine &#8212; ows_validation_engine 1.1.2026 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=3d5a727b"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for cc_validation_engine</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">cc_validation_engine.py</span>
+<span class="sd">=======================</span>
+
+<span class="sd">Core validation engine for schema-based normalization, cross-sheet rule</span>
+<span class="sd">evaluation, and optional SQL-backed audit logging. This module defines the</span>
+<span class="sd">`ValidationEngine` class, which orchestrates end-to-end validation of</span>
+<span class="sd">workbooks submitted by external organizations (e.g., CareerConneCT,</span>
+<span class="sd">Good Jobs Challenge).</span>
+
+<span class="sd">Overview</span>
+<span class="sd">--------</span>
+<span class="sd">The engine performs the following high-level steps:</span>
+
+<span class="sd">1. **Sheet-by-sheet column-type normalization**</span>
+<span class="sd">   Uses column-type classes (e.g., `categoricalColumn`, `dateTimeColumn`,</span>
+<span class="sd">   `identifierColumn`) to coerce raw spreadsheet values into a consistent,</span>
+<span class="sd">   validated format. Column-type classes also generate column-level errors.</span>
+
+<span class="sd">2. **Identity resolution and participant tracking (optional)**</span>
+<span class="sd">   When `logging=True`, the engine:</span>
+<span class="sd">   - creates multiple spreadsheet-specific key variants via `KeyCreator`,</span>
+<span class="sd">   - resolves or creates global `person_id` values based on keys,</span>
+<span class="sd">   - assigns `participant_id` values for each dataset instance, and</span>
+<span class="sd">   - logs normalized cell values and participant presence to the database.</span>
+
+<span class="sd">3. **Cross-sheet rule evaluation**</span>
+<span class="sd">   Delegates rule execution to `CrossRuleEngine`, applying rule sets such as</span>
+<span class="sd">   connected presence, conditional blanks, conditional requirements, and</span>
+<span class="sd">   date-based conditional requirements.</span>
+
+<span class="sd">4. **Error aggregation**</span>
+<span class="sd">   All normalization errors and cross-sheet violations are collected into</span>
+<span class="sd">   DataFrames, accessible via `engine.errors` or `engine.get_all_errors()`.</span>
+
+<span class="sd">Inputs</span>
+<span class="sd">------</span>
+<span class="sd">The engine requires:</span>
+<span class="sd">    - ``workbook_definitions`` (dict):</span>
+<span class="sd">        Schema describing sheets, expected columns, column types, and</span>
+<span class="sd">        accepted responses.</span>
+<span class="sd">    - ``cross_rules`` (list[tuple], optional):</span>
+<span class="sd">        Rule sets to apply during cross-sheet validation. If not provided,</span>
+<span class="sd">        the caller is expected to supply rule sets externally.</span>
+<span class="sd">    - ``logging`` (bool):</span>
+<span class="sd">        Enables write-back to the SQL logging database via</span>
+<span class="sd">        ``ValidationDBLogger``.</span>
+
+<span class="sd">Within `validate_workbook`, the caller must supply:</span>
+<span class="sd">    - ``file`` (str):</span>
+<span class="sd">        Identifier in ``org|period`` format.</span>
+<span class="sd">    - ``workbook_type`` (str):</span>
+<span class="sd">        Dataset name (e.g., &quot;training data&quot;).</span>
+<span class="sd">    - ``workbook_format`` (str):</span>
+<span class="sd">        Workbook layout (&quot;simple format&quot; or &quot;four sheet format&quot;).</span>
+<span class="sd">    - ``dfs_by_sheet`` (dict[str, pandas.DataFrame]):</span>
+<span class="sd">        Raw data from each sheet after loading.</span>
+<span class="sd">    - ``keycreators`` (list of (KeyCreator, str)):</span>
+<span class="sd">        Pairs of key generators and output column names for identity matching.</span>
+
+<span class="sd">Outputs</span>
+<span class="sd">-------</span>
+<span class="sd">Attributes populated during validation:</span>
+<span class="sd">    - ``normalized_data`` (dict[str → DataFrame]):</span>
+<span class="sd">        Cleaned, normalized DataFrames for each sheet.</span>
+<span class="sd">    - ``errors`` (list[DataFrame]):</span>
+<span class="sd">        Column-level and cross-sheet validation error frames.</span>
+<span class="sd">    - ``column_error_index`` (dict[(sheet, column) → set[int]]):</span>
+<span class="sd">        Tracks row indices associated with column-level errors.</span>
+
+<span class="sd">Methods:</span>
+<span class="sd">    - ``validate_workbook``:</span>
+<span class="sd">        Main entry point for executing the full validation workflow.</span>
+<span class="sd">    - ``get_all_errors``:</span>
+<span class="sd">        Returns a single concatenated DataFrame of all errors.</span>
+<span class="sd">    - ``make_entry_key``:</span>
+<span class="sd">        Generates a deterministic hashed ID for record tracking.</span>
+
+<span class="sd">Assumptions and Constraints</span>
+<span class="sd">---------------------------</span>
+<span class="sd">- ``workbook_definitions`` fully describe all sheets and expected columns.</span>
+<span class="sd">- Each sheet includes a ``row_number`` column corresponding to the original</span>
+<span class="sd">  Excel row numbers.</span>
+<span class="sd">- ``identity_sheet`` must exist (&quot;Report&quot; for simple format, &quot;Personal</span>
+<span class="sd">  Information&quot; for multi-sheet format).</span>
+<span class="sd">- Column normalization must precede cross-sheet rule evaluation.</span>
+<span class="sd">- KeyCreator fields must match post-normalization column names.</span>
+<span class="sd">- Database schema must be initialized before enabling logging.</span>
+
+<span class="sd">Side Effects</span>
+<span class="sd">------------</span>
+<span class="sd">- When ``logging=True``, this module writes:</span>
+<span class="sd">    - run metadata,</span>
+<span class="sd">    - normalized cell values,</span>
+<span class="sd">    - person/participant resolution events,</span>
+<span class="sd">    - presence logs,</span>
+<span class="sd">    - validation rule violations</span>
+<span class="sd">  to the SQL logging database via ``ValidationDBLogger``.</span>
+
+<span class="sd">Security / PII Notes</span>
+<span class="sd">--------------------</span>
+<span class="sd">- This engine processes sensitive PII including names, DOB, ZIP code, and</span>
+<span class="sd">  state ID values.</span>
+<span class="sd">- Identity keys are generated using SHA-256, but raw PII exists in memory</span>
+<span class="sd">  during normalization and logging.</span>
+<span class="sd">- Database logs may contain raw and normalized values; appropriate access</span>
+<span class="sd">  controls must be enforced externally.</span>
+
+<span class="sd">This module is intended to be imported by higher-level orchestration scripts</span>
+<span class="sd">(e.g., `cc_validation_main.py`) and is not designed for direct command-line</span>
+<span class="sd">execution.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cc_validation_column_types</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">retired_files.cc_validation_cross_rules</span><span class="w"> </span><span class="kn">import</span> <span class="n">connected_presence</span><span class="p">,</span> <span class="n">conditionally_blank_unless</span><span class="p">,</span> <span class="n">conditionally_required</span><span class="p">,</span> <span class="n">conditionally_required_by_date_comparison</span>
+<span class="c1"># from cc_validation_cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES </span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cc_cross_rule_engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">CrossRuleEngine</span>
+<span class="c1"># from cc_validation_cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES</span>
+<span class="c1">## this is a bad way to handle this, should come up with a better way of switching between rule sets, possibly passing them as an argument in main, maybe just consolidating the JSON that captures the tables? </span>
+<span class="c1"># from gjc_validation_cross_rule_sets import CONDITIONALLY_REQUIRED_RULES, CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES, CONNECTED_PRESENCE_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_BLANK_RULES</span>
+
+<span class="c1">### SQL Logging Related Imports </span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">validation_db_logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationDBLogger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hashlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">sha256</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
+
+<span class="n">COLUMN_CLASS_MAP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;categorical&quot;</span><span class="p">:</span> <span class="n">categoricalColumn</span><span class="p">,</span>
+    <span class="s2">&quot;fileSpecificCategorical&quot;</span><span class="p">:</span><span class="n">fileSpecificCategoricalColumn</span><span class="p">,</span>
+    <span class="s2">&quot;identifier&quot;</span><span class="p">:</span> <span class="n">identifierColumn</span><span class="p">,</span>
+    <span class="s2">&quot;boolean&quot;</span><span class="p">:</span> <span class="n">booleanColumn</span><span class="p">,</span>
+    <span class="s2">&quot;dateTime&quot;</span><span class="p">:</span> <span class="n">dateTimeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;zipCode&quot;</span><span class="p">:</span> <span class="n">zipCodeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;stateID7&quot;</span><span class="p">:</span> <span class="n">stateID7Column</span><span class="p">,</span>
+    <span class="s2">&quot;ONETCode&quot;</span><span class="p">:</span> <span class="n">ONETCodeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;CIPCode&quot;</span><span class="p">:</span> <span class="n">CIPCodeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;hourlyWage&quot;</span><span class="p">:</span> <span class="n">hourlyWageColumn</span><span class="p">,</span>
+    <span class="s2">&quot;hoursWorked&quot;</span><span class="p">:</span> <span class="n">hoursWorkedColumn</span><span class="p">,</span>
+    <span class="s2">&quot;NAICSCode&quot;</span><span class="p">:</span> <span class="n">NAICSCodeColumn</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="ValidationEngine">
+<a class="viewcode-back" href="../cc_validation_engine.html#cc_validation_engine.ValidationEngine">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ValidationEngine</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Core orchestrator for sheet-level column validation in CareerConneCT /</span>
+<span class="sd">    workforce-data workbooks.</span>
+
+<span class="sd">    The engine applies:</span>
+<span class="sd">       • column-type normalization (dates, categorical, integers, Booleans, ZIPs, etc.)</span>
+<span class="sd">       • file-specific categorical validation (for org-dependent fields)</span>
+<span class="sd">       • error generation with row-level metadata</span>
+<span class="sd">       • row-dropping rules for entirely blank participant records</span>
+<span class="sd">       • construction of `column_error_index` for downstream cross-sheet checks</span>
+
+<span class="sd">    This class handles validation for **one workbook at a time**.  </span>
+<span class="sd">    Multi-sheet and cross-sheet coordination occurs in the calling</span>
+<span class="sd">    `validate_workbook()` method (not included in this snippet).</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        workbook_definitions (dict):</span>
+<span class="sd">            Schema describing expected columns, column types, and accepted responses</span>
+<span class="sd">            for each sheet in the workbook.</span>
+<span class="sd">        cross_rules (dict):</span>
+<span class="sd">            Optional override for cross-sheet validation rules.</span>
+<span class="sd">        logging (bool):</span>
+<span class="sd">            If True, downstream caller logs to SQLite via `ValidationDBLogger`.</span>
+<span class="sd">        normalized_data (dict[str, DataFrame]):</span>
+<span class="sd">            Resulting normalized sheets after validation.</span>
+<span class="sd">        errors (list[DataFrame]):</span>
+<span class="sd">            List of error DataFrames produced per sheet.</span>
+<span class="sd">        column_error_index (dict[(sheet, column) → set[int]]):</span>
+<span class="sd">            Fast lookup for cross-rule engine; identifies failed rows per column.</span>
+<span class="sd">        file (str or None):</span>
+<span class="sd">            Identifier used when generating error reports (“org|quarter|filename”).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_definitions</span><span class="p">,</span> <span class="n">cross_rules</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">logging</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span> <span class="o">=</span> <span class="n">workbook_definitions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cross_rules</span> <span class="o">=</span> <span class="n">cross_rules</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span> <span class="o">=</span> <span class="p">{}</span>   <span class="c1"># {sheet_name: DataFrame}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>            <span class="c1"># list of DataFrames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validated</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cross_checked</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="o">=</span> <span class="n">logging</span> 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_sheet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">accepted_responses</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate and normalize all columns for a single sheet.</span>
+
+<span class="sd">        This method applies the column-type classes defined in</span>
+<span class="sd">        `COLUMN_CLASS_MAP` to each column described in `accepted_responses`,</span>
+<span class="sd">        producing both a normalized DataFrame and a structured error DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df (pd.DataFrame):</span>
+<span class="sd">                Raw sheet data as loaded by the WorkbookLoader.</span>
+<span class="sd">            sheet_name (str):</span>
+<span class="sd">                Name of the sheet being validated. Used for error metadata.</span>
+<span class="sd">            accepted_responses (dict):</span>
+<span class="sd">                Column-level schema for this sheet, e.g.:</span>
+
+<span class="sd">                    {</span>
+<span class="sd">                        &quot;Date Entered Training&quot;: {&quot;type&quot;: &quot;date&quot;, &quot;required&quot;: True},</span>
+<span class="sd">                        &quot;County&quot;: {</span>
+<span class="sd">                            &quot;type&quot;: &quot;categorical&quot;,</span>
+<span class="sd">                            &quot;accepted_responses&quot;: [&quot;Hartford&quot;, &quot;New Haven&quot;, ...]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        ...</span>
+<span class="sd">                    }</span>
+
+<span class="sd">            file (str, optional):</span>
+<span class="sd">                Full workbook identifier (`&quot;org|quarter|filename&quot;`). Propagated</span>
+<span class="sd">                into error logs for data lineage.</span>
+<span class="sd">            row_offset (int, optional):</span>
+<span class="sd">                Excel row offset used when translating DataFrame indices</span>
+<span class="sd">                back into user-visible spreadsheet row numbers.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple:</span>
+<span class="sd">                (normalized_df, errors_df)</span>
+
+<span class="sd">                • normalized_df (pd.DataFrame):</span>
+<span class="sd">                    All columns normalized, reindexed (after dropping fully blank rows),</span>
+<span class="sd">                    and containing `id_key`/`row_number` if present.</span>
+<span class="sd">                </span>
+<span class="sd">                • errors_df (pd.DataFrame):</span>
+<span class="sd">                    Structured validation errors with columns:</span>
+<span class="sd">                    [&quot;file&quot;,&quot;sheet&quot;,&quot;row_number&quot;,&quot;column&quot;,&quot;rule&quot;,&quot;raw_value&quot;,&quot;normalized&quot;]</span>
+
+<span class="sd">                    Empty if no errors detected.</span>
+
+<span class="sd">        Behavior:</span>
+<span class="sd">            • Applies type-specific normalizers (date, integer, categorical, ZIP, etc.).</span>
+<span class="sd">            • Handles file-specific categorical fields (e.g., responses vary by CBO).</span>
+<span class="sd">            • Records per-column errors via each validator’s `errors_df()` method.</span>
+<span class="sd">            • Drops rows that are blank for all non-identity columns.</span>
+<span class="sd">            • Preserves `id_key` and `row_number`.</span>
+<span class="sd">            • Updates `self.column_error_index` for cross-sheet rules.</span>
+
+<span class="sd">        Side Effects:</span>
+<span class="sd">            • Mutates `self.column_error_index` (used later by cross-rule engine).</span>
+<span class="sd">            • Sets `self._validated = True`.</span>
+<span class="sd">            • Prints warnings for missing/undefined columns.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • Validation order is column-by-column; errors do not prevent processing.</span>
+<span class="sd">            • Validators may coerce values (string normalization, padding, casefolding).</span>
+<span class="sd">            • Row removal logic ensures that blank spreadsheet rows do not generate</span>
+<span class="sd">              false positive validation errors.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">normalized_cols</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">all_errors</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="s2">&quot;row_number&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">accepted_responses</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;skip </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">col_type</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">col_type</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c1">### categorical responses require extra information passed by workbook_definitions</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="n">COLUMN_CLASS_MAP</span><span class="p">[</span><span class="n">col_type</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s2">&quot;categorical&quot;</span><span class="p">:</span>
+                <span class="n">accepted</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">accepted_responses</span><span class="o">=</span><span class="n">accepted</span><span class="p">,</span>
+                <span class="n">required</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> 
+                <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s2">&quot;fileSpecificCategorical&quot;</span><span class="p">:</span>
+                <span class="n">accepted</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">,[])</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">accepted_responses</span> <span class="o">=</span> <span class="n">accepted</span><span class="p">,</span> 
+                <span class="n">required</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                <span class="n">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">])</span>
+
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="n">s_norm</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+            <span class="n">s_fmt</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s_norm</span><span class="p">)</span>
+
+            <span class="n">errs</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">errors_df</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">raw</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="n">row_offset</span><span class="p">)</span>    
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+
+                <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            
+                    <span class="n">errs</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">errs</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            
+                <span class="n">all_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">errs</span><span class="p">)</span>
+
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_fmt</span>
+
+        <span class="n">normalized_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">normalized_cols</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+        <span class="n">errors_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_errors</span><span class="p">)</span> <span class="k">if</span> <span class="n">all_errors</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="s2">&quot;sheet&quot;</span><span class="p">,</span><span class="s2">&quot;row_number&quot;</span><span class="p">,</span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="s2">&quot;rule&quot;</span><span class="p">,</span><span class="s2">&quot;raw_value&quot;</span><span class="p">,</span><span class="s2">&quot;normalized&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1">#         ### Moved this to the column type classes, inappropriate for the engine to be normalizing, leaving here for reference in case changes broke stuff </span>
+        <span class="c1"># normalized_df = normalized_df.replace(r&quot;^\s*$&quot;, pd.NA, regex=True)    # empty or whitespace-only</span>
+        <span class="c1"># normalized_df = normalized_df.replace(r&quot;^0+$&quot;, pd.NA, regex=True)     # &quot;0&quot;, &quot;00&quot;, etc.</span>
+        <span class="c1"># normalized_df = normalized_df.replace(</span>
+        <span class="c1">#     to_replace=[</span>
+        <span class="c1">#         &quot;#VALUE!&quot;, &quot;#REF!&quot;, &quot;#DIV/0!&quot;, &quot;#NAME?&quot;, &quot;#NULL!&quot;, &quot;#NUM!&quot;,</span>
+        <span class="c1">#         &quot;#N/A&quot;, &quot;nan&quot;, &quot;&lt;NA&gt;&quot;, &quot;NaN&quot;</span>
+        <span class="c1">#     ],</span>
+        <span class="c1">#     value=pd.NA</span>
+        <span class="c1"># )</span>
+
+        <span class="c1"># Drop rows that are all blank except id_key/row_number</span>
+        <span class="n">cols_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="s2">&quot;row_number&quot;</span><span class="p">]]</span>
+        <span class="n">drop_mask</span> <span class="o">=</span> <span class="n">normalized_df</span><span class="p">[</span><span class="n">cols_to_check</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">dropped_row_numbers</span> <span class="o">=</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">drop_mask</span><span class="p">,</span> <span class="s2">&quot;row_number&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">normalized_df</span> <span class="o">=</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">drop_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># ✅ Reindex to keep positional alignment with masks</span>
+        <span class="n">normalized_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Build column_error_index from the combined errors_df</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;column_error_index&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">errors_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">errors_df</span><span class="p">[</span><span class="s2">&quot;column&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+                <span class="n">bad_idx</span> <span class="o">=</span> <span class="n">errors_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">errors_df</span><span class="p">[</span><span class="s2">&quot;column&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bad_idx</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span><span class="p">[(</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">col</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">bad_idx</span><span class="p">)</span>
+
+        <span class="c1"># --- Remove any errors that belong to fully blank rows ---</span>
+        <span class="k">if</span> <span class="n">dropped_row_numbers</span><span class="p">:</span>
+            <span class="n">errors_df</span> <span class="o">=</span> <span class="n">errors_df</span><span class="p">[</span><span class="o">~</span><span class="n">errors_df</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">dropped_row_numbers</span><span class="p">)]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validated</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">normalized_df</span><span class="p">,</span> <span class="n">errors_df</span>
+
+    <span class="c1">## main function, the one implementing the other functions </span>
+<div class="viewcode-block" id="ValidationEngine.validate_workbook">
+<a class="viewcode-back" href="../cc_validation_engine.html#cc_validation_engine.ValidationEngine.validate_workbook">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_workbook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">,</span> <span class="n">dfs_by_sheet</span><span class="p">,</span> <span class="n">keycreators</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate an entire workbook, generate normalized per-sheet data, resolve</span>
+<span class="sd">        participant identity, apply cross-sheet rules, and optionally log all</span>
+<span class="sd">        results to the validation database.</span>
+
+<span class="sd">        This method orchestrates the entire validation lifecycle:</span>
+
+<span class="sd">        1. **Sheet-level validation**</span>
+<span class="sd">           • Each sheet listed in `dfs_by_sheet` is validated using column-type</span>
+<span class="sd">             validators defined in `workbook_definitions`.</span>
+<span class="sd">           • Invalid values generate row-level error records.</span>
+<span class="sd">           • Blank records (all-NA except id_key/row_number) are removed.</span>
+<span class="sd">           • Normalized DataFrames are stored in `self.normalized_data`.</span>
+
+<span class="sd">        2. **Identity resolution**</span>
+<span class="sd">           • Determines the canonical identity sheet:</span>
+<span class="sd">               - `&quot;Report&quot;` for simple-format workbooks</span>
+<span class="sd">               - `&quot;Personal Information&quot;` for four-sheet format</span>
+<span class="sd">           • Ensures `id_key` exists (auto-generated for simple format).</span>
+<span class="sd">           • If database logging is enabled:</span>
+<span class="sd">               - Applies all configured `KeyCreator` instances.</span>
+<span class="sd">               - Resolves or creates `person` records in the `person` table.</span>
+<span class="sd">               - Creates or updates `participant` records for the dataset.</span>
+
+<span class="sd">        3. **Logging normalized cell values**</span>
+<span class="sd">           • When logging is enabled, all normalized values for all sheets</span>
+<span class="sd">             are written to the database via `ValidationDBLogger`.</span>
+
+<span class="sd">        4. **Participant presence tracking**</span>
+<span class="sd">           • Marks participants as `&quot;present&quot;` or `&quot;missing&quot;` for the run,</span>
+<span class="sd">             enabling longitudinal participant tracking across reporting cycles.</span>
+
+<span class="sd">        5. **Cross-sheet rule enforcement**</span>
+<span class="sd">           • Delegates to `_apply_cross_rules()` which uses `CrossRuleEngine`</span>
+<span class="sd">             to evaluate rules such as:</span>
+<span class="sd">               - connected presence</span>
+<span class="sd">               - conditional required fields</span>
+<span class="sd">               - conditional blank-unless</span>
+<span class="sd">               - date comparison rules</span>
+<span class="sd">           • Any violations are appended to the error collection.</span>
+
+<span class="sd">        6. **Violation persistence**</span>
+<span class="sd">           • If logging is enabled, attaches `participant_id` to each error row</span>
+<span class="sd">             using `id_key` matching.</span>
+<span class="sd">           • Persists each rule violation into the `validation_violation` table.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file (str):</span>
+<span class="sd">                Identifier for the workbook, typically of the form</span>
+<span class="sd">                `&quot;org|quarter|filename&quot;`. Used for logging and lineage.</span>
+<span class="sd">            workbook_type (str):</span>
+<span class="sd">                Dataset category (e.g., `&quot;CareerConneCT&quot;`).</span>
+<span class="sd">            workbook_format (str):</span>
+<span class="sd">                Layout style defined in `workbook_definitions`</span>
+<span class="sd">                (e.g., `&quot;simple format&quot;`, `&quot;four sheet format&quot;`).</span>
+<span class="sd">            dfs_by_sheet (dict[str, pandas.DataFrame]):</span>
+<span class="sd">                Raw DataFrames produced by the loader, keyed by sheet name.</span>
+<span class="sd">            keycreators (list[tuple], optional):</span>
+<span class="sd">                List of `(KeyCreator, column_name)` pairs used to generate</span>
+<span class="sd">                additional hashed or unhashed identity keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None</span>
+<span class="sd">                All normalized data, errors, and logging output are stored in:</span>
+<span class="sd">                • `self.normalized_data`</span>
+<span class="sd">                • `self.errors`</span>
+<span class="sd">                • database tables (if logging enabled)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError:</span>
+<span class="sd">                If the required identity sheet is missing.</span>
+<span class="sd">            KeyError:</span>
+<span class="sd">                If workbook definitions are incomplete for the given</span>
+<span class="sd">                workbook type or format.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • This method must be called before any cross-rule checks or data export.</span>
+<span class="sd">            • `self.errors` collects sheet-level and cross-sheet violations.</span>
+<span class="sd">            • Calling code may retrieve all errors via `get_all_errors()`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">org</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">quarter</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+
+            <span class="n">logger</span> <span class="o">=</span> <span class="n">ValidationDBLogger</span><span class="p">()</span>
+            <span class="c1">## create a unique id connected to the information passed in the run table </span>
+            <span class="n">run_id</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="n">org</span><span class="p">,</span> <span class="n">quarter</span><span class="p">,</span> <span class="n">triggered_by</span><span class="o">=</span><span class="s2">&quot;mwebb&quot;</span><span class="p">)</span>
+
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 1️⃣ Sheet-by-sheet validation</span>
+        <span class="c1"># ============================================================</span>
+        <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">dfs_by_sheet</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">accepted_responses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">[</span><span class="n">workbook_type</span><span class="p">][</span><span class="n">workbook_format</span><span class="p">][</span><span class="n">sheet_name</span><span class="p">][</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">]</span>
+
+            <span class="n">norm_df</span><span class="p">,</span> <span class="n">errs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_sheet</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">accepted_responses</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">)</span>
+
+            <span class="n">cols_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">norm_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="s2">&quot;row_number&quot;</span><span class="p">]]</span>
+            <span class="n">norm_df</span> <span class="o">=</span> <span class="n">norm_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">cols_to_check</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="p">[</span><span class="n">sheet_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">norm_df</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">errs</span><span class="p">)</span>
+
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 2️⃣ Identify canonical participants (from identity sheet)</span>
+        <span class="c1"># ============================================================</span>
+        
+        <span class="k">if</span><span class="p">(</span><span class="n">workbook_format</span> <span class="o">==</span> <span class="s2">&quot;simple format&quot;</span><span class="p">):</span>
+            <span class="n">identity_sheet</span> <span class="o">=</span> <span class="s2">&quot;Report&quot;</span>
+            <span class="n">id_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">identity_sheet</span><span class="p">)</span>
+            <span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;|&quot;</span> <span class="o">+</span> <span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;Last Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">identity_sheet</span> <span class="o">=</span> <span class="s2">&quot;Personal Information&quot;</span>
+            <span class="n">id_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">identity_sheet</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">id_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identity sheet &#39;</span><span class="si">{</span><span class="n">identity_sheet</span><span class="si">}</span><span class="s2">&#39; not found in workbook.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Generate spreadsheet specific keys that can be used to map back to a universal person ID</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+
+            <span class="k">for</span> <span class="n">kc</span><span class="p">,</span> <span class="n">colname</span> <span class="ow">in</span> <span class="n">keycreators</span><span class="p">:</span>
+                <span class="n">id_df</span><span class="p">[</span><span class="n">colname</span><span class="p">]</span> <span class="o">=</span> <span class="n">id_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">kc</span><span class="o">.</span><span class="n">create_key_from_row</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">person_ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">id_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                
+                <span class="n">pid</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">resolve_person</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="c1">### checks keys, and resolves match or creates new person as needed</span>
+                <span class="n">person_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span> <span class="c1">## create list of recognized person ids to be added to participant table </span>
+
+            <span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;person_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">person_ids</span>
+
+            <span class="c1"># Create or update dataset entries in the DB</span>
+
+            <span class="n">participant_ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">id_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="n">pid</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;person_id&quot;</span><span class="p">]</span>
+
+                <span class="n">participant_id</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">get_or_create_participant</span><span class="p">(</span>
+                    <span class="n">person_id</span><span class="o">=</span><span class="n">pid</span><span class="p">,</span>
+                    <span class="n">dataset_name</span><span class="o">=</span><span class="n">workbook_type</span><span class="p">,</span>
+                    <span class="n">sheet_name</span><span class="o">=</span><span class="n">identity_sheet</span><span class="p">,</span>
+                    <span class="n">org</span><span class="o">=</span><span class="n">org</span><span class="p">,</span>
+                    <span class="n">quarter</span><span class="o">=</span><span class="n">quarter</span>
+                <span class="p">)</span>
+
+                <span class="n">participant_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">participant_id</span><span class="p">)</span>
+
+            <span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">participant_ids</span>
+            
+            <span class="n">logger</span><span class="o">.</span><span class="n">log_all_normalized_cell_values</span><span class="p">(</span>
+                <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+                <span class="n">dataset_name</span><span class="o">=</span><span class="n">workbook_type</span><span class="p">,</span>
+                <span class="n">normalized_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="p">,</span>
+                <span class="n">id_df</span><span class="o">=</span><span class="n">id_df</span>
+            <span class="p">)</span>
+
+            <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+            <span class="n">cur</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="s2">&quot;SELECT participant_id FROM participant WHERE dataset_name=? AND org=?&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="n">org</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">all_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+
+            <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">all_ids</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;present&quot;</span> <span class="k">if</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">seen</span> <span class="k">else</span> <span class="s2">&quot;missing&quot;</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">mark_presence_participant</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">pid</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 4️⃣ Apply cross-sheet rules</span>
+        <span class="c1"># ============================================================</span>
+        <span class="n">cross_errs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_cross_rules</span><span class="p">(</span><span class="n">workbook_type</span><span class="o">=</span><span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="o">=</span><span class="n">workbook_format</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cross_errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cross_errs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+
+            <span class="c1"># Combine all sheet-level + cross-sheet errors into one DF</span>
+            <span class="n">err_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="c1"># Attach participant_id to each error row using id_key</span>
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">err_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+
+                <span class="c1"># Build lookup: id_key → participant_id</span>
+                <span class="n">id_lookup</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">id_df</span>
+                    <span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">])</span>
+                    <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;id_key&quot;</span><span class="p">)[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Map onto errors</span>
+                <span class="n">err_df</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">err_df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">id_lookup</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># If id_key missing, participant_id cannot be resolved</span>
+                <span class="n">err_df</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="c1"># Persist each violation</span>
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">err_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+
+                <span class="n">rule_name</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rule&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">normalized</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;normalized&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">raw_value</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;raw_value&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">participant_id</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;participant_id&quot;</span><span class="p">)</span>
+
+                <span class="n">severity</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span>   <span class="c1"># or dynamic based on rule definition</span>
+
+                <span class="n">logger</span><span class="o">.</span><span class="n">log_violation</span><span class="p">(</span>
+                    <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+                    <span class="n">rule_id</span><span class="o">=</span><span class="n">rule_name</span><span class="p">,</span>                <span class="c1"># optionally: map rule → rule_id</span>
+                    <span class="n">participant_id</span><span class="o">=</span><span class="n">participant_id</span><span class="p">,</span>
+                    <span class="n">column_id</span><span class="o">=</span><span class="n">col</span><span class="p">,</span>               <span class="c1"># or your internal column_id</span>
+                    <span class="n">normalized</span><span class="o">=</span><span class="n">normalized</span><span class="p">,</span>
+                    <span class="n">raw_value</span><span class="o">=</span><span class="n">raw_value</span><span class="p">,</span>
+                    <span class="n">severity</span><span class="o">=</span><span class="n">severity</span>
+                <span class="p">)</span></div>
+
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_cross_rules</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply all configured cross-sheet and cross-column validation rules.</span>
+
+<span class="sd">        This method delegates enforcement to `CrossRuleEngine`, which evaluates</span>
+<span class="sd">        rule objects defined in `self.cross_rules`. Cross-sheet rules compare</span>
+<span class="sd">        values across multiple sheets (e.g., connected presence, conditional</span>
+<span class="sd">        requirements, date comparisons, etc.) and generate violations when</span>
+<span class="sd">        inconsistencies or unmet conditions are detected.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            workbook_type (str):</span>
+<span class="sd">                Dataset family (e.g., &quot;CareerConneCT&quot;, &quot;Participant Data&quot;).</span>
+<span class="sd">            workbook_format (str):</span>
+<span class="sd">                Layout format (e.g., &quot;simple format&quot;, &quot;four sheet format&quot;).</span>
+<span class="sd">            file (str, optional):</span>
+<span class="sd">                Workbook identifier (&quot;org|quarter|filename&quot;) used for error lineage.</span>
+<span class="sd">            row_offset (int, optional):</span>
+<span class="sd">                Offset applied when converting DataFrame indices to Excel row numbers.</span>
+<span class="sd">                Passed to the rule engine but typically remains at the default.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Combined DataFrame of all cross-sheet rule violations with columns:</span>
+<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;, &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;].</span>
+<span class="sd">                Returns an empty DataFrame with the same schema if no violations occur.</span>
+
+<span class="sd">        Behavior:</span>
+<span class="sd">            • Initializes a `CrossRuleEngine` using the already-normalized sheet data.</span>
+<span class="sd">            • Iterates through each rule group in `self.cross_rules`</span>
+<span class="sd">              (e.g., connected presence, conditional blank, conditional required).</span>
+<span class="sd">            • Executes each rule set and collects all violation DataFrames.</span>
+<span class="sd">            • Concatenates all violations into a single DataFrame.</span>
+<span class="sd">            • Marks the engine state as `_cross_checked = True`.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • Cross rules depend on `self.normalized_data`, which must already be</span>
+<span class="sd">              produced by `_validate_sheet()` calls in `validate_workbook()`.</span>
+<span class="sd">            • Missing or empty rule sets are silently skipped.</span>
+<span class="sd">            • Downstream code (e.g., the logger) attaches `participant_id` after this step.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># 1️⃣ Initialize the engine</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">CrossRuleEngine</span><span class="p">(</span>
+            <span class="n">workbook_type</span> <span class="o">=</span> <span class="n">workbook_type</span><span class="p">,</span>
+            <span class="n">workbook_format</span> <span class="o">=</span> <span class="n">workbook_format</span><span class="p">,</span>
+            <span class="n">dfs_by_sheet</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="p">,</span>
+            <span class="n">normalization_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">,</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span>
+        <span class="p">)</span>
+
+        <span class="c1"># 2️⃣ Run each rule category through the engine</span>
+        <span class="n">all_violations</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">rule_sets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cross_rules</span>
+
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">ruleset</span> <span class="ow">in</span> <span class="n">rule_sets</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ruleset</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+
+            <span class="n">violations</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">run_all_rules</span><span class="p">(</span><span class="n">ruleset</span><span class="p">)</span>
+
+
+            <span class="k">if</span> <span class="n">violations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">violations</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="n">all_violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">violations</span><span class="p">)</span>
+
+        <span class="c1"># 3️⃣ Combine all violation DataFrames</span>
+        <span class="k">if</span> <span class="n">all_violations</span><span class="p">:</span>
+            <span class="n">combined</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_violations</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">combined</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="s2">&quot;sheet&quot;</span><span class="p">,</span> <span class="s2">&quot;row_number&quot;</span><span class="p">,</span> <span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="s2">&quot;rule&quot;</span><span class="p">,</span> <span class="s2">&quot;raw_value&quot;</span><span class="p">,</span> <span class="s2">&quot;normalized&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cross_checked</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">combined</span>
+
+    
+
+<div class="viewcode-block" id="ValidationEngine.get_all_errors">
+<a class="viewcode-back" href="../cc_validation_engine.html#cc_validation_engine.ValidationEngine.get_all_errors">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a single DataFrame containing all accumulated validation errors.</span>
+
+<span class="sd">        This method aggregates:</span>
+<span class="sd">        - Sheet-level column-type validation errors generated during</span>
+<span class="sd">          `_validate_sheet()`</span>
+<span class="sd">        - Any cross-sheet rule violations produced by `_apply_cross_rules()`</span>
+
+<span class="sd">        Errors are returned in a consistent, flat structure suitable for:</span>
+<span class="sd">        - Export to Excel/CSV</span>
+<span class="sd">        - Display in UI dashboards</span>
+<span class="sd">        - Insertion into logging or auditing pipelines</span>
+<span class="sd">        - Downstream analytics (e.g., error frequency reports)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame:</span>
+<span class="sd">                A DataFrame with the standardized columns:</span>
+<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;, &quot;rule&quot;,</span>
+<span class="sd">                 &quot;raw_value&quot;, &quot;normalized&quot;]</span>
+
+<span class="sd">                If no errors have been recorded, an empty DataFrame with</span>
+<span class="sd">                the correct schema is returned.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • This does *not* modify internal state.</span>
+<span class="sd">            • Errors remain stored in `self.errors`.</span>
+<span class="sd">            • Calling this multiple times is inexpensive and safe.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="s2">&quot;sheet&quot;</span><span class="p">,</span><span class="s2">&quot;row_number&quot;</span><span class="p">,</span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="s2">&quot;rule&quot;</span><span class="p">,</span><span class="s2">&quot;raw_value&quot;</span><span class="p">,</span><span class="s2">&quot;normalized&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ows_validation_engine</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_workbook_loader.html">Workbook Loader</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Michael Webb.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

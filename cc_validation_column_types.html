@@ -1,0 +1,2482 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Validation Column Types &#8212; OWS Validation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=b8e7130e" />
+    <script src="_static/documentation_options.js?v=3d5a727b"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Validation Crossrule Engine" href="cc_cross_rule_engine.html" />
+    <link rel="prev" title="Workbook Definitions" href="cc_workbook_definitions.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="validation-column-types">
+<h1>Validation Column Types<a class="headerlink" href="#validation-column-types" title="Link to this heading">¶</a></h1>
+<p>The datatype classes that manage normalization, cleaning, and error identification at the column level.</p>
+<dl class="py class" id="module-cc_validation_column_types">
+<dt class="sig sig-object py" id="cc_validation_column_types.BaseColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">BaseColumn</span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#BaseColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.BaseColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class for all column-type validators.</p>
+<p>Provides shared cleaning logic used across specific column types
+(categorical, identifier, numeric, etc.). The cleaning step normalizes
+whitespace, converts common Excel error tokens to <cite>pd.NA</cite>, and ensures
+column values are handled as pandas <cite>“string”</cite> dtype.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.BaseColumn.ERROR_TOKENS">
+<span class="sig-name descname"><span class="pre">ERROR_TOKENS</span></span><a class="headerlink" href="#cc_validation_column_types.BaseColumn.ERROR_TOKENS" title="Link to this definition">¶</a></dt>
+<dd><p>Common spreadsheet error literals and representations of null
+that should be treated as missing values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>set[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="id0">
+<span class="sig-name descname"><span class="pre">ERROR_TOKENS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'#DIV/0!',</span> <span class="pre">'#N/A',</span> <span class="pre">'#NAME?',</span> <span class="pre">'#NULL!',</span> <span class="pre">'#NUM!',</span> <span class="pre">'#REF!',</span> <span class="pre">'#VALUE!',</span> <span class="pre">'&lt;NA&gt;',</span> <span class="pre">'NaN',</span> <span class="pre">'nan',</span> <span class="pre">'null'}</span></em><a class="headerlink" href="#id0" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.BaseColumn.base_clean">
+<span class="sig-name descname"><span class="pre">base_clean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#BaseColumn.base_clean"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.BaseColumn.base_clean" title="Link to this definition">¶</a></dt>
+<dd><p>Perform low-level normalization of a column before type-specific validation.</p>
+<p>Operations performed:
+- Convert to pandas <cite>“string”</cite> dtype
+- Strip leading/trailing whitespace
+- Replace empty strings or whitespace-only strings with <cite>pd.NA</cite>
+- Replace common Excel/CSV error tokens (e.g. “#VALUE!”, “NaN”) with <cite>pd.NA</cite></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cleaned series with standardized missing-value representation.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.BaseColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#BaseColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.BaseColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.BaseColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#BaseColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.BaseColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.CIPCodeColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">CIPCodeColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#CIPCodeColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.CIPCodeColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for CIP (Classification of Instructional Programs) codes.</p>
+<p>This validator normalizes and validates CIP codes to one of the three
+canonical forms defined by NCES:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">DD</span></code>           — 2-digit “CIP Series”</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DD.DD</span></code>        — 4-digit “CIP Subseries”</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DD.DDDD</span></code>      — 6-digit “CIP Program”</p></li>
+</ul>
+</div></blockquote>
+<p>It also supports multi-valued cells (e.g., several CIP codes separated by
+commas, semicolons, or whitespace) and outputs them as a semicolon-delimited
+string in normalized form.</p>
+<dl>
+<dt>Behavior Overview:</dt><dd><ul>
+<li><p>Applies BaseColumn cleaning (strip whitespace, replace Excel errors).</p></li>
+<li><p>Splits multi-code entries on common separators.</p></li>
+<li><p>Removes all characters except digits and periods.</p></li>
+<li><p>Automatically converts common malformed forms into canonical patterns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;151201&quot;</span></code>     → <code class="docutils literal notranslate"><span class="pre">&quot;15.1201&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;1512&quot;</span></code>       → <code class="docutils literal notranslate"><span class="pre">&quot;15.12&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;15.120100&quot;</span></code>  → <code class="docutils literal notranslate"><span class="pre">&quot;15.1201&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;15</span> <span class="pre">12&quot;</span></code>      → <code class="docutils literal notranslate"><span class="pre">&quot;15.12&quot;</span></code></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Drops unparseable junk codes.</p></li>
+<li><p>Produces <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> if no valid CIP codes remain.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values after normalization generate a
+<code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> validation error.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel row numbers aligned to Series indices. Used to populate the
+<code class="docutils literal notranslate"><span class="pre">row_number</span></code> field in error logs.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize raw CIP code strings.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Apply BaseColumn cleaning and strip floating-point suffixes.</p></li>
+<li><p>Split each entry into candidate codes.</p></li>
+<li><p>Sanitize by removing non-digit/non-dot characters.</p></li>
+<li><p>Attempt to coerce each candidate into a canonical CIP format.</p></li>
+<li><p>Recombine valid codes as a semicolon-delimited string.</p></li>
+</ol>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>pd.Series:</dt><dd><p>Normalized CIP code strings, or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> if no valid codes
+could be derived.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Formatting step; returns normalized CIP strings unchanged.</p>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Construct a structured DataFrame of validation errors.</p>
+<dl>
+<dt>Error types recorded:</dt><dd><ul>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> —</dt><dd><p>Value is empty after cleaning but column is marked required.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">match</span> <span class="pre">CIP</span> <span class="pre">format</span> <span class="pre">(e.g.</span> <span class="pre">'15',</span> <span class="pre">'15.12',</span> <span class="pre">'15.1201')&quot;</span></code> —</dt><dd><dl>
+<dt>Triggered when:</dt><dd><p>– raw data is present but normalization fails, or
+– one or more CIP codes in a multi-code cell do not</p>
+<blockquote>
+<div><p>conform to allowed patterns.</p>
+</div></blockquote>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Validation rule:</dt><dd><p>All CIP codes within a cell must match one of the canonical patterns
+(2-digit, 4-digit with dot, or 6-digit with dot). If any code is invalid,
+the entire cell is flagged.</p>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>pd.DataFrame with columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”, “column”,</dt><dd><p>“rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Row number logic:</dt><dd><ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">row_numbers</span></code> was supplied, values are pulled from it.</p></li>
+<li><p>Otherwise, row numbers default to <code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">+</span> <span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This validator checks <em>format only</em> — it does not confirm that a CIP
+code exists in the official NCES taxonomy.</p></li>
+<li><p>Empty or malformed codes are silently skipped during normalization.</p></li>
+<li><p>Use semicolon-delimited output for downstream exploding or mapping.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.CIPCodeColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#CIPCodeColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.CIPCodeColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.CIPCodeColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#CIPCodeColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.CIPCodeColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.CIPCodeColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'cip_code'</span></em><a class="headerlink" href="#cc_validation_column_types.CIPCodeColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.CIPCodeColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#CIPCodeColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.CIPCodeColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.NAICSCodeColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">NAICSCodeColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#NAICSCodeColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.NAICSCodeColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for NAICS (North American Industry Classification System) codes.</p>
+<p>This validator parses and normalizes NAICS industry codes as 2–6 digit
+numeric identifiers, supporting a wide range of common input formats
+(e.g., “31”, “31151”, “311513”, “311513.0”, “311/3115”, “31; 311; 31151” ).</p>
+<dl class="simple">
+<dt>Behavior Overview:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning (strip whitespace, remove Excel errors).</p></li>
+<li><p>Strips non-numeric characters, removes decimal suffixes, and splits
+multi-code entries on common delimiters (comma, semicolon, slash, spaces).</p></li>
+<li><p>Accepts any valid NAICS code length (2, 3, 4, 5, or 6 digits).</p></li>
+<li><p>Filters out malformed or ambiguous codes.</p></li>
+<li><p>Produces a semicolon-delimited list for rows containing multiple codes.</p></li>
+</ul>
+</dd>
+<dt>Examples of valid normalized outputs:</dt><dd><p>┌───────────────────────┬────────────────────────────┐
+│ Raw Input             │ Normalized Output          │
+├───────────────────────┼────────────────────────────┤
+│ “31151”               │ “31151”                    │
+│ “311513.0”            │ “311513”                   │
+│ “31/311/3115”         │ “31;311;3115”              │
+│ “31151300”            │ “311513” (trailing zeros)  │
+│ “” / “ “ / None       │ NA                         │
+└───────────────────────┴────────────────────────────┘</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values after normalization generate a
+<code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> validation error.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Spreadsheet row numbers for accurate error reporting. If not
+provided, error logs compute row numbers from index + <code class="docutils literal notranslate"><span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize raw NAICS entries to 2–6 digit codes.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Apply BaseColumn cleaning.</p></li>
+<li><p>Remove junk characters &amp; decimal portions.</p></li>
+<li><p>Split multi-code entries on common delimiters.</p></li>
+<li><p>Keep only numeric strings of length 2–6.</p></li>
+<li><p>Collapse malformed entries to <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>.</p></li>
+</ol>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series of semicolon-delimited valid NAICS codes,
+or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> where no valid codes are detected.</p>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Return normalized NAICS codes unchanged (no further formatting applied).</p>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Construct a structured error report describing invalid NAICS codes.</p>
+<dl class="simple">
+<dt>Error types recorded:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> —</dt><dd><p>Field is required but no usable value exists.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">match</span> <span class="pre">NAICS</span> <span class="pre">format</span> <span class="pre">(e.g.</span> <span class="pre">'31',</span> <span class="pre">'31151',</span> <span class="pre">'311513')&quot;</span></code> —</dt><dd><p>Raw values present but not convertible into any valid NAICS code, or
+normalized values that fail the 2–6 digit rule.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>pd.DataFrame with columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”,</dt><dd><p>“column”, “rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Row-number logic:</dt><dd><ul class="simple">
+<li><p>Uses provided <code class="docutils literal notranslate"><span class="pre">row_numbers</span></code> when available.</p></li>
+<li><p>Falls back to index + <code class="docutils literal notranslate"><span class="pre">row_offset</span></code> for consistent reporting.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>NAICS codes represent hierarchical sectors (2 digits → broad, 6 digits → detailed).</p></li>
+<li><p>This validator tolerates multi-code entries but does not attempt semantic
+validation beyond confirming valid digit lengths.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.NAICSCodeColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#NAICSCodeColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.NAICSCodeColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.NAICSCodeColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#NAICSCodeColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.NAICSCodeColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.NAICSCodeColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'naics_code'</span></em><a class="headerlink" href="#cc_validation_column_types.NAICSCodeColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.NAICSCodeColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#NAICSCodeColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.NAICSCodeColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.ONETCodeColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">ONETCodeColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#ONETCodeColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.ONETCodeColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for validating and normalizing O*NET-SOC occupation codes.</p>
+<p>This validator handles the wide variety of formats in which O*NET codes
+commonly appear in workforce development datasets. It cleans, normalizes,
+and validates codes to the canonical <code class="docutils literal notranslate"><span class="pre">DD-DDDD.DD</span></code> structure
+(e.g., <code class="docutils literal notranslate"><span class="pre">&quot;15-2051.00&quot;</span></code>), and supports multiple codes per cell
+separated by commas, semicolons, or whitespace.</p>
+<dl>
+<dt>Behavior Overview:</dt><dd><ul>
+<li><p>Applies BaseColumn cleaning (strip whitespace, remove Excel errors).</p></li>
+<li><p>Accepts multi-valued cells and splits them into individual codes.</p></li>
+<li><p>Removes extraneous characters and punctuation.</p></li>
+<li><p>Auto-recognizes several common malformed forms, e.g.:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;15-2051&quot;</span></code>       → <code class="docutils literal notranslate"><span class="pre">&quot;15-2051.00&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;15205100&quot;</span></code>      → <code class="docutils literal notranslate"><span class="pre">&quot;15-2051.00&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;15.2051&quot;</span></code>       → <code class="docutils literal notranslate"><span class="pre">&quot;15-2051.00&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;15.2051.00&quot;</span></code>    → <code class="docutils literal notranslate"><span class="pre">&quot;15-2051.00&quot;</span></code></p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>Re-combines multiple codes using semicolon delimiters.</p></li>
+<li><p>Validates that <em>every</em> code in the cell matches the O*NET pattern.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values after normalization generate a
+<code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> error.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel row numbers aligned to Series indices, used to populate the
+<code class="docutils literal notranslate"><span class="pre">row_number</span></code> field in error logs.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize raw O*NET codes.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Apply BaseColumn cleaning and strip floating-point artifacts.</p></li>
+<li><p>Split multi-valued cells on commas, semicolons, or whitespace.</p></li>
+<li><p>Remove illegal characters and punctuation.</p></li>
+<li><p>Reconstruct codes into canonical <code class="docutils literal notranslate"><span class="pre">DD-DDDD.DD</span></code> format
+where possible.</p></li>
+<li><p>Return a semicolon-joined string of codes or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>.</p></li>
+</ol>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series of canonicalized O*NET codes (strings) or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>.</p>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Formatting step for the validator. Returns normalized values unchanged,
+as normalization already produces the canonical representation.</p>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Construct a structured DataFrame describing validation errors.</p>
+<dl>
+<dt>Error types recorded:</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> — value is missing when required.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">match</span> <span class="pre">ONET</span> <span class="pre">format</span> <span class="pre">(e.g.</span> <span class="pre">'15-2051.00')&quot;</span></code> —
+triggered when:</p>
+<blockquote>
+<div><p>– raw data is present but cannot be normalized, or
+– normalized data is present but contains one or more</p>
+<blockquote>
+<div><p>invalid O*NET codes.</p>
+</div></blockquote>
+</div></blockquote>
+</li>
+</ul>
+</dd>
+<dt>For multi-code cells:</dt><dd><p>All codes must match the canonical pattern; otherwise the entire
+cell is flagged as invalid.</p>
+</dd>
+<dt>Output columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”, “column”,</dt><dd><p>“rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+<dt>Row number handling:</dt><dd><ul class="simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">row_numbers</span></code> if provided,</p></li>
+<li><p>Otherwise, fall back to <code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">+</span> <span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This validator does not attempt to verify that O*NET codes exist
+in the official taxonomy—only that they match the syntactic format.</p></li>
+<li><p>The semicolon-delimited output allows downstream systems to
+easily split and explode multi-code rows.</p></li>
+<li><p>Leading zeros in O*NET codes are always preserved.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.ONETCodeColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#ONETCodeColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.ONETCodeColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.ONETCodeColumn.fix_format">
+<span class="sig-name descname"><span class="pre">fix_format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">val</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#ONETCodeColumn.fix_format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.ONETCodeColumn.fix_format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.ONETCodeColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#ONETCodeColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.ONETCodeColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.ONETCodeColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'onet_code'</span></em><a class="headerlink" href="#cc_validation_column_types.ONETCodeColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.ONETCodeColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#ONETCodeColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.ONETCodeColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.booleanColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">booleanColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#booleanColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.booleanColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for Yes/No fields.
+Accepts common yes/no variants, noramlizes and casts to 1/0.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.booleanColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#booleanColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.booleanColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.booleanColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#booleanColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.booleanColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.booleanColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'boolean'</span></em><a class="headerlink" href="#cc_validation_column_types.booleanColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.booleanColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#booleanColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.booleanColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">categoricalColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">accepted_responses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fuzzy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">90</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#categoricalColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.categoricalColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Validator for limited-response categorical fields.</p>
+<p>Responsibilities:
+- Normalize raw text (case, whitespace, Excel error tokens)
+- Map cleaned text to a canonical accepted value
+- Optionally perform fuzzy matching for near-misses or typos
+- Produce per-row error diagnostics</p>
+<dl class="simple">
+<dt>Supports two accepted-response formats:</dt><dd><ul class="simple">
+<li><p>list[str] — literal accepted values</p></li>
+<li><p>dict[str, list[str]] — canonical value → alternative spellings/variants</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.required">
+<span class="sig-name descname"><span class="pre">required</span></span><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.required" title="Link to this definition">¶</a></dt>
+<dd><p>Whether blank values should be treated as validation errors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.fuzzy">
+<span class="sig-name descname"><span class="pre">fuzzy</span></span><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.fuzzy" title="Link to this definition">¶</a></dt>
+<dd><p>Whether to fuzzy-match unmatched responses.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.min_score">
+<span class="sig-name descname"><span class="pre">min_score</span></span><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.min_score" title="Link to this definition">¶</a></dt>
+<dd><p>Minimum fuzzy match ratio (0–100) required to accept a match.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.accepted">
+<span class="sig-name descname"><span class="pre">accepted</span></span><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.accepted" title="Link to this definition">¶</a></dt>
+<dd><p>Lookup from normalized input → canonical value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict[str, str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.row_numbers">
+<span class="sig-name descname"><span class="pre">row_numbers</span></span><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.row_numbers" title="Link to this definition">¶</a></dt>
+<dd><p>Sheet row numbers used to report error locations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#categoricalColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>Construct a DataFrame describing validation errors for this categorical column.</p>
+<dl class="simple">
+<dt>Error types recorded:</dt><dd><ul class="simple">
+<li><p>“Required but missing”: value is missing but field is required</p></li>
+<li><dl class="simple">
+<dt>“Invalid Value, not in accepted responses”: raw value was present</dt><dd><p>but could not be mapped (even via fuzzy matching)</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Column name being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized categorical values.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional file identifier used in reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name for context in error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when raw indices do not match Excel row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>Structured error report with columns:
+[“file”, “sheet”, “row_number”, “column”,</p>
+<blockquote>
+<div><p>”rule”, “raw_value”, “normalized”]</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#categoricalColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.categoricalColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#categoricalColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.categoricalColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>Normalize a categorical column.</p>
+<dl class="simple">
+<dt>Workflow:</dt><dd><ol class="arabic simple">
+<li><p>Apply base cleaning (from BaseColumn)</p></li>
+<li><p>Convert cleaned text into canonical category labels</p></li>
+<li><p>For unmatched values, attempt fuzzy matching (if enabled)</p></li>
+</ol>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized categorical values (canonical form), or <cite>pd.NA</cite> where
+no acceptable value can be determined.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.dateTimeColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">dateTimeColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'1900-01-01'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_date</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'2100-12-31'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#dateTimeColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.dateTimeColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for parsing, normalizing, and validating date values.</p>
+<p>This validator handles a wide variety of messy real-world date formats,
+including embedded month names, Unicode separators, Excel-style shorthand,
+and inconsistent spacing. It attempts to extract a canonical date in
+ISO format (YYYY-MM-DD), enforcing optional minimum and maximum bounds.</p>
+<dl class="simple">
+<dt>Behavior Overview:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning to remove whitespace, Excel error tokens,
+and placeholder junk.</p></li>
+<li><dl class="simple">
+<dt>Normalizes text using <cite>_clean_text</cite>, which:</dt><dd><ul>
+<li><p>Removes invisible unicode characters</p></li>
+<li><p>Converts non-ASCII dashes and separators to “/”</p></li>
+<li><p>Preserves month names (Jan, February, etc.)</p></li>
+<li><p>Extracts ISO (YYYY-MM-DD), US (MM/DD/YYYY), or fallback numeric patterns</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Converts cleaned strings into pandas datetime objects via
+<cite>pd.to_datetime(…, errors=”coerce”)</cite>.</p></li>
+<li><p>Flags dates outside the configured allowable range.</p></li>
+<li><p>Supports explicit invalid tokens (“n/a”, “null”, “NaT”, etc.).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values after cleaning generate “Required but missing”
+validation errors.</p></li>
+<li><p><strong>min_date</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Earliest permissible date (inclusive). If None, no lower bound is applied.</p></li>
+<li><p><strong>max_date</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Latest permissible date (inclusive). If None, no upper bound is applied.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel-style row numbers used when creating error reports. If omitted,
+DataFrame index + <cite>row_offset</cite> is used instead.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>Input:</dt><dd><p>s (pd.Series): Raw date values (strings, numerics, mixed).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Output:</dt><dd><p>pd.Series of pandas datetime64 values or <cite>NaT</cite> where coercion fails.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Base cleaning.</p></li>
+<li><p>Replace common invalid tokens with NA.</p></li>
+<li><p>Apply <cite>_clean_text</cite> to extract a date-like pattern.</p></li>
+<li><p>Parse via <cite>pd.to_datetime</cite>.</p></li>
+</ol>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><ul class="simple">
+<li><p>Formats parsed datetime objects as ISO strings (“YYYY-MM-DD”).</p></li>
+<li><p>Missing values are emitted as empty strings.</p></li>
+</ul>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><ul class="simple">
+<li><p>Constructs a structured DataFrame describing date validation errors.</p></li>
+<li><dl class="simple">
+<dt>Error categories include:</dt><dd><ul>
+<li><p>“Required but missing”</p></li>
+<li><p>“Invalid Value, not a valid date”</p></li>
+<li><p>“Invalid Value, date before minimum allowed”</p></li>
+<li><p>“Invalid Value, date after maximum allowed”</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Output columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”, “column”,</dt><dd><p>“rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+</ul>
+<dl class="simple">
+<dt>Row numbers use:</dt><dd><ul class="simple">
+<li><p>self.row_numbers (if provided), otherwise</p></li>
+<li><p>DataFrame index + <cite>row_offset</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><ul class="simple">
+<li><p>normalized datetime Series</p></li>
+<li><p>formatted ISO date strings</p></li>
+<li><p>structured validation error DataFrames</p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>The class does not return values directly, but its methods produce</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p><cite>_clean_text</cite> attempts to recover dates from extremely irregular input.</p></li>
+<li><p>The validator avoids interpreting 2-digit years heuristically unless
+clearly part of a recognizable MM/DD/YY pattern.</p></li>
+<li><p>Inputs like “.”, “—”, “/”, empty strings, or placeholder artifacts
+are treated as missing.</p></li>
+<li><p>Date ranges allow you to prevent absurd historical values (e.g. 1/1/1895)
+or future dates beyond expected operational windows.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.dateTimeColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#dateTimeColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.dateTimeColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.dateTimeColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#dateTimeColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.dateTimeColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.dateTimeColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'date_time'</span></em><a class="headerlink" href="#cc_validation_column_types.dateTimeColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.dateTimeColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#dateTimeColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.dateTimeColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.fileSpecificCategoricalColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">fileSpecificCategoricalColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">accepted_responses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fuzzy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">90</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#fileSpecificCategoricalColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.fileSpecificCategoricalColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for categorical fields whose valid responses depend on the
+originating file (e.g., different CBOs use different program names).</p>
+<p>This validator selects the appropriate canonical-to-variant mapping based on
+the provided <cite>file</cite> identifier, normalizes raw text values, and applies
+both exact and optional fuzzy matching to produce consistent categorical
+outputs.</p>
+<dl>
+<dt>Expected Structure of accepted_responses:</dt><dd><dl>
+<dt>{</dt><dd><dl class="simple">
+<dt>“FILE_ID_A”: {</dt><dd><p>“Canonical Label 1”: [“variant1”, “v1”, …],
+“Canonical Label 2”: [“variant2”, “v2”, …],</p>
+</dd>
+</dl>
+<p>},
+“FILE_ID_B”: {</p>
+<blockquote>
+<div><p>“Canonical Label X”: […],
+…</p>
+</div></blockquote>
+<p>}</p>
+</dd>
+</dl>
+<p>}</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>accepted_responses</strong> (<em>dict</em>) – Nested dictionary mapping file IDs to canonical labels and their
+allowable variants.</p></li>
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values are treated as validation errors.</p></li>
+<li><p><strong>fuzzy</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to attempt fuzzy matching for values not in <cite>accepted_responses</cite>.</p></li>
+<li><p><strong>min_score</strong> (<em>int</em><em>, </em><em>optional</em>) – Minimum fuzzy-match score (0–100) required to accept a near match.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Spreadsheet-aware row references used when constructing error logs.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em>, </em><em>optional</em>) – File identifier (e.g., “CWP”, “BRBC”) selecting which accepted-response
+mapping to use.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>This class does not return directly; its methods return normalized Series
+or structured error DataFrames (see below).</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Behavior:</dt><dd><ul class="simple">
+<li><p>Builds a reverse mapping (variant → canonical) for the active file.</p></li>
+<li><p>Cleans raw values (casefold, whitespace collapsing, handling “0”/Excel tokens).</p></li>
+<li><p>Performs exact matches first, then fuzzy matching (if enabled).</p></li>
+<li><p>Returns canonical category labels or <cite>pd.NA</cite> for invalid/unmatched values.</p></li>
+<li><dl class="simple">
+<dt>Generates structured error reports for:</dt><dd><ul>
+<li><p>required but missing values</p></li>
+<li><p>invalid or file-incompatible categorical entries</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Side Effects:</dt><dd><ul class="simple">
+<li><p>May raise <cite>ValueError</cite> if <cite>self.file</cite> does not exist in accepted_responses.</p></li>
+<li><p>Uses <cite>row_numbers</cite> to produce precise Excel-style row metadata.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>File-specific categorical validation is essential when partners use
+distinct naming conventions or inconsistent capitalization/spelling.</p></li>
+<li><p>Fuzzy matching should be used cautiously for fields where misclassification
+has high cost (e.g., credentials, program names).</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.fileSpecificCategoricalColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#fileSpecificCategoricalColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.fileSpecificCategoricalColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>Report missing or invalid categorical entries.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.fileSpecificCategoricalColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#fileSpecificCategoricalColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.fileSpecificCategoricalColumn.format" title="Link to this definition">¶</a></dt>
+<dd><p>Return canonical string (no formatting change).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.fileSpecificCategoricalColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#fileSpecificCategoricalColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.fileSpecificCategoricalColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>Normalize categorical text values based on file-specific accepted responses.
+file_id must match a key in accepted_responses.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.hourlyWageColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">hourlyWageColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_wage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_wage</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">45.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#hourlyWageColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hourlyWageColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for hourly wage fields.</p>
+<p>This validator extracts and validates hourly wage values expressed as
+free-text, stripping currency symbols and extraneous wording while enforcing
+configurable minimum and maximum wage thresholds.</p>
+<p>Unlike typical numeric validators, this class <em>explicitly detects wage ranges</em>
+(e.g., <code class="docutils literal notranslate"><span class="pre">&quot;15-20&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;12/15&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;10</span> <span class="pre">to</span> <span class="pre">12&quot;</span></code>). Ranges are not coerced and are
+instead surfaced as validation errors because they represent ambiguous or
+non-atomic wage entries.</p>
+<dl class="simple">
+<dt>Behavior Overview:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning (remove Excel error tokens, strip whitespace).</p></li>
+<li><p>Detects and flags wage <em>ranges</em> via regular expressions.</p></li>
+<li><p>Removes currency symbols and common unit labels (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;per</span> <span class="pre">hr&quot;</span></code>).</p></li>
+<li><p>Strips all non-numeric characters except the decimal point.</p></li>
+<li><p>Parses remaining text into a float (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;$17&quot;</span> <span class="pre">→</span> <span class="pre">17.0</span></code>).</p></li>
+<li><p>Values of <code class="docutils literal notranslate"><span class="pre">0</span></code> are treated as missing (commonly an encoding issue).</p></li>
+<li><p>Formatting step outputs wages as <code class="docutils literal notranslate"><span class="pre">&quot;$17.00&quot;</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values after cleaning generate a
+<code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> validation error.</p></li>
+<li><p><strong>min_wage</strong> (<em>float</em><em>, </em><em>optional</em>) – Lower bound for valid wages. Values below this threshold raise the
+error <code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">&gt;=</span> <span class="pre">$X.XX&quot;</span></code>.</p></li>
+<li><p><strong>max_wage</strong> (<em>float</em><em>, </em><em>optional</em>) – Upper bound for reasonable wages. Values above this threshold trigger
+a <em>confirmation</em> warning rather than a hard failure.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel row numbers used for reporting. If None, row numbers default to
+<code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">+</span> <span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize free-text wage values into numeric floats.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Lowercase and trim text.</p></li>
+<li><p>Detect ranges using <code class="docutils literal notranslate"><span class="pre">self._range_pattern</span></code> and preserve the raw
+value for error classification.</p></li>
+<li><p>Remove currency symbols, “hr”/“hourly”/“per hr”, etc.</p></li>
+<li><p>Strip all non-digit / non-decimal characters.</p></li>
+<li><p>Convert to float; invalid or zero values → <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>.</p></li>
+</ol>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>pd.Series:</dt><dd><p>Floats representing hourly wages, or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> where the value is
+missing, invalid, or a detected range.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Convert normalized floats into <code class="docutils literal notranslate"><span class="pre">&quot;$XX.XX&quot;</span></code> formatted strings.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>pd.Series of strings or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> for missing values.</p>
+</dd>
+</dl>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Construct a structured DataFrame of validation errors.</p>
+<dl class="simple">
+<dt>Error types recorded:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> —</dt><dd><p>Value is empty after normalization and column is required.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">&gt;=</span> <span class="pre">$min_wage&quot;</span></code> —</dt><dd><p>Wage is below the configured lower bound.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Confirmation</span> <span class="pre">required,</span> <span class="pre">unusually</span> <span class="pre">high</span> <span class="pre">(&gt;</span> <span class="pre">$max_wage)&quot;</span></code> —</dt><dd><p>Wage exceeds typical labor-market ranges; not technically invalid
+but requires human review.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">number</span> <span class="pre">indicating</span> <span class="pre">hourly</span> <span class="pre">wage&quot;</span></code> —</dt><dd><p>Raw value exists but cannot be parsed (including detected ranges).</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Range handling:</dt><dd><ul class="simple">
+<li><p>Any raw entry matching the range pattern (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;15-20&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;14/16&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;10</span> <span class="pre">to</span> <span class="pre">12&quot;</span></code>) is automatically flagged in the last category.</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>pd.DataFrame:</dt><dd><dl class="simple">
+<dt>A structured table with columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”,</dt><dd><p>“column”, “rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Row number logic:</dt><dd><ul class="simple">
+<li><p>Uses <code class="docutils literal notranslate"><span class="pre">row_numbers</span></code> when provided.</p></li>
+<li><p>Otherwise computes <code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">+</span> <span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This validator enforces <em>atomic</em> wage entries — ranges must be corrected
+manually before analysis.</p></li>
+<li><p>Currency formatting is normalized consistently in <cite>format()</cite>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">0</span></code> is treated as missing because spreadsheets sometimes export empty
+wage cells as <code class="docutils literal notranslate"><span class="pre">0</span></code> when coerced to numeric types.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.hourlyWageColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#hourlyWageColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hourlyWageColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.hourlyWageColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#hourlyWageColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hourlyWageColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.hourlyWageColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'hourly_wage'</span></em><a class="headerlink" href="#cc_validation_column_types.hourlyWageColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.hourlyWageColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#hourlyWageColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hourlyWageColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.hoursWorkedColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">hoursWorkedColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_hours</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">80</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#hoursWorkedColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hoursWorkedColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for hours-worked fields.</p>
+<p>This validator parses typical weekly or program hours from free-text inputs,
+enforcing numeric constraints and reasonable upper bounds (e.g., <code class="docutils literal notranslate"><span class="pre">&lt;=</span> <span class="pre">80</span></code>).
+All values are cleaned, coerced to floats when possible, and validated
+against minimum/maximum thresholds.</p>
+<dl class="simple">
+<dt>Behavior Overview:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning (strip whitespace, remove Excel error tokens).</p></li>
+<li><p>Converts valid numeric strings into floats.</p></li>
+<li><p>Treats empty strings, whitespace-only values, and failed parses as <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>.</p></li>
+<li><p>Enforces non-negative hours.</p></li>
+<li><p>Enforces a configurable maximum (default: 80 hours).</p></li>
+<li><p>Formatting step converts whole-number floats to integers for cleaner output.</p></li>
+</ul>
+</dd>
+<dt>Examples of accepted inputs:</dt><dd><p>┌──────────────┬────────────────────────────┐
+│ Raw Input     │ Normalized Representation  │
+├──────────────┼────────────────────────────┤
+│ “40”          │ 40                         │
+│ “37.5”        │ 37.5                       │
+│ “  15  “      │ 15                         │
+│ “” / “ “      │ NA                         │
+│ “abc”         │ NA (with validation error) │
+└──────────────┴────────────────────────────┘</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values after cleaning generate a
+<code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> validation error.</p></li>
+<li><p><strong>max_hours</strong> (<em>int</em><em>, </em><em>optional</em>) – Upper bound for reasonable reported weekly hours.
+Values exceeding this threshold are considered invalid.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel row numbers for accurate error reporting.
+If None, row numbers default to <code class="docutils literal notranslate"><span class="pre">index</span> <span class="pre">+</span> <span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize free-text hour values to numeric form.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Clean via <cite>BaseColumn.base_clean()</cite>.</p></li>
+<li><p>Strip whitespace and coerce to float using a safe converter.</p></li>
+<li><p>Invalid numbers or blank values → <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code>.</p></li>
+</ol>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series of floats or <code class="docutils literal notranslate"><span class="pre">pd.NA</span></code> values.</p>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Format normalized numeric values.</p>
+<ul class="simple">
+<li><p>Whole-number floats are converted to integers (e.g., <code class="docutils literal notranslate"><span class="pre">40.0</span> <span class="pre">→</span> <span class="pre">40</span></code>).</p></li>
+<li><p>Fractional hours remain floats (e.g., <code class="docutils literal notranslate"><span class="pre">37.5</span></code>).</p></li>
+</ul>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>pd.Series with cleaned numeric values.</p>
+</dd>
+</dl>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Produce a structured error report for invalid hour entries.</p>
+<dl class="simple">
+<dt>Error types recorded:</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> —</dt><dd><p>No usable value and field is required.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">non-negative&quot;</span></code> —</dt><dd><p>Negative hours such as <code class="docutils literal notranslate"><span class="pre">-5</span></code>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">cannot</span> <span class="pre">exceed</span> <span class="pre">X</span> <span class="pre">hours&quot;</span></code> —</dt><dd><p>Hours greater than <code class="docutils literal notranslate"><span class="pre">max_hours</span></code> (e.g., &gt; 80).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">a</span> <span class="pre">number</span> <span class="pre">indicating</span> <span class="pre">typical</span> <span class="pre">weekly</span> <span class="pre">hours&quot;</span></code> —</dt><dd><p>Raw input exists but could not be parsed to a number.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><dl class="simple">
+<dt>pd.DataFrame with columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”,</dt><dd><p>“column”, “rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd>
+<dt>Row number handling:</dt><dd><ul class="simple">
+<li><p>Uses <cite>row_numbers</cite> when supplied.</p></li>
+<li><p>Otherwise computes row numbers from index + <cite>row_offset</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This validator treats ambiguous or text-based entries (e.g. “a lot”)
+as invalid unless manually corrected by the user.</p></li>
+<li><p>Hours are assumed to refer to <em>weekly</em> or <em>program</em> hours and therefore
+constrained to realistic ranges.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.hoursWorkedColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#hoursWorkedColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hoursWorkedColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.hoursWorkedColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#hoursWorkedColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hoursWorkedColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.hoursWorkedColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'hours_worked'</span></em><a class="headerlink" href="#cc_validation_column_types.hoursWorkedColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.hoursWorkedColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#hoursWorkedColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.hoursWorkedColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.identifierColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">identifierColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#identifierColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.identifierColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for free-text identifiers such as student IDs, intake IDs,
+or internal tracking numbers.</p>
+<p>This validator performs minimal structural cleaning—primarily whitespace
+normalization and basic sanity checks—while preserving the original content
+as much as possible. Identifiers differ from categorical values in that
+they are not validated against an allowed set, but may still be required
+or rejected if malformed.</p>
+<dl class="simple">
+<dt>Behavior:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning to remove Excel error tokens and convert
+blank/whitespace-only entries into <cite>pd.NA</cite>.</p></li>
+<li><p>Lowercases text (<cite>casefold</cite>) for consistent internal representation.</p></li>
+<li><p>Collapses internal whitespace into a single space.</p></li>
+<li><p>Treats digit-only strings such as “0”, “00”, “000” as missing.</p></li>
+<li><dl class="simple">
+<dt>Produces two classes of errors:</dt><dd><ul>
+<li><p>“Required but missing”</p></li>
+<li><p>“Formatting Issue, identifier rejected” (non-missing raw → NA after normalization)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing or empty identifiers generate a validation error.</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel-based row references used in error reporting.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>This class does not return directly; its methods produce either normalized
+Series or structured error DataFrames (see below).</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>normalize(s):</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>Input:</dt><dd><p>s (pd.Series): Raw identifier values from the sheet.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Output:</dt><dd><p>pd.Series of cleaned identifier strings or <cite>pd.NA</cite>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+<dt>format(s_norm):</dt><dd><ul class="simple">
+<li><p>Identifiers require no additional formatting; returned unchanged.</p></li>
+</ul>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><ul class="simple">
+<li><dl class="simple">
+<dt>Constructs a structured error DataFrame with columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”, “column”,</dt><dd><p>“rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><p>Includes row-level metadata via <cite>row_numbers</cite> or <cite>row_offset</cite>.</p></li>
+</ul>
+</dd>
+<dt>Side Effects:</dt><dd><ul class="simple">
+<li><p>None, except the use of <cite>row_numbers</cite> for error positioning.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>identifierColumn performs lightweight, non-destructive cleaning.</p></li>
+<li><p>No fuzzy matching or cross-reference validation is applied.</p></li>
+<li><p>Ideal for fields where exact text is meaningful but basic sanitation
+is still required.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.identifierColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#identifierColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.identifierColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.identifierColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#identifierColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.identifierColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.identifierColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'identifier'</span></em><a class="headerlink" href="#cc_validation_column_types.identifierColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.identifierColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#identifierColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.identifierColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.stateID7Column">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">stateID7Column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_formatting</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#stateID7Column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.stateID7Column" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for validating and normalizing 7-digit State ID numbers.</p>
+<p>This validator enforces the Connecticut-style “State ID #” format used in
+workforce and education datasets, where each identifier must be exactly
+seven digits (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;0123456&quot;</span></code>). The column may contain formatting noise
+such as whitespace, decimal artifacts (<code class="docutils literal notranslate"><span class="pre">&quot;0123456.0&quot;</span></code>), or hyphens, all of
+which can be removed prior to validation.</p>
+<dl class="simple">
+<dt>Behavior Overview:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning (strip whitespace, remove Excel error tokens).</p></li>
+<li><p>Optionally removes all non-digit characters (<code class="docutils literal notranslate"><span class="pre">strip_formatting=True</span></code>).</p></li>
+<li><p>Converts values to canonical digit-only strings or <cite>pd.NA</cite>.</p></li>
+<li><p>Validates that final normalized values contain exactly 7 digits.</p></li>
+<li><p>Returns structured error metadata for missing/invalid identifiers.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values (after cleaning and normalization)
+generate a <code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> error.</p></li>
+<li><p><strong>strip_formatting</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, remove non-digit characters such as hyphens, spaces,
+and decimal suffixes (e.g., convert <code class="docutils literal notranslate"><span class="pre">&quot;0123456.0&quot;</span></code> → <code class="docutils literal notranslate"><span class="pre">&quot;0123456&quot;</span></code>).</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel row numbers aligned with the Series index. Used to populate
+the <code class="docutils literal notranslate"><span class="pre">row_number</span></code> field in error logs.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize raw State ID values.</p>
+<dl class="simple">
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Apply BaseColumn cleaning.</p></li>
+<li><p>Strip whitespace and optional formatting noise.</p></li>
+<li><p>Remove non-digit characters.</p></li>
+<li><p>Convert empty strings to <cite>pd.NA</cite>.</p></li>
+</ol>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series of cleaned digit strings or <cite>pd.NA</cite>.</p>
+</dd>
+</dl>
+</dd>
+<dt>validate(s_norm):</dt><dd><p>Validate that each normalized value matches the required pattern.</p>
+<dl class="simple">
+<dt>Requirements:</dt><dd><ul class="simple">
+<li><p>Exactly seven digits (<code class="docutils literal notranslate"><span class="pre">&quot;\d{7}&quot;</span></code>)</p></li>
+<li><p>OR NA if not required</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series of boolean indicators.</p>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Return final formatted values.</p>
+<dl class="simple">
+<dt>Notes:</dt><dd><ul class="simple">
+<li><p>No auto-padding is performed.</p></li>
+<li><p>Valid inputs must already be seven digits.</p></li>
+<li><p>Returned values are suitable for reporting and database storage.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Construct a structured DataFrame of validation errors.</p>
+<dl>
+<dt>Error types recorded:</dt><dd><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;Required</span> <span class="pre">but</span> <span class="pre">missing&quot;</span></code> — value missing when <cite>required=True</cite></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">Value,</span> <span class="pre">State</span> <span class="pre">ID</span> <span class="pre">must</span> <span class="pre">be</span> <span class="pre">7</span> <span class="pre">Digits</span> <span class="pre">(e.g.</span> <span class="pre">'0123456')&quot;</span></code> —
+triggered for:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Non-empty raw inputs that do not normalize to 7 digits</p></li>
+<li><p>Values that normalize to NA but were present in raw form</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</dd>
+<dt>Output columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”, “column”,</dt><dd><p>“rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+<dt>Row number logic:</dt><dd><ul class="simple">
+<li><p>Use <cite>self.row_numbers</cite> if supplied,</p></li>
+<li><p>Otherwise fall back to DataFrame index + <code class="docutils literal notranslate"><span class="pre">row_offset</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>State IDs may begin with leading zeros, which are preserved.</p></li>
+<li><p>This validator does not support alphanumeric IDs.</p></li>
+<li><p>Downstream systems should rely on normalized output for uniqueness checks.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.stateID7Column.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#stateID7Column.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.stateID7Column.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.stateID7Column.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#stateID7Column.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.stateID7Column.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.stateID7Column.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'state_id_7'</span></em><a class="headerlink" href="#cc_validation_column_types.stateID7Column.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.stateID7Column.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#stateID7Column.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.stateID7Column.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.stateID7Column.validate">
+<span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#stateID7Column.validate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.stateID7Column.validate" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_validation_column_types.</span></span><span class="sig-name descname"><span class="pre">zipCodeColumn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">required</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strip_formatting</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_numbers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_validation_column_types.html#zipCodeColumn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_validation_column_types.BaseColumn" title="cc_validation_column_types.BaseColumn"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></p>
+<p>Column type for validating and normalizing U.S. ZIP codes.</p>
+<p>This validator supports the two most common ZIP formats used in workforce
+datasets:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Standard 5-digit ZIPs (e.g., “06511”)</p></li>
+<li><p>4-digit values that should be left-padded to five digits (e.g., “6877” → “06877”)</p></li>
+</ul>
+</div></blockquote>
+<dl class="simple">
+<dt>Behavior Overview:</dt><dd><ul class="simple">
+<li><p>Applies BaseColumn cleaning (removing whitespace, Excel error tokens, etc.).</p></li>
+<li><p>Optionally strips all non-digit characters (hyphens, spaces) before processing.</p></li>
+<li><p>Normalizes values to string digits or <cite>pd.NA</cite> if unusable.</p></li>
+<li><dl class="simple">
+<dt>Formats values by:</dt><dd><ul>
+<li><p>Padding 4-digit ZIPs to 5 digits.</p></li>
+<li><p>Correcting misplaced trailing zeros in some user-entered patterns.</p></li>
+<li><p>Ensuring only valid 5-digit ZIP codes remain in the output.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>Provides structured validation errors for:</dt><dd><ul>
+<li><p>Missing required values</p></li>
+<li><p>Non-numeric or improperly formatted ZIP entries</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>required</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, missing values (after cleaning) generate
+“Required but missing” validation errors.</p></li>
+<li><p><strong>strip_formatting</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, remove non-digit characters prior to validation
+(recommended for handling “06-511”, “06511 “, “06511-1234”, etc.).</p></li>
+<li><p><strong>row_numbers</strong> (<em>pd.Series</em><em>, </em><em>optional</em>) – Excel row numbers to attach to error output. If omitted,
+DataFrame index + <cite>row_offset</cite> is used.</p></li>
+</ul>
+</dd>
+</dl>
+<dl>
+<dt>normalize(s):</dt><dd><p>Normalize raw ZIP values.</p>
+<dl class="simple">
+<dt>Input:</dt><dd><p>s (pd.Series): Raw ZIP values.</p>
+</dd>
+<dt>Output:</dt><dd><p>pd.Series of cleaned string values (digits only), or <cite>pd.NA</cite> where
+the value cannot be interpreted as a ZIP code.</p>
+</dd>
+<dt>Steps:</dt><dd><ol class="arabic simple">
+<li><p>Base cleaning</p></li>
+<li><p>Strip formatting (if enabled)</p></li>
+<li><p>Remove empty strings → set to NA</p></li>
+</ol>
+</dd>
+</dl>
+</dd>
+<dt>validate(s_norm):</dt><dd><dl class="simple">
+<dt>Vectorized boolean test evaluating whether each normalized value is:</dt><dd><ul class="simple">
+<li><p>5 digits, or</p></li>
+<li><p>NA (if not required)</p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series of bool values indicating validity.</p>
+</dd>
+</dl>
+</dd>
+<dt>format(s_norm):</dt><dd><p>Convert normalized string digits into final 5-digit ZIPs.</p>
+<dl class="simple">
+<dt>Logic:</dt><dd><ul class="simple">
+<li><p>4-digit → left-pad with “0”</p></li>
+<li><p>Overlong patterns ending with unnecessary zeros → corrected</p></li>
+<li><p>Invalid patterns → replaced with <cite>pd.NA</cite></p></li>
+</ul>
+</dd>
+<dt>Returns:</dt><dd><p>pd.Series containing canonical ZIP strings.</p>
+</dd>
+</dl>
+</dd>
+<dt>errors_df(col, raw, s_norm, file, sheet, row_offset):</dt><dd><p>Produce a structured DataFrame describing ZIP-code validation errors.</p>
+<dl class="simple">
+<dt>Error types recorded:</dt><dd><ul class="simple">
+<li><p>“Required but missing”</p></li>
+<li><p>“Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)”
+(raised for non-numeric, malformed, or incorrectly sized values)</p></li>
+</ul>
+</dd>
+<dt>Output columns:</dt><dd><dl class="simple">
+<dt>[“file”, “sheet”, “row_number”, “column”,</dt><dd><p>“rule”, “raw_value”, “normalized”]</p>
+</dd>
+</dl>
+</dd>
+<dt>Row numbers use:</dt><dd><ul class="simple">
+<li><p><cite>self.row_numbers</cite> if supplied, otherwise</p></li>
+<li><p>DataFrame index + <cite>row_offset</cite></p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This validator does <em>not</em> process ZIP+4 formats (e.g., “06511-1234”),
+but can strip them down if <cite>strip_formatting=True</cite>.</p></li>
+<li><p>ZIP codes beginning with “0” (common in New England) are preserved correctly.</p></li>
+<li><p>Ensures downstream systems receive clean, canonical 5-digit ZIP codes.</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn.errors_df">
+<span class="sig-name descname"><span class="pre">errors_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">col</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#zipCodeColumn.errors_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn.errors_df" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Construct a standardized DataFrame describing validation errors for this
+column type.</p>
+<p>Each subclass defines its own validation rules (e.g., required values,
+type constraints, range checks, format rules), but all error reports
+returned from column validators share the same structure.</p>
+<dl class="simple">
+<dt>Typical error conditions include (depending on subclass logic):</dt><dd><ul class="simple">
+<li><p>Missing required values</p></li>
+<li><p>Values that cannot be normalized or parsed</p></li>
+<li><p>Values that violate type- or format-specific constraints</p></li>
+<li><p>Values that fall outside allowed or expected ranges</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>col</strong> (<em>str</em>) – Name of the column being validated.</p></li>
+<li><p><strong>raw</strong> (<em>pd.Series</em>) – Original unnormalized values as read from the dataset.</p></li>
+<li><p><strong>s_norm</strong> (<em>pd.Series</em>) – Normalized or canonicalized values produced by <cite>normalize()</cite>.</p></li>
+<li><p><strong>file</strong> (<em>str</em><em> or </em><em>None</em>) – Optional identifier of the source file, included for reporting.</p></li>
+<li><p><strong>sheet</strong> (<em>str</em><em> or </em><em>None</em>) – Sheet name or dataset section used for contextual error reporting.</p></li>
+<li><p><strong>row_offset</strong> (<em>int</em>) – Offset applied when converting DataFrame index positions to
+Excel-style row numbers.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A structured validation error table with columns:
+[</p>
+<blockquote>
+<div><p>”file”,
+“sheet”,
+“row_number”,
+“column”,
+“rule”,
+“raw_value”,
+“normalized”</p>
+</div></blockquote>
+<p>]</p>
+<p>If no errors are found, returns an empty DataFrame with this schema.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn.format">
+<span class="sig-name descname"><span class="pre">format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#zipCodeColumn.format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn.format" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'zip_code'</span></em><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn.normalize">
+<span class="sig-name descname"><span class="pre">normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#zipCodeColumn.normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn.normalize" title="Link to this definition">¶</a></dt>
+<dd><p>This is a function shell in the base column class, each sublcass implements its own
+version.</p>
+<p>Normalize a column’s raw values into a standardized representation suitable
+for validation and downstream processing.</p>
+<dl class="simple">
+<dt>Normalization typically includes:</dt><dd><p>1. Applying the shared base cleaning (string coercion, trimming,
+whitespace collapsing, and removal of known error tokens)
+2. Performing type-specific transformations (e.g., parsing dates,
+numeric coercion, mapping to canonical labels)
+3. Producing a clean, consistent output that downstream validators
+can rely on</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>s</strong> (<em>pd.Series</em>) – Raw column values as read from the source file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A normalized representation of the column. The specific form depends
+on the column subtype (e.g., strings, codes, dates, booleans). Values
+that cannot be meaningfully interpreted should be represented as
+<cite>pd.NA</cite>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.Series</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn.row_numbers">
+<span class="sig-name descname"><span class="pre">row_numbers</span></span><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn.row_numbers" title="Link to this definition">¶</a></dt>
+<dd><p>required = True -&gt; blank after cleaning counts as an error
+strip_formatting -&gt; remove hyphens/spaces/etc. before validating</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_validation_column_types.zipCodeColumn.validate">
+<span class="sig-name descname"><span class="pre">validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s_norm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Series</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Series</span></span></span><a class="reference internal" href="_modules/cc_validation_column_types.html#zipCodeColumn.validate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_validation_column_types.zipCodeColumn.validate" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">OWS Validation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Validation Column Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.BaseColumn"><code class="docutils literal notranslate"><span class="pre">BaseColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.CIPCodeColumn"><code class="docutils literal notranslate"><span class="pre">CIPCodeColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.NAICSCodeColumn"><code class="docutils literal notranslate"><span class="pre">NAICSCodeColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.ONETCodeColumn"><code class="docutils literal notranslate"><span class="pre">ONETCodeColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.booleanColumn"><code class="docutils literal notranslate"><span class="pre">booleanColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.categoricalColumn"><code class="docutils literal notranslate"><span class="pre">categoricalColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.dateTimeColumn"><code class="docutils literal notranslate"><span class="pre">dateTimeColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.fileSpecificCategoricalColumn"><code class="docutils literal notranslate"><span class="pre">fileSpecificCategoricalColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.hourlyWageColumn"><code class="docutils literal notranslate"><span class="pre">hourlyWageColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.hoursWorkedColumn"><code class="docutils literal notranslate"><span class="pre">hoursWorkedColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.identifierColumn"><code class="docutils literal notranslate"><span class="pre">identifierColumn</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.stateID7Column"><code class="docutils literal notranslate"><span class="pre">stateID7Column</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_validation_column_types.zipCodeColumn"><code class="docutils literal notranslate"><span class="pre">zipCodeColumn</span></code></a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_cross_rule_sets.html">Crossrule Sets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation_db_logger.html">SQL Logger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cc_workbook_definitions.html" title="previous chapter">Workbook Definitions</a></li>
+      <li>Next: <a href="cc_cross_rule_engine.html" title="next chapter">Validation Crossrule Engine</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, CT State - Office of Workforce Strategy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/cc_validation_column_types.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

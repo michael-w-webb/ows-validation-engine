@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Validation Crossrule Classes &#8212; OWS Validation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=b8e7130e" />
+    <script src="_static/documentation_options.js?v=3d5a727b"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Crossrule Sets" href="cc_validation_cross_rule_sets.html" />
+    <link rel="prev" title="Validation Crossrule Engine" href="cc_cross_rule_engine.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="validation-crossrule-classes">
+<h1>Validation Crossrule Classes<a class="headerlink" href="#validation-crossrule-classes" title="Link to this heading">¶</a></h1>
+<p>The datatype classes that are used by the cross rule engine. Ensures that each data type is handled appropriately.</p>
+<dl class="py class" id="module-cc_cross_rule_classes">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_cross_rule_classes.</span></span><span class="sig-name descname"><span class="pre">BaseVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfs_by_sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parent (base) class for all variable types.</p>
+<p>Provides universal predicates (is_blank, equals, etc.)
+and a common evaluate() interface that subclasses extend.</p>
+<p>Each Variable operates only on its own column (Series) and the
+pre-processed <cite>condition</cite> dict provided by the CrossRuleEngine.
+The engine handles:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Resolving <cite>var_ref</cite> → injecting referenced Series into condition[“value”]</p></li>
+<li><p>Selecting the correct subclass for variable type</p></li>
+<li><p>Passing the appropriate DataFrame context</p></li>
+</ul>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable.equals">
+<span class="sig-name descname"><span class="pre">equals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable.equals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable.equals" title="Link to this definition">¶</a></dt>
+<dd><p>Return a Boolean mask where the value equals <cite>value</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable.evaluate" title="Link to this definition">¶</a></dt>
+<dd><p>Generic evaluation dispatcher. Subclasses override or extend this.
+The condition dict should include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>op: the operation (e.g. ‘equals’, ‘in’, ‘is_blank’)</p></li>
+<li><p>value(s): supporting arguments depending on op</p></li>
+</ul>
+</div></blockquote>
+<p>Notes:
+- The engine guarantees that <cite>value</cite> (if present) has already been</p>
+<blockquote>
+<div><p>resolved (either a scalar, list, or Series).</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Subclasses can safely assume consistent structure.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable.in_list">
+<span class="sig-name descname"><span class="pre">in_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable.in_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable.in_list" title="Link to this definition">¶</a></dt>
+<dd><p>Return True where the value is one of <cite>values</cite>.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable.is_blank">
+<span class="sig-name descname"><span class="pre">is_blank</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable.is_blank"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable.is_blank" title="Link to this definition">¶</a></dt>
+<dd><p>Return a Boolean mask where the value is missing or empty.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable.is_not_blank">
+<span class="sig-name descname"><span class="pre">is_not_blank</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable.is_not_blank"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable.is_not_blank" title="Link to this definition">¶</a></dt>
+<dd><p>Inverse of is_blank().</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.BaseVariable.not_in_list">
+<span class="sig-name descname"><span class="pre">not_in_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#BaseVariable.not_in_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.BaseVariable.not_in_list" title="Link to this definition">¶</a></dt>
+<dd><p>Return True where the value is <em>not</em> one of <cite>values</cite>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.CategoricalVariable">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_cross_rule_classes.</span></span><span class="sig-name descname"><span class="pre">CategoricalVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfs_by_sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#CategoricalVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.CategoricalVariable" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_cross_rule_classes.BaseVariable" title="cc_cross_rule_classes.BaseVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseVariable</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.CategoricalVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#CategoricalVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.CategoricalVariable.evaluate" title="Link to this definition">¶</a></dt>
+<dd><p>Generic evaluation dispatcher. Subclasses override or extend this.
+The condition dict should include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>op: the operation (e.g. ‘equals’, ‘in’, ‘is_blank’)</p></li>
+<li><p>value(s): supporting arguments depending on op</p></li>
+</ul>
+</div></blockquote>
+<p>Notes:
+- The engine guarantees that <cite>value</cite> (if present) has already been</p>
+<blockquote>
+<div><p>resolved (either a scalar, list, or Series).</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Subclasses can safely assume consistent structure.</p></li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.DateVariable">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_cross_rule_classes.</span></span><span class="sig-name descname"><span class="pre">DateVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfs_by_sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#DateVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.DateVariable" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_cross_rule_classes.BaseVariable" title="cc_cross_rule_classes.BaseVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseVariable</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.DateVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#DateVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.DateVariable.evaluate" title="Link to this definition">¶</a></dt>
+<dd><p>Handles date comparisons. Supports both literal and Series-based
+comparisons, depending on whether the engine passed a static date
+or another column’s Series in <cite>condition[“value”]</cite>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.NumericVariable">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_cross_rule_classes.</span></span><span class="sig-name descname"><span class="pre">NumericVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">series</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfs_by_sheet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalization_schema</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#NumericVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.NumericVariable" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#cc_cross_rule_classes.BaseVariable" title="cc_cross_rule_classes.BaseVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseVariable</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_cross_rule_classes.NumericVariable.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">condition</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_cross_rule_classes.html#NumericVariable.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_cross_rule_classes.NumericVariable.evaluate" title="Link to this definition">¶</a></dt>
+<dd><p>Generic evaluation dispatcher. Subclasses override or extend this.
+The condition dict should include:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>op: the operation (e.g. ‘equals’, ‘in’, ‘is_blank’)</p></li>
+<li><p>value(s): supporting arguments depending on op</p></li>
+</ul>
+</div></blockquote>
+<p>Notes:
+- The engine guarantees that <cite>value</cite> (if present) has already been</p>
+<blockquote>
+<div><p>resolved (either a scalar, list, or Series).</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Subclasses can safely assume consistent structure.</p></li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">OWS Validation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_column_types.html">Validation Column Types</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Validation Crossrule Classes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#cc_cross_rule_classes.BaseVariable"><code class="docutils literal notranslate"><span class="pre">BaseVariable</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_cross_rule_classes.CategoricalVariable"><code class="docutils literal notranslate"><span class="pre">CategoricalVariable</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_cross_rule_classes.DateVariable"><code class="docutils literal notranslate"><span class="pre">DateVariable</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_cross_rule_classes.NumericVariable"><code class="docutils literal notranslate"><span class="pre">NumericVariable</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_cross_rule_sets.html">Crossrule Sets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation_db_logger.html">SQL Logger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cc_cross_rule_engine.html" title="previous chapter">Validation Crossrule Engine</a></li>
+      <li>Next: <a href="cc_validation_cross_rule_sets.html" title="next chapter">Crossrule Sets</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, CT State - Office of Workforce Strategy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/cc_cross_rule_classes.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

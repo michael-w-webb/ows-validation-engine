@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cc_cross_rule_classes &#8212; OWS Validation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=b8e7130e" />
+    <script src="../_static/documentation_options.js?v=3d5a727b"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for cc_cross_rule_classes</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<div class="viewcode-block" id="BaseVariable">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BaseVariable</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parent (base) class for all variable types.</span>
+
+<span class="sd">    Provides universal predicates (is_blank, equals, etc.)</span>
+<span class="sd">    and a common evaluate() interface that subclasses extend.</span>
+
+<span class="sd">    Each Variable operates only on its own column (Series) and the</span>
+<span class="sd">    pre-processed `condition` dict provided by the CrossRuleEngine.</span>
+<span class="sd">    The engine handles:</span>
+<span class="sd">        - Resolving `var_ref` → injecting referenced Series into condition[&quot;value&quot;]</span>
+<span class="sd">        - Selecting the correct subclass for variable type</span>
+<span class="sd">        - Passing the appropriate DataFrame context</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">sheet</span><span class="p">,</span> <span class="n">series</span><span class="p">,</span> <span class="n">dfs_by_sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">normalization_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sheet</span> <span class="o">=</span> <span class="n">sheet</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">series</span> <span class="o">=</span> <span class="n">series</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dfs_by_sheet</span> <span class="o">=</span> <span class="n">dfs_by_sheet</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalization_schema</span> <span class="o">=</span> <span class="n">normalization_schema</span>
+
+    <span class="c1"># ------------------------------------------------------------</span>
+    <span class="c1"># ✅ Universal predicates</span>
+    <span class="c1"># ------------------------------------------------------------</span>
+    
+<div class="viewcode-block" id="BaseVariable.is_blank">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable.is_blank">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_blank</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a Boolean mask where the value is missing or empty.&quot;&quot;&quot;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">series</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">|</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="BaseVariable.is_not_blank">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable.is_not_blank">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">is_not_blank</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Inverse of is_blank().&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">is_blank</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="BaseVariable.equals">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable.equals">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">equals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a Boolean mask where the value equals `value`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">series</span> <span class="o">==</span> <span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="BaseVariable.in_list">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable.in_list">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True where the value is one of `values`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">values</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="BaseVariable.not_in_list">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable.not_in_list">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">not_in_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return True where the value is *not* one of `values`.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">values</span><span class="p">)</span></div>
+
+
+    <span class="c1"># ------------------------------------------------------------</span>
+    <span class="c1"># ⚙️ Default evaluation logic</span>
+    <span class="c1"># ------------------------------------------------------------</span>
+<div class="viewcode-block" id="BaseVariable.evaluate">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.BaseVariable.evaluate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">condition</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generic evaluation dispatcher. Subclasses override or extend this.</span>
+<span class="sd">        The condition dict should include:</span>
+<span class="sd">            - op: the operation (e.g. &#39;equals&#39;, &#39;in&#39;, &#39;is_blank&#39;)</span>
+<span class="sd">            - value(s): supporting arguments depending on op</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">        - The engine guarantees that `value` (if present) has already been</span>
+<span class="sd">          resolved (either a scalar, list, or Series).</span>
+<span class="sd">        - Subclasses can safely assume consistent structure.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;op&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;connected_presence&quot;</span><span class="p">:</span>
+            <span class="n">ref_series</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ref_series</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ref_series</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;connected_presence requires a resolved reference Series for &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="c1"># Normalize blanks in both variables</span>
+            <span class="n">x_blank</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">|</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">series</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">y_blank</span> <span class="o">=</span> <span class="n">ref_series</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">|</span> <span class="p">(</span><span class="n">ref_series</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+            <span class="c1"># True if both blank or both not blank</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">x_blank</span> <span class="o">&amp;</span> <span class="n">y_blank</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="o">~</span><span class="n">x_blank</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">y_blank</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;equals&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">condition</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;in&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">(</span><span class="n">condition</span><span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;not_in&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">not_in_list</span><span class="p">(</span><span class="n">condition</span><span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;is_blank&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_blank</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;is_not_blank&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_not_blank</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported operation &#39;</span><span class="si">{</span><span class="n">op</span><span class="si">}</span><span class="s2">&#39; for variable &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1"># ------------------------------------------------------------</span>
+<span class="c1"># 🔢 Numeric Variable</span>
+<span class="c1"># ------------------------------------------------------------</span>
+<div class="viewcode-block" id="NumericVariable">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.NumericVariable">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">NumericVariable</span><span class="p">(</span><span class="n">BaseVariable</span><span class="p">):</span>
+<div class="viewcode-block" id="NumericVariable.evaluate">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.NumericVariable.evaluate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">condition</span><span class="p">):</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;op&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;between&quot;</span><span class="p">:</span>
+            <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="n">condition</span><span class="p">[</span><span class="s2">&quot;range&quot;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">series</span> <span class="o">&gt;=</span> <span class="n">lo</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">series</span> <span class="o">&lt;=</span> <span class="n">hi</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;gt&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">series</span> <span class="o">&gt;</span> <span class="n">condition</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;lt&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">series</span> <span class="o">&lt;</span> <span class="n">condition</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">condition</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1"># ------------------------------------------------------------</span>
+<span class="c1"># 📅 Date Variable</span>
+<span class="c1"># ------------------------------------------------------------</span>
+<div class="viewcode-block" id="DateVariable">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.DateVariable">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DateVariable</span><span class="p">(</span><span class="n">BaseVariable</span><span class="p">):</span>
+<div class="viewcode-block" id="DateVariable.evaluate">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.DateVariable.evaluate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">condition</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Handles date comparisons. Supports both literal and Series-based</span>
+<span class="sd">        comparisons, depending on whether the engine passed a static date</span>
+<span class="sd">        or another column’s Series in `condition[&quot;value&quot;]`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;op&quot;</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">series</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;coerce&quot;</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Normalize: if value is not a Series, convert to Timestamp</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="c1"># perform operation</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;before&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">s</span> <span class="o">&lt;</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;after&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">s</span> <span class="o">&gt;</span> <span class="n">value</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;between&quot;</span><span class="p">:</span>
+            <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span> <span class="o">=</span> <span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">condition</span><span class="p">[</span><span class="s2">&quot;range&quot;</span><span class="p">]]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">s</span> <span class="o">&gt;=</span> <span class="n">lo</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">s</span> <span class="o">&lt;=</span> <span class="n">hi</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">condition</span><span class="p">)</span></div>
+</div>
+
+
+<span class="c1"># ------------------------------------------------------------</span>
+<span class="c1"># 🧩 Categorical Variable</span>
+<span class="c1"># ------------------------------------------------------------</span>
+<div class="viewcode-block" id="CategoricalVariable">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.CategoricalVariable">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CategoricalVariable</span><span class="p">(</span><span class="n">BaseVariable</span><span class="p">):</span>
+<div class="viewcode-block" id="CategoricalVariable.evaluate">
+<a class="viewcode-back" href="../cc_cross_rule_classes.html#cc_cross_rule_classes.CategoricalVariable.evaluate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">condition</span><span class="p">):</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;op&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;in&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_list</span><span class="p">(</span><span class="n">condition</span><span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;not_in&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">not_in_list</span><span class="p">(</span><span class="n">condition</span><span class="p">[</span><span class="s2">&quot;values&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">evaluate</span><span class="p">(</span><span class="n">condition</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OWS Validation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_main.html">Validation Main</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_column_types.html">Validation Column Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_validation_cross_rule_sets.html">Crossrule Sets</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, CT State - Office of Workforce Strategy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

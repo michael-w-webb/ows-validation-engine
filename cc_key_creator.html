@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Validation Key Creator &#8212; OWS Validation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=b8e7130e" />
+    <script src="_static/documentation_options.js?v=3d5a727b"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SQL Logger" href="validation_db_logger.html" />
+    <link rel="prev" title="Crossrule Sets" href="cc_validation_cross_rule_sets.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="validation-key-creator">
+<h1>Validation Key Creator<a class="headerlink" href="#validation-key-creator" title="Link to this heading">¶</a></h1>
+<p>A key creation class to provide uniform identifiers throughout the validation process.</p>
+<section id="keycreator-module">
+<span id="module-cc_key_creator"></span><h2>KeyCreator Module<a class="headerlink" href="#keycreator-module" title="Link to this heading">¶</a></h2>
+<p>Provides a flexible, schema-agnostic key generation utility used to create
+deterministic identifiers for participant records, workbook rows,
+and entity matching across datasets.</p>
+<p>The <a class="reference internal" href="#cc_key_creator.KeyCreator" title="cc_key_creator.KeyCreator"><code class="xref py py-class docutils literal notranslate"><span class="pre">KeyCreator</span></code></a> class supports:</p>
+<ul class="simple">
+<li><p><strong>Composite key creation</strong> from arbitrary fields</p></li>
+<li><p><strong>Optional normalization</strong> of individual components via user-supplied functions</p></li>
+<li><p><strong>Required field enforcement</strong>, with automatic invalidation when requirements fail</p></li>
+<li><p><strong>Hashed or unhashed keys</strong>, depending on debugging or privacy needs</p></li>
+<li><p><strong>Attach-to-DataFrame API</strong> for generating key columns at scale</p></li>
+</ul>
+<section id="typical-use-cases">
+<h3>Typical Use Cases<a class="headerlink" href="#typical-use-cases" title="Link to this heading">¶</a></h3>
+<p>This module is used throughout the validation engine to generate
+stable row-level identifiers such as:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sheet-level</span> <span class="pre">linking</span> <span class="pre">keys</span></code> (e.g., First Name + Last Name)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">participant</span> <span class="pre">identity</span> <span class="pre">keys</span></code> for database lookup</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hashed</span> <span class="pre">canonical</span> <span class="pre">IDs</span></code> used for cross-dataset entity resolution</p></li>
+</ul>
+<p>The class accepts any schema and is not tied to CareerConneCT, GJC,
+or specific column conventions.</p>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">key_creator</span><span class="w"> </span><span class="kn">import</span> <span class="n">KeyCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">strict_alphabetic_normalize</span>
+
+<span class="n">kc</span> <span class="o">=</span> <span class="n">KeyCreator</span><span class="p">(</span>
+    <span class="n">key_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Last Name&quot;</span><span class="p">,</span> <span class="s2">&quot;DOB&quot;</span><span class="p">],</span>
+    <span class="n">normalizers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;First Name&quot;</span><span class="p">:</span> <span class="n">strict_alphabetic_normalize</span><span class="p">},</span>
+    <span class="n">required_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Last Name&quot;</span><span class="p">],</span>
+    <span class="n">return_unhashed</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+
+<span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">kc</span><span class="o">.</span><span class="n">create_key_from_row</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="contents">
+<h3>Contents<a class="headerlink" href="#contents" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>KeyCreator  – main class for composite/hashing logic</p></li>
+</ul>
+</section>
+<section id="dependencies">
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>pandas</p></li>
+<li><p>hashlib</p></li>
+</ul>
+</section>
+</section>
+<dl class="py class">
+<dt class="sig sig-object py" id="cc_key_creator.KeyCreator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cc_key_creator.</span></span><span class="sig-name descname"><span class="pre">KeyCreator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalizers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required_fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'|'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_unhashed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_key_creator.html#KeyCreator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_key_creator.KeyCreator" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generic, schema-agnostic key generator.</p>
+<ul class="simple">
+<li><p>key_fields: list[str]</p></li>
+<li><p>normalizers: dict[field -&gt; fn(value)]</p></li>
+<li><p>required_fields: list[str]</p></li>
+<li><p>return_unhashed: if True, return the composite string instead of a hashed ID</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_key_creator.KeyCreator.add_key_column">
+<span class="sig-name descname"><span class="pre">add_key_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'id_key'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_key_creator.html#KeyCreator.add_key_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_key_creator.KeyCreator.add_key_column" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cc_key_creator.KeyCreator.create_key_from_row">
+<span class="sig-name descname"><span class="pre">create_key_from_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cc_key_creator.html#KeyCreator.create_key_from_row"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cc_key_creator.KeyCreator.create_key_from_row" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">OWS Validation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_column_types.html">Validation Column Types</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_cross_rule_sets.html">Crossrule Sets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Validation Key Creator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#keycreator-module">KeyCreator Module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cc_key_creator.KeyCreator"><code class="docutils literal notranslate"><span class="pre">KeyCreator</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="validation_db_logger.html">SQL Logger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cc_validation_cross_rule_sets.html" title="previous chapter">Crossrule Sets</a></li>
+      <li>Next: <a href="validation_db_logger.html" title="next chapter">SQL Logger</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, CT State - Office of Workforce Strategy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/cc_key_creator.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

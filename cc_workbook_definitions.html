@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Workbook Definitions &#8212; OWS Validation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=b8e7130e" />
+    <script src="_static/documentation_options.js?v=3d5a727b"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Validation Column Types" href="cc_validation_column_types.html" />
+    <link rel="prev" title="Workbook Loader" href="cc_validation_workbook_loader.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="workbook-definitions">
+<h1>Workbook Definitions<a class="headerlink" href="#workbook-definitions" title="Link to this heading">¶</a></h1>
+<p>A dictionary object that provides necessary meta-data for file validation. This is a critical input.</p>
+<section id="workbook-definitions-label-maps-and-schema-metadata">
+<span id="module-cc_workbook_definitions"></span><h2>Workbook Definitions, Label Maps, and Schema Metadata<a class="headerlink" href="#workbook-definitions-label-maps-and-schema-metadata" title="Link to this heading">¶</a></h2>
+<p>This module contains the authoritative schema specification for all
+CareerConneCT “training data” workbooks supported by the validation
+pipeline. It encodes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Canonical column names used throughout the pipeline</p></li>
+<li><p>All known spelling / formatting variants (“label maps”) that appear
+in provider-submitted Excel files</p></li>
+<li><p>Column-level metadata describing expected types, requirements, and
+accepted categorical responses</p></li>
+<li><p>Workbook-level structure (sheet names, starting rows/columns, and
+schema for both <em>simple format</em> and <em>four-sheet format</em>)</p></li>
+<li><p>Logic template phrases used by natural-language rule descriptions</p></li>
+</ul>
+</div></blockquote>
+<p>These definitions serve as the central contract between:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p><strong>WorkbookLoader</strong> – to map raw header text → canonical names</p></li>
+<li><p><strong>NormalizationEngine / ColumnType classes</strong> – to validate, clean,
+and coerce column values into standardized formats</p></li>
+<li><p><strong>CrossRuleEngine</strong> – to interpret variable types and retrieve the
+correct pandas Series for cross-sheet logic evaluation</p></li>
+<li><p><strong>UI or reporting layers</strong> – to generate intelligible messages and
+consistent descriptions of rule expectations</p></li>
+</ol>
+</div></blockquote>
+<section id="label-maps-labels">
+<h3>Label Maps (“labels”)<a class="headerlink" href="#label-maps-labels" title="Link to this heading">¶</a></h3>
+<p>Each sheet definition includes a mapping:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>{</dt><dd><p>“Canonical Name”: [“Variant A”, “Variant B”, …]</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>The workbook loader uses these maps to:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Match raw column headers from provider files</p></li>
+<li><p>Normalize them into predictable, canonical field names</p></li>
+<li><p>Tolerate typos, punctuation differences, capitalization,
+OWS-specific export labels, and Salesforce-style field names</p></li>
+</ul>
+</div></blockquote>
+<p>These maps are <em>lossless</em>: they never drop fields, they only expand the
+set of acceptable column headers.</p>
+</section>
+<section id="accepted-responses-and-types-accepted-responses-w-types">
+<h3>Accepted Responses and Types (“accepted_responses_w_types”)<a class="headerlink" href="#accepted-responses-and-types-accepted-responses-w-types" title="Link to this heading">¶</a></h3>
+<p>Each canonical column has a metadata block describing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>type – one of the defined column classes
+(e.g., “dateTime”, “categorical”, “boolean”, “identifier”,
+“hourlyWage”, “hoursWorked”, “stateID7”, “CIPCode”, “ONETCode”)</p></li>
+<li><p>required – whether the field must be present and non-blank</p></li>
+<li><p>accepted_responses – (optional) list of canonical categorical
+values used by CategoricalColumn normalization and by
+CrossRuleEngine for logical operations</p></li>
+</ul>
+</div></blockquote>
+<p>These definitions are consumed by:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>BaseColumn subclasses during normalization</p></li>
+<li><p>CrossRuleEngine.get_variable() when creating Variable instances</p></li>
+<li><p>Rule authoring and error-message templates</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="workbook-structure-workbook-definitions">
+<h3>Workbook Structure (“workbook_definitions”)<a class="headerlink" href="#workbook-structure-workbook-definitions" title="Link to this heading">¶</a></h3>
+<p>The outer <cite>workbook_definitions</cite> object organizes schemas by:</p>
+<blockquote>
+<div><p>workbook_type → workbook_format → sheet_name → sheet_definition</p>
+</div></blockquote>
+<p>For example:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>“training data” →</dt><dd><dl class="simple">
+<dt>“simple format” →</dt><dd><p>“Report” → {labels, accepted_responses, starting_row, …}</p>
+</dd>
+<dt>“four sheet format” →</dt><dd><p>“Personal Information”
+“Training”
+“Credential”
+“Outcomes”</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</div></blockquote>
+<p>Each sheet definition includes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>labels – a full header normalization map</p></li>
+<li><p>accepted_responses – the column metadata schema</p></li>
+<li><p>starting_row – where data begins (allows skipping header clutter)</p></li>
+<li><p>starting_column – permits partial-sheet ingestion</p></li>
+<li><p>columns_used – reserved for restricting the importable subset</p></li>
+</ul>
+</div></blockquote>
+<p>This structure makes it easy for the loader to select the correct
+parsing logic depending on which workbook format the provider uploaded.</p>
+</section>
+<section id="logic-templates-and-expectations">
+<h3>Logic Templates and Expectations<a class="headerlink" href="#logic-templates-and-expectations" title="Link to this heading">¶</a></h3>
+<p>Two auxiliary dictionaries define natural-language templates used by
+<cite>CrossRuleEngine.describe_logic()</cite>:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Logic_Templates – maps operator categories to English snippets
+(e.g., “is in the past”, “is blank”, “is {values}”)</p></li>
+<li><p>Logic_Expectations – indicates whether a field is “required” or
+“should be blank” in IF/THEN constructions</p></li>
+</ul>
+</div></blockquote>
+<p>These templates ensure that every rule written in clause-tree syntax can
+be rendered into a readable English explanation without custom text.</p>
+</section>
+<section id="extending-or-updating-this-module">
+<h3>Extending or Updating This Module<a class="headerlink" href="#extending-or-updating-this-module" title="Link to this heading">¶</a></h3>
+<p>To add new fields or update schemas:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Add new label variants under the correct sheet’s <cite>labels</cite> dict</p></li>
+<li><p>Add (or update) a canonical entry under <cite>accepted_responses</cite>
+with its correct type and accepted categorical responses</p></li>
+<li><p>If a new sheet or workbook format is added, create a new
+nested dictionary under <cite>workbook_definitions</cite> following the
+established pattern</p></li>
+<li><p>If a new variable type is introduced (e.g., NAICSCode),
+ensure that BaseColumn+Variable subclasses support the type
+before referencing it here</p></li>
+</ol>
+</div></blockquote>
+<p>All changes propagate automatically through:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Column mapping</p></li>
+<li><p>Data normalization</p></li>
+<li><p>Cross-sheet rule evaluation</p></li>
+<li><p>Validation reporting</p></li>
+</ul>
+</div></blockquote>
+<p>This module is therefore the <strong>single source of truth</strong> for schema
+consistency across every component of the CareerConneCT validation
+pipeline.</p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">OWS Validation</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Workbook Definitions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#workbook-definitions-label-maps-and-schema-metadata">Workbook Definitions, Label Maps, and Schema Metadata</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_column_types.html">Validation Column Types</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cc_validation_cross_rule_sets.html">Crossrule Sets</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cc_key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation_db_logger.html">SQL Logger</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cc_validation_workbook_loader.html" title="previous chapter">Workbook Loader</a></li>
+      <li>Next: <a href="cc_validation_column_types.html" title="next chapter">Validation Column Types</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, CT State - Office of Workforce Strategy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/cc_workbook_definitions.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

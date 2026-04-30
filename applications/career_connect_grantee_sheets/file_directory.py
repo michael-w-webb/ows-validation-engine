@@ -226,10 +226,6 @@ file_directory = {
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "Y4Q2" / "To OWS. Y4 Q2.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
         "format": "four sheet format"
-      },
-      "PY4 Q3": { # Placeholder until they submit data.
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Career Resources Health Career Training Program" / "Y4Q2" / "To OWS. Y4 Q2.CRI Healthcare Careers Client Data Entry Spreadsheet.xlsm",
-        "format": "four sheet format"
       }
     }
   },
@@ -418,10 +414,6 @@ file_directory = {
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Health CareeRx" / "Y4Q2" / "Y4Q2 - CareerConneCT Data Entry Spreadsheet (1).xlsx",
         "format": "four sheet format"
-      },
-      "PY4 Q3": { # Placeholder until they submit data
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Health CareeRx" / "Y4Q2" / "Y4Q2 - CareerConneCT Data Entry Spreadsheet (1).xlsx",
-        "format": "four sheet format"
       }
     }
   },
@@ -556,7 +548,7 @@ file_directory = {
         "format": "four sheet format"
       },
       "PY4 Q3": { # Placeholder until the data comes in for Y4 Q3
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Connecticut State Building Trades Training Institute" / "Y4Q2" / "CSBTTI Data Entry Spreadsheet PY4 Q2 - MW Corrected.xlsm",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Connecticut State Building Trades Training Institute" / "Y4Q3" / "CSBTTI Data Entry Spreadsheet PY4 Q3 - MW Corrected (1).xlsm",
         "format": "four sheet format"
       }
     }
@@ -651,11 +643,6 @@ file_directory = {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q2" / "Havenly - Data Entry Spreadsheet Y4Q2.xlsm",
         "format": "four sheet format"
       }
-      ,
-      "PY4 Q3": { # Placeholder until they submit their data.
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q2" / "Havenly - Data Entry Spreadsheet Y4Q2.xlsm",
-        "format": "four sheet format"
-      }
 
     }
   },
@@ -734,10 +721,6 @@ file_directory = {
         "format": "four sheet format"
       },
       "PY3 Q3": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "CCAT" / "Y3Q3" / "Data Entry Spreadsheet CCAT.xlsx",
-        "format": "four sheet format"
-      },
-      "PY4 Q3": { # Placeholder
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "CCAT" / "Y3Q3" / "Data Entry Spreadsheet CCAT.xlsx",
         "format": "four sheet format"
       }

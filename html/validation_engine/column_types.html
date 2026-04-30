@@ -1,16 +1,16 @@
 <!doctype html>
-<html class="no-js" lang="en" data-content_root="./">
+<html class="no-js" lang="en" data-content_root="../">
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Validation Engine" href="validation_engine/validation_engine.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Validation Crossrule Engine" href="cross_rule_engine.html"><link rel="prev" title="Workbook Loader" href="workbook_loader.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>OWS Validation Documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="_static/custom.css" />
+        <title>Validation Column Types - OWS Validation Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" />
     
     
 
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="#"><div class="brand">OWS Validation Documentation</div></a>
+      <a href="../index.html"><div class="brand">OWS Validation Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -181,31 +181,31 @@
   <aside class="sidebar-drawer">
     <div class="sidebar-container">
       
-      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   <span class="sidebar-brand-text">OWS Validation Documentation</span>
   
-</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
   <input type="hidden" name="check_keywords" value="yes">
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/validation_engine.html">Validation Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/workbook_loader.html">Workbook Loader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/column_types.html">Validation Column Types</a></li>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Validation Column Types</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_engine.html">Validation Crossrule Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cross_rule_classes.html">Validation Crossrule Classes</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/db_logger.html">SQL Logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="db_logger.html">SQL Logger</a></li>
 </ul>
 
 </div>
@@ -226,7 +226,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/index.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/validation_engine/column_types.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -239,78 +239,14 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="ows-validation-documentation">
-<h1>OWS Validation Documentation<a class="headerlink" href="#ows-validation-documentation" title="Link to this heading">¶</a></h1>
-<p>These pages provide documentation for the various methods and classes that support the OWS validation process,
-which aims to quickly transform disparate excel spreadsheets into a clean, usable dataset while also recording errors,
-and producing an error log that can easily be used by data owners to remedy issues.</p>
-<p>The implementation as it is presented here also includes SQL logging functionality to a SQLite table, connecting separate runs
-to allow for fast cross-grant comparison and assessments of state change (over time) for a given grant. If you aren’t interested
-in the SQL logging and just want the data consolidation and error log creation, this can be toggled when the validation engine
-is called.</p>
-<p>The system itself is dataset agnostic and could be re-implemented to manage data collection in any context where different
-organizations are submitting formulaically structured datasets.</p>
-<p>Certain critical objects (like the file directory) are omitted here for security reasons, but the code is otherwise intact.</p>
-<p>The general architecture of the project is laid out below:</p>
-<figure class="align-center">
-<img alt="Validation engine architecture" src="_images/concept_map.png" />
-</figure>
-<section id="core-engine">
-<h2>Core Engine<a class="headerlink" href="#core-engine" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/validation_engine.html">Validation Engine</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/validation_engine.html#cc-validation-engine-py">cc_validation_engine.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine"><code class="docutils literal notranslate"><span class="pre">ValidationEngine</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/workbook_loader.html">Workbook Loader</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#workbook-loading-and-preprocessing-utilities">Workbook Loading and Preprocessing Utilities</a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.ensure_unprotected_visible"><code class="docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.extract_columns_noisy"><code class="docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.clean_text"><code class="docutils literal notranslate"><span class="pre">clean_text()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.find_sheet_by_headers"><code class="docutils literal notranslate"><span class="pre">find_sheet_by_headers()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.WorkbookLoader"><code class="docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.MultiWorkbookLoader"><code class="docutils literal notranslate"><span class="pre">MultiWorkbookLoader</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/column_types.html">Validation Column Types</a></li>
-</ul>
-</div>
-</section>
-<section id="cross-rules">
-<h2>Cross-Rules<a class="headerlink" href="#cross-rules" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_engine.html">Validation Crossrule Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
-</ul>
-</div>
-</section>
-<section id="logging">
-<h2>Logging<a class="headerlink" href="#logging" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/key_creator.html">Validation Key Creator</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/key_creator.html#keycreator-module">KeyCreator Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/key_creator.html#validation_engine.key_creator.KeyCreator"><code class="docutils literal notranslate"><span class="pre">KeyCreator</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/db_logger.html">SQL Logger</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger</span></code></a></li>
-</ul>
-</li>
-</ul>
-</div>
-</section>
+          <section id="validation-column-types">
+<h1>Validation Column Types<a class="headerlink" href="#validation-column-types" title="Link to this heading">¶</a></h1>
+<p>The datatype classes that manage normalization, cleaning, and error identification at the column level.</p>
 </section>
 
         </article>
@@ -318,16 +254,26 @@ organizations are submitting formulaically structured datasets.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="validation_engine/validation_engine.html">
+          <a class="next-page" href="cross_rule_engine.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Validation Engine</div>
+                <div class="title">Validation Crossrule Engine</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          
+          <a class="prev-page" href="workbook_loader.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Workbook Loader</div>
+                
+              </div>
+            </a>
         </div>
         <div class="bottom-of-page">
           <div class="left-details">
@@ -346,36 +292,15 @@ organizations are submitting formulaically structured datasets.</p>
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">OWS Validation Documentation</a><ul>
-<li><a class="reference internal" href="#core-engine">Core Engine</a></li>
-<li><a class="reference internal" href="#cross-rules">Cross-Rules</a></li>
-<li><a class="reference internal" href="#logging">Logging</a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=9262e05c"></script>
-    <script src="_static/doctools.js?v=9bcbadda"></script>
-    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+</div><script src="../_static/documentation_options.js?v=9262e05c"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
     </body>
 </html>

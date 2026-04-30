@@ -1,16 +1,16 @@
 <!doctype html>
-<html class="no-js" lang="en" data-content_root="./">
+<html class="no-js" lang="en" data-content_root="../">
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Validation Engine" href="validation_engine/validation_engine.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>OWS Validation Documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
-    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
-    <link rel="stylesheet" type="text/css" href="_static/custom.css" />
+        <title>Validation Key Creator - OWS Validation Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" />
     
     
 
@@ -162,7 +162,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="#"><div class="brand">OWS Validation Documentation</div></a>
+      <a href="../index.html"><div class="brand">OWS Validation Documentation</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -181,11 +181,11 @@
   <aside class="sidebar-drawer">
     <div class="sidebar-container">
       
-      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
   
   <span class="sidebar-brand-text">OWS Validation Documentation</span>
   
-</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
   <input type="hidden" name="check_keywords" value="yes">
   <input type="hidden" name="area" value="default">
@@ -193,19 +193,7 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/validation_engine.html">Validation Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/workbook_loader.html">Workbook Loader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/column_types.html">Validation Column Types</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_engine.html">Validation Crossrule Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/db_logger.html">SQL Logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cc_workbook_definitions.html">Workbook Definitions</a></li>
 </ul>
 
 </div>
@@ -226,7 +214,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="_sources/index.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/validation_engine/key_creator.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -244,73 +232,85 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="ows-validation-documentation">
-<h1>OWS Validation Documentation<a class="headerlink" href="#ows-validation-documentation" title="Link to this heading">¶</a></h1>
-<p>These pages provide documentation for the various methods and classes that support the OWS validation process,
-which aims to quickly transform disparate excel spreadsheets into a clean, usable dataset while also recording errors,
-and producing an error log that can easily be used by data owners to remedy issues.</p>
-<p>The implementation as it is presented here also includes SQL logging functionality to a SQLite table, connecting separate runs
-to allow for fast cross-grant comparison and assessments of state change (over time) for a given grant. If you aren’t interested
-in the SQL logging and just want the data consolidation and error log creation, this can be toggled when the validation engine
-is called.</p>
-<p>The system itself is dataset agnostic and could be re-implemented to manage data collection in any context where different
-organizations are submitting formulaically structured datasets.</p>
-<p>Certain critical objects (like the file directory) are omitted here for security reasons, but the code is otherwise intact.</p>
-<p>The general architecture of the project is laid out below:</p>
-<figure class="align-center">
-<img alt="Validation engine architecture" src="_images/concept_map.png" />
-</figure>
-<section id="core-engine">
-<h2>Core Engine<a class="headerlink" href="#core-engine" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/validation_engine.html">Validation Engine</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/validation_engine.html#cc-validation-engine-py">cc_validation_engine.py</a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine"><code class="docutils literal notranslate"><span class="pre">ValidationEngine</span></code></a></li>
+          <section id="validation-key-creator">
+<h1>Validation Key Creator<a class="headerlink" href="#validation-key-creator" title="Link to this heading">¶</a></h1>
+<p>A key creation class to provide uniform identifiers throughout the validation process.</p>
+<section id="keycreator-module">
+<span id="module-validation_engine.key_creator"></span><h2>KeyCreator Module<a class="headerlink" href="#keycreator-module" title="Link to this heading">¶</a></h2>
+<p>Provides a flexible, schema-agnostic key generation utility used to create
+deterministic identifiers for participant records, workbook rows,
+and entity matching across datasets.</p>
+<p>The <a class="reference internal" href="#validation_engine.key_creator.KeyCreator" title="validation_engine.key_creator.KeyCreator"><code class="xref py py-class docutils literal notranslate"><span class="pre">KeyCreator</span></code></a> class supports:</p>
+<ul class="simple">
+<li><p><strong>Composite key creation</strong> from arbitrary fields</p></li>
+<li><p><strong>Optional normalization</strong> of individual components via user-supplied functions</p></li>
+<li><p><strong>Required field enforcement</strong>, with automatic invalidation when requirements fail</p></li>
+<li><p><strong>Hashed or unhashed keys</strong>, depending on debugging or privacy needs</p></li>
+<li><p><strong>Attach-to-DataFrame API</strong> for generating key columns at scale</p></li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/workbook_loader.html">Workbook Loader</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#workbook-loading-and-preprocessing-utilities">Workbook Loading and Preprocessing Utilities</a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.ensure_unprotected_visible"><code class="docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.extract_columns_noisy"><code class="docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.clean_text"><code class="docutils literal notranslate"><span class="pre">clean_text()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.find_sheet_by_headers"><code class="docutils literal notranslate"><span class="pre">find_sheet_by_headers()</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.WorkbookLoader"><code class="docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.MultiWorkbookLoader"><code class="docutils literal notranslate"><span class="pre">MultiWorkbookLoader</span></code></a></li>
+<section id="typical-use-cases">
+<h3>Typical Use Cases<a class="headerlink" href="#typical-use-cases" title="Link to this heading">¶</a></h3>
+<p>This module is used throughout the validation engine to generate
+stable row-level identifiers such as:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">sheet-level</span> <span class="pre">linking</span> <span class="pre">keys</span></code> (e.g., First Name + Last Name)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">participant</span> <span class="pre">identity</span> <span class="pre">keys</span></code> for database lookup</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">hashed</span> <span class="pre">canonical</span> <span class="pre">IDs</span></code> used for cross-dataset entity resolution</p></li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/column_types.html">Validation Column Types</a></li>
-</ul>
+<p>The class accepts any schema and is not tied to CareerConneCT, GJC,
+or specific column conventions.</p>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">key_creator</span><span class="w"> </span><span class="kn">import</span> <span class="n">KeyCreator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">strict_alphabetic_normalize</span>
+
+<span class="n">kc</span> <span class="o">=</span> <span class="n">KeyCreator</span><span class="p">(</span>
+    <span class="n">key_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Last Name&quot;</span><span class="p">,</span> <span class="s2">&quot;DOB&quot;</span><span class="p">],</span>
+    <span class="n">normalizers</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;First Name&quot;</span><span class="p">:</span> <span class="n">strict_alphabetic_normalize</span><span class="p">},</span>
+    <span class="n">required_fields</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Last Name&quot;</span><span class="p">],</span>
+    <span class="n">return_unhashed</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+
+<span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">kc</span><span class="o">.</span><span class="n">create_key_from_row</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
 </div>
 </section>
-<section id="cross-rules">
-<h2>Cross-Rules<a class="headerlink" href="#cross-rules" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_engine.html">Validation Crossrule Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<section id="contents">
+<h3>Contents<a class="headerlink" href="#contents" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>KeyCreator  – main class for composite/hashing logic</p></li>
 </ul>
-</div>
 </section>
-<section id="logging">
-<h2>Logging<a class="headerlink" href="#logging" title="Link to this heading">¶</a></h2>
-<div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/key_creator.html">Validation Key Creator</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/key_creator.html#keycreator-module">KeyCreator Module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/key_creator.html#validation_engine.key_creator.KeyCreator"><code class="docutils literal notranslate"><span class="pre">KeyCreator</span></code></a></li>
+<section id="dependencies">
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>pandas</p></li>
+<li><p>hashlib</p></li>
 </ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/db_logger.html">SQL Logger</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger</span></code></a></li>
-</ul>
-</li>
-</ul>
-</div>
 </section>
+</section>
+<dl class="py class">
+<dt class="sig sig-object py" id="validation_engine.key_creator.KeyCreator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">validation_engine.key_creator.</span></span><span class="sig-name descname"><span class="pre">KeyCreator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalizers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">required_fields</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'|'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hash_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'sha256'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_unhashed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/key_creator.html#KeyCreator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.key_creator.KeyCreator" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generic, schema-agnostic key generator.</p>
+<ul class="simple">
+<li><p>key_fields: list[str]</p></li>
+<li><p>normalizers: dict[field -&gt; fn(value)]</p></li>
+<li><p>required_fields: list[str]</p></li>
+<li><p>return_unhashed: if True, return the composite string instead of a hashed ID</p></li>
+</ul>
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.key_creator.KeyCreator.create_key_from_row">
+<span class="sig-name descname"><span class="pre">create_key_from_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/key_creator.html#KeyCreator.create_key_from_row"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.key_creator.KeyCreator.create_key_from_row" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.key_creator.KeyCreator.add_key_column">
+<span class="sig-name descname"><span class="pre">add_key_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'id_key'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/key_creator.html#KeyCreator.add_key_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.key_creator.KeyCreator.add_key_column" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </section>
 
         </article>
@@ -318,15 +318,7 @@ organizations are submitting formulaically structured datasets.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="validation_engine/validation_engine.html">
-              <div class="page-info">
-                <div class="context">
-                  <span>Next</span>
-                </div>
-                <div class="title">Validation Engine</div>
-              </div>
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-            </a>
+          
           
         </div>
         <div class="bottom-of-page">
@@ -358,10 +350,18 @@ organizations are submitting formulaically structured datasets.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">OWS Validation Documentation</a><ul>
-<li><a class="reference internal" href="#core-engine">Core Engine</a></li>
-<li><a class="reference internal" href="#cross-rules">Cross-Rules</a></li>
-<li><a class="reference internal" href="#logging">Logging</a></li>
+<li><a class="reference internal" href="#">Validation Key Creator</a><ul>
+<li><a class="reference internal" href="#keycreator-module">KeyCreator Module</a><ul>
+<li><a class="reference internal" href="#typical-use-cases">Typical Use Cases</a></li>
+<li><a class="reference internal" href="#contents">Contents</a></li>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#validation_engine.key_creator.KeyCreator"><code class="docutils literal notranslate"><span class="pre">KeyCreator</span></code></a><ul>
+<li><a class="reference internal" href="#validation_engine.key_creator.KeyCreator.create_key_from_row"><code class="docutils literal notranslate"><span class="pre">KeyCreator.create_key_from_row()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.key_creator.KeyCreator.add_key_column"><code class="docutils literal notranslate"><span class="pre">KeyCreator.add_key_column()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -373,9 +373,9 @@ organizations are submitting formulaically structured datasets.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=9262e05c"></script>
-    <script src="_static/doctools.js?v=9bcbadda"></script>
-    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+</div><script src="../_static/documentation_options.js?v=9262e05c"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
     </body>
 </html>

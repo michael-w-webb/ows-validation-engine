@@ -1,0 +1,9 @@
+Standard Normalizations
+=================
+
+A set of standard normalizations created for key creator, potentially useful in other contexts as well. 
+
+.. automodule:: validation_engine.standard_normalizations
+   :members:
+   :undoc-members:
+   :show-inheritance:

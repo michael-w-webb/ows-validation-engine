@@ -1,0 +1,673 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Helper Functions" href="helpers.html"><link rel="prev" title="Validation Key Creator" href="key_creator.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>SQL Logger - OWS Validation Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../_static/custom.css" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">OWS Validation Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">OWS Validation Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="column_types.html">Validation Column Types</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">SQL Logger</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="helpers.html">Helper Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="standard_normalizations.html">Standard Normalizations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/validation_engine/db_logger.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="sql-logger">
+<h1>SQL Logger<a class="headerlink" href="#sql-logger" title="Link to this heading">¶</a></h1>
+<p>The logger class which is called to handle writing to SQL.</p>
+<dl class="py class" id="module-validation_engine.db_logger">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">validation_engine.db_logger.</span></span><span class="sig-name descname"><span class="pre">ValidationDBLogger</span></span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>SQLite-backed logging and persistence layer for the validation engine.</p>
+<p>This class is responsible for recording validation runs, resolving and
+persisting participant identities, and logging normalized data values
+and validation violations to a SQLite database. It enables longitudinal
+tracking of participants and datasets across repeated validation runs.</p>
+<dl class="simple">
+<dt>The logger supports:</dt><dd><ul class="simple">
+<li><p>Run-level tracking via unique <code class="docutils literal notranslate"><span class="pre">run_id</span></code> values</p></li>
+<li><p>Deterministic person resolution using hashed identity keys</p></li>
+<li><p>Persistent participant identifiers scoped to (person, dataset)</p></li>
+<li><p>Column-level metadata normalization across sheets and datasets</p></li>
+<li><p>Cell-level value history logging for post-normalization analysis</p></li>
+<li><p>Structured violation logging with severity levels</p></li>
+</ul>
+</dd>
+</dl>
+<p>SQLite is configured for concurrent-safe access using WAL mode and
+foreign key enforcement. All timestamps are generated at write time
+using the database clock.</p>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This logger assumes the database schema already exists.</p></li>
+<li><p>Identity resolution prioritizes strict and medium-strength keys;
+weak-name-only matching is intentionally disabled to avoid
+accidental merges.</p></li>
+<li><p>All Pandas NA / NaN values are coerced to <code class="docutils literal notranslate"><span class="pre">NULL</span></code> prior to insertion.</p></li>
+</ul>
+<section id="typical-usage">
+<h2>Typical usage<a class="headerlink" href="#typical-usage" title="Link to this heading">¶</a></h2>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">logger</span> <span class="o">=</span> <span class="n">ValidationDBLogger</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">run_id</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">dataset_name</span><span class="o">=</span><span class="s2">&quot;Q2 Submission&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">org</span><span class="o">=</span><span class="s2">&quot;EWIB&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">quarter</span><span class="o">=</span><span class="s2">&quot;2025Q2&quot;</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">person_id</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">resolve_person</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">participant_id</span> <span class="o">=</span> <span class="n">logger</span><span class="o">.</span><span class="n">get_or_create_participant</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">person_id</span><span class="p">,</span> <span class="n">dataset_name</span><span class="o">=</span><span class="s2">&quot;Q2 Submission&quot;</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This class is designed to be called by higher-level orchestration
+components (e.g., validation engines, workbook loaders) rather than
+directly by end users.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.__init__" title="Link to this definition">¶</a></dt>
+<dd><p>Initialize a SQLite connection for validation logging.</p>
+<p>Opens a connection to the validation database and configures
+SQLite pragmas to support concurrent access and safe writes.</p>
+<p>Configuration applied:
+- Foreign key enforcement enabled
+- WAL journal mode for concurrent readers/writers
+- NORMAL synchronous mode for performance/safety balance</p>
+<p class="rubric">Notes</p>
+<p>The database file is expected to exist and have a valid schema.
+This constructor does not create or migrate tables.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.load_participant_map">
+<span class="sig-name descname"><span class="pre">load_participant_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">org</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.load_participant_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.load_participant_map" title="Link to this definition">¶</a></dt>
+<dd><p>Preload participant identifiers into an in-memory map for fast lookup.</p>
+<dl class="simple">
+<dt>Populates self._participant_map with keys of the form:</dt><dd><p>(person_id, dataset_name, org) -&gt; participant_id</p>
+</dd>
+</dl>
+<p>This should be called once per run, before validation begins.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>org</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.load_person_maps">
+<span class="sig-name descname"><span class="pre">load_person_maps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.load_person_maps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.load_person_maps" title="Link to this definition">¶</a></dt>
+<dd><p>Preload person identity key maps into memory.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.start_run">
+<span class="sig-name descname"><span class="pre">start_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">org</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quarter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">triggered_by</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_description</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.start_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.start_run" title="Link to this definition">¶</a></dt>
+<dd><p>Create and persist a new validation run.</p>
+<p>Inserts a new row into the <code class="docutils literal notranslate"><span class="pre">validation_run</span></code> table and returns
+a unique <code class="docutils literal notranslate"><span class="pre">run_id</span></code> that should be used to associate all
+subsequent logging activity for this run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Logical name of the dataset submission.</p></li>
+<li><p><strong>org</strong> (<em>str</em>) – Submitting organization.</p></li>
+<li><p><strong>quarter</strong> (<em>str</em>) – Reporting quarter (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;2025Q2&quot;</span></code>).</p></li>
+<li><p><strong>triggered_by</strong> (<em>str</em><em>, </em><em>optional</em>) – Identifier for the process or user that initiated the run.</p></li>
+<li><p><strong>run_description</strong> (<em>str</em><em>, </em><em>optional</em>) – Free-text description of the run.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>UUID string identifying the validation run.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.complete_run">
+<span class="sig-name descname"><span class="pre">complete_run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.complete_run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.complete_run" title="Link to this definition">¶</a></dt>
+<dd><p>Mark a validation run as completed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>run_id</strong> (<em>str</em>) – UUID of the validation run to update.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.get_or_create_column">
+<span class="sig-name descname"><span class="pre">get_or_create_column</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.get_or_create_column"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.get_or_create_column" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve or create a normalized column identifier.</p>
+<p>Ensures that each logical (dataset, sheet, column) combination
+is represented by a single persistent <code class="docutils literal notranslate"><span class="pre">column_id</span></code> across runs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Dataset to which the column belongs.</p></li>
+<li><p><strong>sheet_name</strong> (<em>str</em>) – Sheet name within the dataset.</p></li>
+<li><p><strong>column_name</strong> (<em>str</em>) – Column name as it appears in the sheet.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>UUID string identifying the column.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.get_person_by_key">
+<span class="sig-name descname"><span class="pre">get_person_by_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_field</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key_value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.get_person_by_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.get_person_by_key" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve a person record using a hashed identity key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key_field</strong> (<em>str</em>) – Name of the identity key column (e.g.
+<code class="docutils literal notranslate"><span class="pre">id_key_strict_name_dob_zip</span></code>).</p></li>
+<li><p><strong>key_value</strong> (<em>str</em>) – Hashed identity key value.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The full <code class="docutils literal notranslate"><span class="pre">person</span></code> row if a match is found, otherwise <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple or None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.insert_person">
+<span class="sig-name descname"><span class="pre">insert_person</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">first</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dob</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zip_code</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">med_name_dob_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">med_name_zip_key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weak_key</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.insert_person"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.insert_person" title="Link to this definition">¶</a></dt>
+<dd><p>Insert a new person record into the database.</p>
+<p>Persists identifying information and associated hashed identity
+keys. Missing values are safely coerced to <code class="docutils literal notranslate"><span class="pre">NULL</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>first</strong> (<em>str</em>) – First name.</p></li>
+<li><p><strong>last</strong> (<em>str</em>) – Last name.</p></li>
+<li><p><strong>dob</strong> (<em>date</em><em> or </em><em>str</em>) – Date of birth.</p></li>
+<li><p><strong>zip_code</strong> (<em>str</em>) – ZIP code.</p></li>
+<li><p><strong>strict_key</strong> (<em>str</em>) – Strict identity hash (name + DOB + ZIP).</p></li>
+<li><p><strong>med_name_dob_key</strong> (<em>str</em>) – Medium identity hash (name + DOB).</p></li>
+<li><p><strong>med_name_zip_key</strong> (<em>str</em>) – Medium identity hash (name + ZIP).</p></li>
+<li><p><strong>weak_key</strong> (<em>str</em>) – Weak identity hash (name only).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>UUID string identifying the new person.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.resolve_person">
+<span class="sig-name descname"><span class="pre">resolve_person</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.resolve_person"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.resolve_person" title="Link to this definition">¶</a></dt>
+<dd><p>Resolve a person using in-memory identity key maps.
+Creates a new person <em>logically</em> if no match is found,
+deferring persistence until later.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_new_people_buffer">
+<span class="sig-name descname"><span class="pre">flush_new_people_buffer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_new_people_buffer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_new_people_buffer" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.get_or_create_participant">
+<span class="sig-name descname"><span class="pre">get_or_create_participant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">person_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">org</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.get_or_create_participant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.get_or_create_participant" title="Link to this definition">¶</a></dt>
+<dd><p>Retrieve or create a persistent participant identifier.</p>
+<p>A participant represents a specific person’s presence within
+a given dataset. The identifier is stable across runs and reused
+whenever the same (person, dataset) pair is encountered.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>person_id</strong> (<em>str</em>) – Identifier of the resolved person.</p></li>
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Dataset to which the participant belongs.</p></li>
+<li><p><strong>sheet_name</strong> (<em>str</em><em>, </em><em>optional</em>) – Sheet name where the participant appears.</p></li>
+<li><p><strong>org</strong> (<em>str</em><em>, </em><em>optional</em>) – Organization associated with the participant.</p></li>
+<li><p><strong>quarter</strong> (<em>str</em><em>, </em><em>optional</em>) – Reporting quarter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>UUID string identifying the participant.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_new_participants">
+<span class="sig-name descname"><span class="pre">flush_new_participants</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_new_participants"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_new_participants" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.mark_presence_participant">
+<span class="sig-name descname"><span class="pre">mark_presence_participant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">participant_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row_number</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">quarter</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.mark_presence_participant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.mark_presence_participant" title="Link to this definition">¶</a></dt>
+<dd><p>Record participant presence or absence for a validation run.</p>
+<p>Writes to <code class="docutils literal notranslate"><span class="pre">participant_presence_log</span></code> using a composite key
+of (run_id, participant_id), allowing presence state to be
+updated idempotently.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>run_id</strong> (<em>str</em>) – Validation run identifier.</p></li>
+<li><p><strong>participant_id</strong> (<em>str</em>) – Participant identifier.</p></li>
+<li><p><strong>status</strong> (<em>str</em>) – Presence status (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;present&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;missing&quot;</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_participant_presence">
+<span class="sig-name descname"><span class="pre">flush_participant_presence</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_participant_presence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_participant_presence" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.log_all_normalized_cell_values">
+<span class="sig-name descname"><span class="pre">log_all_normalized_cell_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.log_all_normalized_cell_values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.log_all_normalized_cell_values" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.log_violation">
+<span class="sig-name descname"><span class="pre">log_violation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rule_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">participant_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalized</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">severity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'error'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.log_violation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.log_violation" title="Link to this definition">¶</a></dt>
+<dd><p>Record a validation rule violation.</p>
+<p>Inserts a structured violation record capturing the rule,
+affected participant, column, and observed values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>run_id</strong> (<em>str</em>) – Validation run identifier.</p></li>
+<li><p><strong>rule_id</strong> (<em>int</em>) – Identifier of the violated rule.</p></li>
+<li><p><strong>participant_id</strong> (<em>str</em>) – Participant associated with the violation.</p></li>
+<li><p><strong>column_id</strong> (<em>str</em>) – Column associated with the violation.</p></li>
+<li><p><strong>normalized</strong> (<em>Any</em>) – Normalized value that triggered the violation.</p></li>
+<li><p><strong>raw_value</strong> (<em>Any</em>) – Original raw value prior to normalization.</p></li>
+<li><p><strong>severity</strong> (<em>str</em><em>, </em><em>optional</em>) – Severity level (default: <code class="docutils literal notranslate"><span class="pre">&quot;error&quot;</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_violations">
+<span class="sig-name descname"><span class="pre">flush_violations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_violations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_violations" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.log_key_mismatches">
+<span class="sig-name descname"><span class="pre">log_key_mismatches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mismatches</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.log_key_mismatches"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.log_key_mismatches" title="Link to this definition">¶</a></dt>
+<dd><p>Persist unresolved identity-key mismatches detected during validation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>run_id</strong> (<em>str</em>) – Validation run identifier.</p></li>
+<li><p><strong>mismatches</strong> (<em>list</em><em>[</em><em>dict</em><em>]</em>) – Each dict must contain:
+org, period, sheet, id_key, issue</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="helpers.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Helper Functions</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="key_creator.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Validation Key Creator</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, CT State - Office of Workforce Strategy
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">SQL Logger</a><ul>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger</span></code></a><ul>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.__init__"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.load_participant_map"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.load_participant_map()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.load_person_maps"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.load_person_maps()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.start_run"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.start_run()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.complete_run"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.complete_run()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.get_or_create_column"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.get_or_create_column()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.get_person_by_key"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.get_person_by_key()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.insert_person"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.insert_person()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.resolve_person"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.resolve_person()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.flush_new_people_buffer"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.flush_new_people_buffer()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.get_or_create_participant"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.get_or_create_participant()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.flush_new_participants"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.flush_new_participants()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.mark_presence_participant"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.mark_presence_participant()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.flush_participant_presence"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.flush_participant_presence()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.log_all_normalized_cell_values"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.log_all_normalized_cell_values()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.log_violation"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.log_violation()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.flush_violations"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.flush_violations()</span></code></a></li>
+<li><a class="reference internal" href="#validation_engine.db_logger.ValidationDBLogger.log_key_mismatches"><code class="docutils literal notranslate"><span class="pre">ValidationDBLogger.log_key_mismatches()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=9262e05c"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

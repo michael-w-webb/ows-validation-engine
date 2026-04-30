@@ -1,9 +1,0 @@
-Validation Engine
-=================
-
-Core validation and normalization logic for Office of Workforce Strategy workbooks.
-
-.. automodule:: cc_validation_engine
-   :members:
-   :undoc-members:
-   :show-inheritance:

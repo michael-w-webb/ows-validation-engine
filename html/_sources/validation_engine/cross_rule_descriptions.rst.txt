@@ -1,0 +1,9 @@
+Validation Crossrule Descriptions
+=================
+
+The descriptions that are used by the cross rule engine's recursive error statement generation. 
+
+.. automodule:: validation_engine.cross_rule_descriptions
+   :members:
+   :undoc-members:
+   :show-inheritance:

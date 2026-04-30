@@ -1,0 +1,1420 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>validation_engine.validation_engine - OWS Validation Documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/custom.css" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">OWS Validation Documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">OWS Validation Documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/column_types.html">Validation Column Types</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/db_logger.html">SQL Logger</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/helpers.html">Helper Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for validation_engine.validation_engine</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">cc_validation_engine.py</span>
+<span class="sd">=======================</span>
+
+<span class="sd">Core validation engine for schema-based normalization, cross-sheet rule</span>
+<span class="sd">evaluation, and optional SQL-backed audit logging. This module defines the</span>
+<span class="sd">`ValidationEngine` class, which orchestrates end-to-end validation of</span>
+<span class="sd">workbooks submitted by external organizations (e.g., CareerConneCT,</span>
+<span class="sd">Good Jobs Challenge).</span>
+
+<span class="sd">Overview</span>
+<span class="sd">--------</span>
+<span class="sd">The engine performs the following high-level steps:</span>
+
+<span class="sd">1. **Sheet-by-sheet column-type normalization**</span>
+<span class="sd">   Uses column-type classes (e.g., `categoricalColumn`, `dateTimeColumn`,</span>
+<span class="sd">   `identifierColumn`) to coerce raw spreadsheet values into a consistent,</span>
+<span class="sd">   validated format. Column-type classes also generate column-level errors.</span>
+
+<span class="sd">2. **Identity resolution and participant tracking (optional)**</span>
+<span class="sd">   When `logging=True`, the engine:</span>
+<span class="sd">   - creates multiple spreadsheet-specific key variants via `KeyCreator`,</span>
+<span class="sd">   - resolves or creates global `person_id` values based on keys,</span>
+<span class="sd">   - assigns `participant_id` values for each dataset instance, and</span>
+<span class="sd">   - logs normalized cell values and participant presence to the database.</span>
+
+<span class="sd">3. **Cross-sheet rule evaluation**</span>
+<span class="sd">   Delegates rule execution to `CrossRuleEngine`, applying rule sets such as</span>
+<span class="sd">   connected presence, conditional blanks, conditional requirements, and</span>
+<span class="sd">   date-based conditional requirements.</span>
+
+<span class="sd">4. **Error aggregation**</span>
+<span class="sd">   All normalization errors and cross-sheet violations are collected into</span>
+<span class="sd">   DataFrames, accessible via `engine.errors` or `engine.get_all_errors()`.</span>
+
+<span class="sd">Inputs</span>
+<span class="sd">------</span>
+<span class="sd">The engine requires:</span>
+<span class="sd">    - ``workbook_definitions`` (dict):</span>
+<span class="sd">        Schema describing sheets, expected columns, column types, and</span>
+<span class="sd">        accepted responses.</span>
+<span class="sd">    - ``cross_rules`` (list[tuple], optional):</span>
+<span class="sd">        Rule sets to apply during cross-sheet validation. If not provided,</span>
+<span class="sd">        the caller is expected to supply rule sets externally.</span>
+<span class="sd">    - ``logging`` (bool):</span>
+<span class="sd">        Enables write-back to the SQL logging database via</span>
+<span class="sd">        ``ValidationDBLogger``.</span>
+
+<span class="sd">Within `validate_workbook`, the caller must supply:</span>
+<span class="sd">    - ``file`` (str):</span>
+<span class="sd">        Identifier in ``org|period`` format.</span>
+<span class="sd">    - ``workbook_type`` (str):</span>
+<span class="sd">        Dataset name (e.g., &quot;training data&quot;).</span>
+<span class="sd">    - ``workbook_format`` (str):</span>
+<span class="sd">        Workbook layout (&quot;simple format&quot; or &quot;four sheet format&quot;).</span>
+<span class="sd">    - ``dfs_by_sheet`` (dict[str, pandas.DataFrame]):</span>
+<span class="sd">        Raw data from each sheet after loading.</span>
+<span class="sd">    - ``keycreators`` (list of (KeyCreator, str)):</span>
+<span class="sd">        Pairs of key generators and output column names for identity matching.</span>
+
+<span class="sd">Outputs</span>
+<span class="sd">-------</span>
+<span class="sd">Attributes populated during validation:</span>
+<span class="sd">    - ``normalized_data`` (dict[str → DataFrame]):</span>
+<span class="sd">        Cleaned, normalized DataFrames for each sheet.</span>
+<span class="sd">    - ``errors`` (list[DataFrame]):</span>
+<span class="sd">        Column-level and cross-sheet validation error frames.</span>
+<span class="sd">    - ``column_error_index`` (dict[(sheet, column) → set[int]]):</span>
+<span class="sd">        Tracks row indices associated with column-level errors.</span>
+
+<span class="sd">Methods:</span>
+<span class="sd">    - ``validate_workbook``:</span>
+<span class="sd">        Main entry point for executing the full validation workflow.</span>
+<span class="sd">    - ``get_all_errors``:</span>
+<span class="sd">        Returns a single concatenated DataFrame of all errors.</span>
+<span class="sd">    - ``make_entry_key``:</span>
+<span class="sd">        Generates a deterministic hashed ID for record tracking.</span>
+
+<span class="sd">Assumptions and Constraints</span>
+<span class="sd">---------------------------</span>
+<span class="sd">- ``workbook_definitions`` fully describe all sheets and expected columns.</span>
+<span class="sd">- Each sheet includes a ``row_number`` column corresponding to the original</span>
+<span class="sd">  Excel row numbers.</span>
+<span class="sd">- ``identity_sheet`` must exist (&quot;Report&quot; for simple format, &quot;Personal</span>
+<span class="sd">  Information&quot; for multi-sheet format).</span>
+<span class="sd">- Column normalization must precede cross-sheet rule evaluation.</span>
+<span class="sd">- KeyCreator fields must match post-normalization column names.</span>
+<span class="sd">- Database schema must be initialized before enabling logging.</span>
+
+<span class="sd">Side Effects</span>
+<span class="sd">------------</span>
+<span class="sd">- When ``logging=True``, this module writes:</span>
+<span class="sd">    - run metadata,</span>
+<span class="sd">    - normalized cell values,</span>
+<span class="sd">    - person/participant resolution events,</span>
+<span class="sd">    - presence logs,</span>
+<span class="sd">    - validation rule violations</span>
+<span class="sd">  to the SQL logging database via ``ValidationDBLogger``.</span>
+
+<span class="sd">Security / PII Notes</span>
+<span class="sd">--------------------</span>
+<span class="sd">- This engine processes sensitive PII including names, DOB, ZIP code, and</span>
+<span class="sd">  state ID values.</span>
+<span class="sd">- Identity keys are generated using SHA-256, but raw PII exists in memory</span>
+<span class="sd">  during normalization and logging.</span>
+<span class="sd">- Database logs may contain raw and normalized values; appropriate access</span>
+<span class="sd">  controls must be enforced externally.</span>
+
+<span class="sd">This module is intended to be imported by higher-level orchestration scripts</span>
+<span class="sd">(e.g., `cc_validation_main.py`) and is not designed for direct command-line</span>
+<span class="sd">execution.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">validation_engine.validation_column_types</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">validation_engine.cross_rule_engine</span><span class="w"> </span><span class="kn">import</span> <span class="n">CrossRuleEngine</span>
+
+<span class="c1">### SQL Logging Related Imports </span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">validation_engine.db_logger</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationDBLogger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hashlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">sha256</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
+<span class="n">COLUMN_CLASS_MAP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;categorical&quot;</span><span class="p">:</span> <span class="n">categoricalColumn</span><span class="p">,</span>
+    <span class="s2">&quot;fileSpecificCategorical&quot;</span><span class="p">:</span><span class="n">fileSpecificCategoricalColumn</span><span class="p">,</span>
+    <span class="s2">&quot;identifier&quot;</span><span class="p">:</span> <span class="n">identifierColumn</span><span class="p">,</span>
+    <span class="s2">&quot;boolean&quot;</span><span class="p">:</span> <span class="n">booleanColumn</span><span class="p">,</span>
+    <span class="s2">&quot;dateTime&quot;</span><span class="p">:</span> <span class="n">dateTimeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;zipCode&quot;</span><span class="p">:</span> <span class="n">zipCodeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;stateID7&quot;</span><span class="p">:</span> <span class="n">stateID7Column</span><span class="p">,</span>
+    <span class="s2">&quot;ONETCode&quot;</span><span class="p">:</span> <span class="n">ONETCodeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;CIPCode&quot;</span><span class="p">:</span> <span class="n">CIPCodeColumn</span><span class="p">,</span>
+    <span class="s2">&quot;hourlyWage&quot;</span><span class="p">:</span> <span class="n">hourlyWageColumn</span><span class="p">,</span>
+    <span class="s2">&quot;hoursWorked&quot;</span><span class="p">:</span> <span class="n">hoursWorkedColumn</span><span class="p">,</span>
+    <span class="s2">&quot;NAICSCode&quot;</span><span class="p">:</span> <span class="n">NAICSCodeColumn</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="ValidationEngine">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ValidationEngine</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Core orchestrator for sheet-level column validation in CareerConneCT /</span>
+<span class="sd">    workforce-data workbooks.</span>
+
+<span class="sd">    The engine applies:</span>
+<span class="sd">       • column-type normalization (dates, categorical, integers, Booleans, ZIPs, etc.)</span>
+<span class="sd">       • file-specific categorical validation (for org-dependent fields)</span>
+<span class="sd">       • error generation with row-level metadata</span>
+<span class="sd">       • row-dropping rules for entirely blank participant records</span>
+<span class="sd">       • construction of `column_error_index` for downstream cross-sheet checks</span>
+
+<span class="sd">    This class handles validation for **one workbook at a time**.  </span>
+<span class="sd">    Multi-sheet and cross-sheet coordination occurs in the calling</span>
+<span class="sd">    `validate_workbook()` method (not included in this snippet).</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        workbook_definitions (dict):</span>
+<span class="sd">            Schema describing expected columns, column types, and accepted responses</span>
+<span class="sd">            for each sheet in the workbook.</span>
+<span class="sd">        cross_rules (dict):</span>
+<span class="sd">            Optional override for cross-sheet validation rules.</span>
+<span class="sd">        logging (bool):</span>
+<span class="sd">            If True, downstream caller logs to SQLite via `ValidationDBLogger`.</span>
+<span class="sd">        normalized_data (dict[str, DataFrame]):</span>
+<span class="sd">            Resulting normalized sheets after validation.</span>
+<span class="sd">        errors (list[DataFrame]):</span>
+<span class="sd">            List of error DataFrames produced per sheet.</span>
+<span class="sd">        column_error_index (dict[(sheet, column) → set[int]]):</span>
+<span class="sd">            Fast lookup for cross-rule engine; identifies failed rows per column.</span>
+<span class="sd">        file (str or None):</span>
+<span class="sd">            Identifier used when generating error reports (“org|quarter|filename”).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_definitions</span><span class="p">,</span> <span class="n">cross_rules</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">logging</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">log_description</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">mismatch_check</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+        
+        <span class="c1">## file meta data navigation </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span> <span class="o">=</span> <span class="n">workbook_definitions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_format</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions_location</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cross_rules</span> <span class="o">=</span> <span class="n">cross_rules</span> <span class="ow">or</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span> <span class="o">=</span> <span class="p">{}</span>   <span class="c1"># {sheet_name: DataFrame}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="p">[]</span>            <span class="c1"># list of DataFrames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validated</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cross_checked</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="kc">None</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="o">=</span> <span class="n">logging</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_description</span> <span class="o">=</span> <span class="n">log_description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mismatch_check</span> <span class="o">=</span> <span class="n">mismatch_check</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mismatches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_description</span><span class="p">:</span>
+
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Engine call must include a log_description argument if Logging is True&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span> <span class="o">=</span> <span class="n">ValidationDBLogger</span><span class="p">()</span>
+            
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_sheet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">accepted_responses</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate and normalize all columns for a single sheet.</span>
+
+<span class="sd">        This method applies the column-type classes defined in</span>
+<span class="sd">        `COLUMN_CLASS_MAP` to each column described in `accepted_responses`,</span>
+<span class="sd">        producing both a normalized DataFrame and a structured error DataFrame.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            df (pd.DataFrame):</span>
+<span class="sd">                Raw sheet data as loaded by the WorkbookLoader.</span>
+<span class="sd">            sheet_name (str):</span>
+<span class="sd">                Name of the sheet being validated. Used for error metadata.</span>
+<span class="sd">            accepted_responses (dict):</span>
+<span class="sd">                Column-level schema for this sheet, e.g.:</span>
+
+<span class="sd">                    {</span>
+<span class="sd">                        &quot;Date Entered Training&quot;: {&quot;type&quot;: &quot;date&quot;, &quot;required&quot;: True},</span>
+<span class="sd">                        &quot;County&quot;: {</span>
+<span class="sd">                            &quot;type&quot;: &quot;categorical&quot;,</span>
+<span class="sd">                            &quot;accepted_responses&quot;: [&quot;Hartford&quot;, &quot;New Haven&quot;, ...]</span>
+<span class="sd">                        },</span>
+<span class="sd">                        ...</span>
+<span class="sd">                    }</span>
+
+<span class="sd">            file (str, optional):</span>
+<span class="sd">                Full workbook identifier (`&quot;org|quarterd&quot;`). Propagated</span>
+<span class="sd">                into error logs for data lineage.</span>
+<span class="sd">            row_offset (int, optional):</span>
+<span class="sd">                Excel row offset used when translating DataFrame indices</span>
+<span class="sd">                back into user-visible spreadsheet row numbers.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple:</span>
+<span class="sd">                (normalized_df, errors_df)</span>
+
+<span class="sd">                • normalized_df (pd.DataFrame):</span>
+<span class="sd">                    All columns normalized, reindexed (after dropping fully blank rows),</span>
+<span class="sd">                    and containing `id_key`/`row_number` if present.</span>
+<span class="sd">                </span>
+<span class="sd">                • errors_df (pd.DataFrame):</span>
+<span class="sd">                    Structured validation errors with columns:</span>
+<span class="sd">                    [&quot;file&quot;,&quot;sheet&quot;,&quot;row_number&quot;,&quot;column&quot;,&quot;rule&quot;,&quot;raw_value&quot;,&quot;normalized&quot;]</span>
+
+<span class="sd">                    Empty if no errors detected.</span>
+
+<span class="sd">        Behavior:</span>
+<span class="sd">            • Applies type-specific normalizers (date, integer, categorical, ZIP, etc.).</span>
+<span class="sd">            • Handles file-specific categorical fields (e.g., responses vary by CBO).</span>
+<span class="sd">            • Records per-column errors via each validator’s `errors_df()` method.</span>
+<span class="sd">            • Drops rows that are blank for all non-identity columns.</span>
+<span class="sd">            • Preserves `id_key` and `row_number`.</span>
+<span class="sd">            • Updates `self.column_error_index` for cross-sheet rules.</span>
+
+<span class="sd">        Side Effects:</span>
+<span class="sd">            • Mutates `self.column_error_index` (used later by cross-rule engine).</span>
+<span class="sd">            • Sets `self._validated = True`.</span>
+<span class="sd">            • Prints warnings for missing/undefined columns.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • Validation order is column-by-column; errors do not prevent processing.</span>
+<span class="sd">            • Validators may coerce values (string normalization, padding, casefolding).</span>
+<span class="sd">            • Row removal logic ensures that blank spreadsheet rows do not generate</span>
+<span class="sd">              false positive validation errors.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">normalized_cols</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">all_errors</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+            
+        <span class="k">if</span> <span class="s2">&quot;source_file&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="s2">&quot;source_file&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;source_file&quot;</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">accepted_responses</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;skip </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">col_type</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">col_type</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c1">### categorical responses require extra information passed by workbook_definitions</span>
+            <span class="bp">cls</span> <span class="o">=</span> <span class="n">COLUMN_CLASS_MAP</span><span class="p">[</span><span class="n">col_type</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s2">&quot;categorical&quot;</span><span class="p">:</span>
+                <span class="n">accepted</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">,</span> <span class="p">[])</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">accepted_responses</span><span class="o">=</span><span class="n">accepted</span><span class="p">,</span>
+                <span class="n">required</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> 
+                <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s2">&quot;fileSpecificCategorical&quot;</span><span class="p">:</span>
+                <span class="n">accepted</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">,[])</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">accepted_responses</span> <span class="o">=</span> <span class="n">accepted</span><span class="p">,</span> 
+                <span class="n">required</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                <span class="n">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">col_type</span> <span class="o">==</span> <span class="s2">&quot;hourlyWage&quot;</span><span class="p">:</span>
+                <span class="n">max_wage</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;max_wage&quot;</span><span class="p">,</span> <span class="mi">45</span><span class="p">)</span>
+                <span class="n">min_wage</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;min_wage&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">max_wage</span><span class="o">=</span><span class="n">max_wage</span><span class="p">,</span> <span class="n">min_wage</span><span class="o">=</span><span class="n">min_wage</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">validator</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">required</span><span class="o">=</span><span class="n">spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;required&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span> <span class="n">row_numbers</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">])</span>
+
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+            <span class="n">s_norm</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
+            <span class="n">s_fmt</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s_norm</span><span class="p">)</span>
+
+            <span class="n">errs</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">errors_df</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">raw</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="n">row_offset</span><span class="p">)</span>    
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+
+                <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            
+                    <span class="n">errs</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">errs</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            
+                <span class="n">all_errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">errs</span><span class="p">)</span>
+
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">raw</span>
+            <span class="n">normalized_cols</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">_normalized&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">s_fmt</span>
+
+        <span class="n">normalized_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">normalized_cols</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+
+        <span class="n">errors_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_errors</span><span class="p">)</span> <span class="k">if</span> <span class="n">all_errors</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="s2">&quot;sheet&quot;</span><span class="p">,</span><span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="s2">&quot;rule&quot;</span><span class="p">,</span><span class="s2">&quot;raw_value&quot;</span><span class="p">,</span><span class="s2">&quot;normalized&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="c1">#         ### Moved this to the column type classes, inappropriate for the engine to be normalizing, leaving here for reference in case changes broke stuff </span>
+        <span class="c1"># normalized_df = normalized_df.replace(r&quot;^\s*$&quot;, pd.NA, regex=True)    # empty or whitespace-only</span>
+        <span class="c1"># normalized_df = normalized_df.replace(r&quot;^0+$&quot;, pd.NA, regex=True)     # &quot;0&quot;, &quot;00&quot;, etc.</span>
+        <span class="c1"># normalized_df = normalized_df.replace(</span>
+        <span class="c1">#     to_replace=[</span>
+        <span class="c1">#         &quot;#VALUE!&quot;, &quot;#REF!&quot;, &quot;#DIV/0!&quot;, &quot;#NAME?&quot;, &quot;#NULL!&quot;, &quot;#NUM!&quot;,</span>
+        <span class="c1">#         &quot;#N/A&quot;, &quot;nan&quot;, &quot;&lt;NA&gt;&quot;, &quot;NaN&quot;</span>
+        <span class="c1">#     ],</span>
+        <span class="c1">#     value=pd.NA</span>
+        <span class="c1"># )</span>
+
+        <span class="c1"># Drop rows that are all blank except id_key/row_number</span>
+        <span class="n">cols_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]]</span>
+        <span class="n">drop_mask</span> <span class="o">=</span> <span class="n">normalized_df</span><span class="p">[</span><span class="n">cols_to_check</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">dropped_row_numbers</span> <span class="o">=</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">drop_mask</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="n">normalized_df</span> <span class="o">=</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">drop_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># ✅ Reindex to keep positional alignment with masks</span>
+        <span class="n">normalized_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Build column_error_index from the combined errors_df</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;column_error_index&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">errors_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">errors_df</span><span class="p">[</span><span class="s2">&quot;column&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">():</span>
+                <span class="n">bad_idx</span> <span class="o">=</span> <span class="n">errors_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">errors_df</span><span class="p">[</span><span class="s2">&quot;column&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">bad_idx</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span><span class="p">[(</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">col</span><span class="p">)]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">bad_idx</span><span class="p">)</span>
+
+        <span class="c1"># --- Remove any errors that belong to fully blank rows ---</span>
+        <span class="k">if</span> <span class="n">dropped_row_numbers</span><span class="p">:</span>
+            <span class="n">errors_df</span> <span class="o">=</span> <span class="n">errors_df</span><span class="p">[</span><span class="o">~</span><span class="n">errors_df</span><span class="p">[</span><span class="s2">&quot;row_number&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">dropped_row_numbers</span><span class="p">)]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validated</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">return</span> <span class="n">normalized_df</span><span class="p">,</span> <span class="n">errors_df</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_org</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">org</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
+                <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Potential Problem - Org is empty string.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot set org: file must be a string structured as </span><span class="si">{org}</span><span class="s2">|</span><span class="si">{quarter}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_quarter</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> 
+                <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Potential Problem - Quarter is empty string.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Cannot set quarter: file must be a string structured as </span><span class="si">{org}</span><span class="s2">|</span><span class="si">{quarter}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ValidationEngine.set_file">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.set_file">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_org</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_quarter</span><span class="p">()</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_assert_file_context_ready</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Engine is not ready: file/org/quarter have not been set. Call set_file().&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Engine is not ready: file/org/quarter have not been set. Call set_file().&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Engine is not ready: file/org/quarter have not been set. Call set_file().&quot;</span><span class="p">)</span>
+        
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_workbook_format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">):</span>
+        
+        <span class="k">if</span> <span class="n">workbook_format</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Workbook format &#39;</span><span class="si">{</span><span class="n">workbook_format</span><span class="si">}</span><span class="s2">&#39; is not defined for workbook type &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_format</span> <span class="o">=</span> <span class="n">workbook_format</span>
+        
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_workbook_definitions_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">workbook_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Workbook type &#39;</span><span class="si">{</span><span class="n">workbook_type</span><span class="si">}</span><span class="s2">&#39; is not defined.&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span> <span class="o">=</span> <span class="n">workbook_type</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_workbook_format</span><span class="p">(</span><span class="n">workbook_format</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_set_workbook_definitions_location</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">):</span>
+
+        <span class="n">working_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_format</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">sheet_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">working_location</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Sheet name &#39;</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&#39; is not defined for workbook type &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span><span class="si">}</span><span class="s2">&#39; and format &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_format</span><span class="si">}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions_location</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_format</span><span class="p">][</span><span class="n">sheet_name</span><span class="p">]</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_file_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span><span class="nb">str</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions_location</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span> 
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;workbook_definitions_location is not set. Call set_workbook_definitions_location first.&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions_location</span><span class="p">[</span><span class="n">item</span><span class="p">]</span>
+
+    <span class="c1">## normalize_data</span>
+<div class="viewcode-block" id="ValidationEngine.normalize_data">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.normalize_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">normalize_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">,</span> <span class="n">dfs_by_sheet</span><span class="p">):</span>
+
+        <span class="c1">### confirm that the file, org, and quarter values have been set correctly.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assert_file_context_ready</span><span class="p">()</span>
+
+        <span class="c1">### make sure the provided workbook type and format vavlues are valid and pass them to the engine&#39;s self.values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_workbook_definitions_context</span><span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">)</span>
+
+        <span class="c1">### declare the run level column_error_index value that is going to be used across validate_sheet calls </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1">### if logging is enabled, create a new run entry in the database and pass the run id to the engine for later use</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1">## create a unique id connected to the information passed in the run table </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span><span class="p">,</span> <span class="n">triggered_by</span><span class="o">=</span><span class="s2">&quot;mwebb&quot;</span><span class="p">,</span> <span class="n">run_desription</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_description</span><span class="p">)</span>
+
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 1️⃣ Sheet-by-sheet validation</span>
+        <span class="c1"># ============================================================</span>
+        
+        <span class="c1">### using the dfs_by_sheet dictionary generated by the workbook loader loop through validate_sheet calls and generate a normalized data dictionary and an errors list</span>
+        <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">dfs_by_sheet</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="c1">### using the workbook type and format values set earlier, set the workbook definitions location for the current sheet</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_workbook_definitions_location</span><span class="p">(</span><span class="n">sheet_name</span><span class="p">)</span>
+
+            <span class="c1">### grab the accepted response dictionary for the current sheet</span>
+            <span class="n">accepted_responses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_file_metadata</span><span class="p">(</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">)</span>
+
+            <span class="n">norm_df</span><span class="p">,</span> <span class="n">errs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_sheet</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">accepted_responses</span><span class="p">)</span>
+
+            <span class="n">cols_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">norm_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]]</span>
+            <span class="n">norm_df</span> <span class="o">=</span> <span class="n">norm_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">cols_to_check</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
+
+            <span class="c1">### pass the cleaned data to the engine attribute for normalized data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="p">[</span><span class="n">sheet_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">norm_df</span>
+
+            <span class="c1">### pass the errors to the existing engine level error list </span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">errs</span><span class="p">)</span></div>
+
+
+    <span class="c1">#### identify canonical entries and log to the databse if logging </span>
+
+<div class="viewcode-block" id="ValidationEngine.ensure_normalized_data">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.ensure_normalized_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ensure_normalized_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">normalized_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">normalized_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;normalized_data is None&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">normalized_data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">normalized_data</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;normalized_data must be a non-empty dict&quot;</span><span class="p">)</span>  </div>
+
+
+<div class="viewcode-block" id="ValidationEngine.build_id_key">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.build_id_key">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_id_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+        <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">normalize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">sep</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;|&quot;</span><span class="p">,</span>
+        <span class="n">null_token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build a deterministic ID key from an arbitrary list of columns.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;columns must contain at least one column name&quot;</span><span class="p">)</span>
+
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing columns for id_key: </span><span class="si">{</span><span class="n">missing</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">parts</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+                    <span class="o">.</span><span class="n">replace</span><span class="p">({</span><span class="s2">&quot;nan&quot;</span><span class="p">:</span> <span class="n">null_token</span><span class="p">,</span> <span class="s2">&quot;none&quot;</span><span class="p">:</span> <span class="n">null_token</span><span class="p">})</span>
+                <span class="p">)</span>
+
+            <span class="n">parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">null_token</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span>
+            <span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">parts</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ValidationEngine.attach_identity_key">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.attach_identity_key">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">attach_identity_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+        <span class="n">normalized_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">identity_sheet</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">id_columns</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">id_col_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;id_key&quot;</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensure_normalized_data</span><span class="p">(</span><span class="n">normalized_data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">identity_sheet</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">normalized_data</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identity sheet &#39;</span><span class="si">{</span><span class="n">identity_sheet</span><span class="si">}</span><span class="s2">&#39; not found&quot;</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="n">normalized_data</span><span class="p">[</span><span class="n">identity_sheet</span><span class="p">]</span>
+
+        <span class="n">df</span><span class="p">[</span><span class="n">id_col_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">build_id_key</span><span class="p">(</span>
+            <span class="n">df</span><span class="p">,</span>
+            <span class="n">id_columns</span><span class="p">,</span>
+            <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="n">normalized_data</span><span class="p">[</span><span class="n">identity_sheet</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span></div>
+
+
+    <span class="c1">## main function, the one implementing the other functions </span>
+<div class="viewcode-block" id="ValidationEngine.validate_workbook">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.validate_workbook">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">validate_workbook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">,</span> <span class="n">dfs_by_sheet</span><span class="p">,</span> <span class="n">passed_identity_sheet</span><span class="p">,</span> <span class="n">keycreators</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate an entire workbook, generate normalized per-sheet data, resolve</span>
+<span class="sd">        participant identity, apply cross-sheet rules, and optionally log all</span>
+<span class="sd">        results to the validation database.</span>
+
+<span class="sd">        This method orchestrates the entire validation lifecycle:</span>
+
+<span class="sd">        1. **Sheet-level validation**</span>
+<span class="sd">           • Each sheet listed in `dfs_by_sheet` is validated using column-type</span>
+<span class="sd">             validators defined in `workbook_definitions`.</span>
+<span class="sd">           • Invalid values generate row-level error records.</span>
+<span class="sd">           • Blank records (all-NA except id_key/row_number) are removed.</span>
+<span class="sd">           • Normalized DataFrames are stored in `self.normalized_data`.</span>
+
+<span class="sd">        2. **Identity resolution**</span>
+<span class="sd">           • Determines the canonical identity sheet:</span>
+<span class="sd">               - `&quot;Report&quot;` for simple-format workbooks</span>
+<span class="sd">               - `&quot;Personal Information&quot;` for four-sheet format</span>
+<span class="sd">           • Ensures `id_key` exists (auto-generated for simple format).</span>
+<span class="sd">           • If database logging is enabled:</span>
+<span class="sd">               - Applies all configured `KeyCreator` instances.</span>
+<span class="sd">               - Resolves or creates `person` records in the `person` table.</span>
+<span class="sd">               - Creates or updates `participant` records for the dataset.</span>
+
+<span class="sd">        3. **Logging normalized cell values**</span>
+<span class="sd">           • When logging is enabled, all normalized values for all sheets</span>
+<span class="sd">             are written to the database via `ValidationDBLogger`.</span>
+
+<span class="sd">        4. **Participant presence tracking**</span>
+<span class="sd">           • Marks participants as `&quot;present&quot;` or `&quot;missing&quot;` for the run,</span>
+<span class="sd">             enabling longitudinal participant tracking across reporting cycles.</span>
+
+<span class="sd">        5. **Cross-sheet rule enforcement**</span>
+<span class="sd">           • Delegates to `_apply_cross_rules()` which uses `CrossRuleEngine`</span>
+<span class="sd">             to evaluate rules such as:</span>
+<span class="sd">               - connected presence</span>
+<span class="sd">               - conditional required fields</span>
+<span class="sd">               - conditional blank-unless</span>
+<span class="sd">               - date comparison rules</span>
+<span class="sd">           • Any violations are appended to the error collection.</span>
+
+<span class="sd">        6. **Violation persistence**</span>
+<span class="sd">           • If logging is enabled, attaches `participant_id` to each error row</span>
+<span class="sd">             using `id_key` matching.</span>
+<span class="sd">           • Persists each rule violation into the `validation_violation` table.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file (str):</span>
+<span class="sd">                Identifier for the workbook, typically of the form</span>
+<span class="sd">                `&quot;org|quarter|filename&quot;`. Used for logging and lineage.</span>
+<span class="sd">            workbook_type (str):</span>
+<span class="sd">                Dataset category (e.g., `&quot;CareerConneCT&quot;`).</span>
+<span class="sd">            workbook_format (str):</span>
+<span class="sd">                Layout style defined in `workbook_definitions`</span>
+<span class="sd">                (e.g., `&quot;simple format&quot;`, `&quot;four sheet format&quot;`).</span>
+<span class="sd">            dfs_by_sheet (dict[str, pandas.DataFrame]):</span>
+<span class="sd">                Raw DataFrames produced by the loader, keyed by sheet name.</span>
+<span class="sd">            keycreators (list[tuple], optional):</span>
+<span class="sd">                List of `(KeyCreator, column_name)` pairs used to generate</span>
+<span class="sd">                additional hashed or unhashed identity keys.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None</span>
+<span class="sd">                All normalized data, errors, and logging output are stored in:</span>
+<span class="sd">                • `self.normalized_data`</span>
+<span class="sd">                • `self.errors`</span>
+<span class="sd">                • database tables (if logging enabled)</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError:</span>
+<span class="sd">                If the required identity sheet is missing.</span>
+<span class="sd">            KeyError:</span>
+<span class="sd">                If workbook definitions are incomplete for the given</span>
+<span class="sd">                workbook type or format.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • This method must be called before any cross-rule checks or data export.</span>
+<span class="sd">            • `self.errors` collects sheet-level and cross-sheet violations.</span>
+<span class="sd">            • Calling code may retrieve all errors via `get_all_errors()`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_error_index</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">org</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;|&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+            <span class="c1">## create a unique id connected to the information passed in the run table </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span><span class="p">,</span> <span class="n">triggered_by</span><span class="o">=</span><span class="s2">&quot;mwebb&quot;</span><span class="p">,</span> <span class="n">run_description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_description</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">raw_data_points</span> <span class="o">=</span> <span class="n">dfs_by_sheet</span>
+    
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 1️⃣ Sheet-by-sheet validation</span>
+        <span class="c1"># ============================================================</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">workbook_type</span><span class="si">}</span><span class="s2"> - Starting Normalization @ </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">dfs_by_sheet</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="n">accepted_responses</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">[</span><span class="n">workbook_type</span><span class="p">][</span><span class="n">workbook_format</span><span class="p">][</span><span class="n">sheet_name</span><span class="p">][</span><span class="s2">&quot;accepted_responses&quot;</span><span class="p">]</span>
+
+            <span class="n">norm_df</span><span class="p">,</span> <span class="n">errs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_sheet</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">accepted_responses</span><span class="p">)</span>
+
+            <span class="n">cols_to_check</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">norm_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]]</span>
+            <span class="n">norm_df</span> <span class="o">=</span> <span class="n">norm_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">cols_to_check</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="p">[</span><span class="n">sheet_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">norm_df</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">errs</span><span class="p">)</span>
+
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 2️⃣ Identify canonical participants (from identity sheet)</span>
+        <span class="c1"># ============================================================</span>
+        
+        <span class="k">if</span><span class="p">(</span><span class="n">workbook_format</span> <span class="o">==</span> <span class="s2">&quot;simple format&quot;</span><span class="p">):</span>
+            <span class="n">identity_sheet</span> <span class="o">=</span> <span class="n">sheet_name</span>
+            <span class="n">id_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">identity_sheet</span><span class="p">)</span>
+            <span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;|&quot;</span> <span class="o">+</span> <span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;Last Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">))</span>
+             
+            <span class="n">raw_data</span> <span class="o">=</span> <span class="n">dfs_by_sheet</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">identity_sheet</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">raw_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identity sheet &#39;</span><span class="si">{</span><span class="n">identity_sheet</span><span class="si">}</span><span class="s2">&#39; not found&quot;</span><span class="p">)</span>
+
+            <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;|&quot;</span> <span class="o">+</span> <span class="n">raw_data</span><span class="p">[</span><span class="s2">&quot;Last Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="n">identity_sheet</span> <span class="o">=</span> <span class="n">passed_identity_sheet</span>
+            <span class="n">id_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">identity_sheet</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">id_df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Identity sheet &#39;</span><span class="si">{</span><span class="n">identity_sheet</span><span class="si">}</span><span class="s2">&#39; not found in workbook.&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Generate spreadsheet specific keys that can be used to map back to a universal person ID</span>
+
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">workbook_type</span><span class="si">}</span><span class="s2"> - Recording Mismatches @ </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">record_mismatches</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">org</span><span class="p">,</span> <span class="n">quarter</span><span class="p">,</span> <span class="n">sheet</span><span class="p">,</span> <span class="n">issue</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mismatches</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;org&quot;</span><span class="p">:</span> <span class="n">org</span><span class="p">,</span>
+                    <span class="s2">&quot;period&quot;</span><span class="p">:</span> <span class="n">quarter</span><span class="p">,</span>
+                    <span class="s2">&quot;sheet&quot;</span><span class="p">:</span> <span class="n">sheet</span><span class="p">,</span>
+                    <span class="s2">&quot;id_key&quot;</span><span class="p">:</span> <span class="n">k</span><span class="p">,</span>
+                    <span class="s2">&quot;issue&quot;</span><span class="p">:</span> <span class="n">issue</span>
+                <span class="p">})</span>
+        <span class="c1"># --- Step 1: find all globally duplicated id_keys ---</span>
+        <span class="n">all_dup_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">dup_keys</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(),</span> <span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dup_keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">record_mismatches</span><span class="p">(</span><span class="n">dup_keys</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="s2">&quot;duplicate_in_sheet&quot;</span><span class="p">)</span>
+                    <span class="n">all_dup_keys</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dup_keys</span><span class="p">)</span>
+
+        <span class="c1"># --- Step 2: drop those keys from every sheet before comparing/merging ---</span>
+        <span class="n">cleaned_dfs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalized_data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">all_dup_keys</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">cleaned_dfs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span><span class="p">))</span>
+
+        <span class="c1"># --- Step 3: do matching/missing/extra on the cleaned data ---</span>
+        <span class="n">base_name</span><span class="p">,</span> <span class="n">base_df</span> <span class="o">=</span> <span class="n">cleaned_dfs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">base_df</span> <span class="o">=</span> <span class="n">base_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">_|_|_</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">&quot;id_key&quot;</span> <span class="k">else</span> <span class="n">c</span><span class="p">)</span>
+
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">base_df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">cleaned_dfs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">base_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">merged</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">])</span>
+            <span class="n">sheet_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">])</span>
+
+            <span class="n">missing_in_sheet</span> <span class="o">=</span> <span class="n">base_keys</span> <span class="o">-</span> <span class="n">sheet_keys</span>
+            <span class="n">extra_in_sheet</span>   <span class="o">=</span> <span class="n">sheet_keys</span> <span class="o">-</span> <span class="n">base_keys</span>
+
+            <span class="k">if</span> <span class="n">missing_in_sheet</span><span class="p">:</span>
+                <span class="n">record_mismatches</span><span class="p">(</span><span class="n">missing_in_sheet</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="s2">&quot;missing_in_sheet&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">extra_in_sheet</span><span class="p">:</span>
+                <span class="n">record_mismatches</span><span class="p">(</span><span class="n">extra_in_sheet</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span><span class="p">,</span> <span class="n">sheet_name</span><span class="p">,</span> <span class="s2">&quot;extra_in_sheet&quot;</span><span class="p">)</span>
+
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">_|_|_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">c</span> <span class="o">!=</span> <span class="s2">&quot;id_key&quot;</span> <span class="k">else</span> <span class="n">c</span><span class="p">)</span>
+
+            <span class="c1">### inner merge is catching any stray single participant entries and removing from the dataset that will be processed</span>
+            <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span> <span class="n">suffixes</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;_|_|_</span><span class="si">{</span><span class="n">sheet_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">))</span>
+
+        
+        <span class="n">DELIM</span> <span class="o">=</span> <span class="s2">&quot;_|_|_&quot;</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">split_col</span><span class="p">(</span><span class="n">col</span><span class="p">):</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_normalized&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">DELIM</span> <span class="ow">in</span> <span class="n">col</span><span class="p">:</span>
+                <span class="n">base</span><span class="p">,</span> <span class="n">sheet</span> <span class="o">=</span> <span class="n">col</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">DELIM</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">base</span><span class="p">,</span> <span class="n">sheet</span> <span class="o">=</span> <span class="n">col</span><span class="p">,</span> <span class="s2">&quot;combined&quot;</span>
+
+            <span class="k">return</span> <span class="n">base</span><span class="p">,</span> <span class="n">sheet</span>
+
+
+        <span class="n">valid_id_keys</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">merged</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">])</span>
+
+        <span class="n">id_df_valid</span> <span class="o">=</span> <span class="n">id_df</span><span class="p">[</span><span class="n">id_df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">valid_id_keys</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c1"># else: </span>
+
+        <span class="c1">#     # All ids remain valid when mismatch checking is disabled</span>
+        <span class="c1">#     id_df_valid = id_df.copy()</span>
+
+        <span class="c1">#     cleaned_dfs = list(self.normalized_data.items())</span>
+
+        <span class="c1">#     if not cleaned_dfs:</span>
+        <span class="c1">#         merged = pd.DataFrame()</span>
+        <span class="c1">#     else:</span>
+        <span class="c1">#         base_name, base_df = cleaned_dfs[0]</span>
+        <span class="c1">#         merged = base_df.copy()</span>
+
+        <span class="c1">#         for sheet_name, df in cleaned_dfs[1:]:</span>
+
+        <span class="c1">#             if &quot;id_key&quot; not in df.columns:</span>
+        <span class="c1">#                 continue</span>
+
+        <span class="c1">#             merged = merged.merge(</span>
+        <span class="c1">#                 df,</span>
+        <span class="c1">#                 on=&quot;id_key&quot;,</span>
+        <span class="c1">#                 how=&quot;inner&quot;,</span>
+        <span class="c1">#                 suffixes=(&quot;&quot;, f&quot;_{sheet_name}&quot;)</span>
+        <span class="c1">#             )</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">workbook_type</span><span class="si">}</span><span class="s2"> - Starting Logging @ </span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">normalized_combined</span> <span class="o">=</span> <span class="n">merged</span>
+
+        <span class="n">dedup_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">,</span> <span class="s2">&quot;First Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Last Name&quot;</span><span class="p">,</span> <span class="s2">&quot;source_file&quot;</span><span class="p">]</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">normalized_combined</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">normalized_combined</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">dedup_cols</span><span class="p">)</span>
+        <span class="n">normalized_combined</span> <span class="o">=</span> <span class="n">normalized_combined</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">mask</span><span class="p">]</span>
+
+        <span class="n">normalized_combined</span><span class="p">[</span><span class="s2">&quot;org&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span>
+        <span class="n">normalized_combined</span><span class="p">[</span><span class="s2">&quot;period&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span> <span class="o">=</span> <span class="n">normalized_combined</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+
+            <span class="k">for</span> <span class="n">kc</span><span class="p">,</span> <span class="n">colname</span> <span class="ow">in</span> <span class="n">keycreators</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="p">[</span><span class="n">colname</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">kc</span><span class="o">.</span><span class="n">create_key_from_row</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">person_ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">load_person_maps</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                
+                <span class="n">pid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">resolve_person</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="c1">### checks keys, and resolves match or creates new person as needed</span>
+                <span class="n">person_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span> <span class="c1">## create list of recognized person ids to be added to participant table </span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">flush_new_people_buffer</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="p">[</span><span class="s2">&quot;person_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">person_ids</span>
+
+            <span class="c1"># Create or update dataset entries in the DB</span>
+
+            <span class="n">participant_ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">load_participant_map</span><span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="n">pid</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;person_id&quot;</span><span class="p">]</span>
+
+                <span class="n">participant_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">get_or_create_participant</span><span class="p">(</span>
+                    <span class="n">person_id</span><span class="o">=</span><span class="n">pid</span><span class="p">,</span>
+                    <span class="n">dataset_name</span><span class="o">=</span><span class="n">workbook_type</span><span class="p">,</span>
+                    <span class="n">org</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">org</span>
+                <span class="p">)</span>
+
+                <span class="n">participant_ids</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">participant_id</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">flush_new_participants</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">participant_ids</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">log_all_normalized_cell_values</span><span class="p">(</span>
+                <span class="n">run_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+                <span class="n">dataset_name</span><span class="o">=</span><span class="n">workbook_type</span><span class="p">,</span>
+                <span class="n">df</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span>
+            <span class="p">)</span>
+
+            <span class="c1">### if this is the first run for a given dataset, mark all participants as present. </span>
+            <span class="n">cur</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">                SELECT COUNT(*) </span>
+<span class="sd">                FROM participant </span>
+<span class="sd">                WHERE dataset_name=? AND org=?</span>
+<span class="sd">                &quot;&quot;&quot;</span><span class="p">,</span>
+                <span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">prior_count</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">is_first_run</span> <span class="o">=</span> <span class="n">prior_count</span> <span class="o">==</span> <span class="mi">0</span>
+            
+            <span class="n">row_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;row_number_</span><span class="si">{</span><span class="n">identity_sheet</span><span class="si">}</span><span class="s2">_|_|_</span><span class="si">{</span><span class="n">identity_sheet</span><span class="si">}</span><span class="s2">&quot;</span>
+
+            <span class="n">pid_to_row</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span>
+                <span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;participant_id&quot;</span><span class="p">)[</span><span class="n">row_col</span><span class="p">]</span>
+                <span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+            <span class="p">)</span>
+
+            <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">pid_to_row</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+            <span class="k">if</span> <span class="n">is_first_run</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">pid</span><span class="p">,</span> <span class="n">row_number</span> <span class="ow">in</span> <span class="n">pid_to_row</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">mark_presence_participant</span><span class="p">(</span>
+                        <span class="n">run_id</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+                        <span class="n">participant_id</span><span class="o">=</span><span class="n">pid</span><span class="p">,</span>
+                        <span class="n">status</span><span class="o">=</span><span class="s2">&quot;present&quot;</span><span class="p">,</span>
+                        <span class="n">row_number</span><span class="o">=</span><span class="n">row_number</span><span class="p">,</span>
+                        <span class="n">sheet_name</span> <span class="o">=</span> <span class="n">identity_sheet</span><span class="p">,</span>
+                        <span class="n">quarter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">quarter</span>
+                    <span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">flush_participant_presence</span><span class="p">()</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">cur</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                    <span class="s2">&quot;SELECT participant_id FROM participant WHERE dataset_name=? AND org=?&quot;</span><span class="p">,</span>
+                    <span class="p">(</span><span class="n">workbook_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">org</span><span class="p">)</span>
+                <span class="p">)</span>
+                <span class="n">all_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+
+                <span class="c1">#print(f&quot;There are {len(all_ids)} participant IDs to check presence for.&quot;)</span>
+
+                <span class="k">for</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">all_ids</span><span class="p">:</span>
+                    <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;present&quot;</span> <span class="k">if</span> <span class="n">pid</span> <span class="ow">in</span> <span class="n">pid_to_row</span> <span class="k">else</span> <span class="s2">&quot;missing&quot;</span>
+                    <span class="n">row_number</span> <span class="o">=</span> <span class="n">pid_to_row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pid</span><span class="p">)</span>  <span class="c1"># None if missing</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">mark_presence_participant</span><span class="p">(</span>
+                        <span class="n">run_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+                        <span class="n">participant_id</span><span class="o">=</span><span class="n">pid</span><span class="p">,</span>
+                        <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
+                        <span class="n">row_number</span><span class="o">=</span><span class="n">row_number</span><span class="p">,</span>
+                        <span class="n">sheet_name</span><span class="o">=</span><span class="n">identity_sheet</span><span class="p">,</span>
+                        <span class="n">quarter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">quarter</span>
+                    <span class="p">)</span>
+                    
+                <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">flush_participant_presence</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mismatches</span><span class="p">:</span>
+            <span class="n">filtered</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mismatches</span>
+                <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id_key&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">filtered</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">log_key_mismatches</span><span class="p">(</span>
+                    <span class="n">run_id</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+                    <span class="n">mismatches</span><span class="o">=</span><span class="n">filtered</span>
+                <span class="p">)</span>
+
+        <span class="c1"># normalized_combined = merged</span>
+
+        <span class="c1"># dedup_cols = [&quot;id_key&quot;, &quot;First Name&quot;, &quot;Last Name&quot;, &quot;source_file&quot;]</span>
+        <span class="c1"># mask = normalized_combined.columns.duplicated() &amp; normalized_combined.columns.isin(dedup_cols)</span>
+        <span class="c1"># normalized_combined = normalized_combined.loc[:, ~mask]</span>
+
+        <span class="c1"># normalized_combined[&quot;org&quot;] = self.org</span>
+        <span class="c1"># normalized_combined[&quot;period&quot;] = self.quarter</span>
+        <span class="c1"># self.single_sheet = normalized_combined</span>
+
+        <span class="c1"># ============================================================</span>
+        <span class="c1"># 4️⃣ Apply cross-sheet rules</span>
+        <span class="c1"># ============================================================</span>
+        <span class="n">cross_errs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_apply_cross_rules</span><span class="p">(</span><span class="n">workbook_type</span><span class="o">=</span><span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="o">=</span><span class="n">workbook_format</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cross_errs</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cross_errs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+
+            <span class="c1"># Combine all sheet-level + cross-sheet errors into one DF</span>
+            <span class="n">err_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="c1"># Attach participant_id to each error row using id_key</span>
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="k">if</span> <span class="s2">&quot;id_key&quot;</span> <span class="ow">in</span> <span class="n">err_df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+
+                <span class="c1"># Build lookup: id_key → participant_id</span>
+                <span class="n">id_lookup</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span>
+                    <span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">])</span>
+                    <span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">&quot;id_key&quot;</span><span class="p">)[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Map onto errors</span>
+                <span class="n">err_df</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">err_df</span><span class="p">[</span><span class="s2">&quot;id_key&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">id_lookup</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># If id_key missing, participant_id cannot be resolved</span>
+                <span class="n">err_df</span><span class="p">[</span><span class="s2">&quot;participant_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="c1"># Persist each violation</span>
+            <span class="c1"># --------------------------------------------------------</span>
+            <span class="c1">#print(f&quot;There are {len(err_df)} to log in this run.&quot;)</span>
+            
+            <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">err_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+
+                <span class="n">rule_name</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;rule&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">normalized</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;normalized&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">raw_value</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;raw_value&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">participant_id</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;participant_id&quot;</span><span class="p">)</span>
+
+                <span class="n">severity</span> <span class="o">=</span> <span class="s2">&quot;error&quot;</span>   <span class="c1"># or dynamic based on rule definition</span>
+
+                <span class="n">column_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">get_or_create_column</span><span class="p">(</span>
+                    <span class="n">dataset_name</span> <span class="o">=</span> <span class="n">workbook_type</span><span class="p">,</span> 
+                    <span class="n">sheet_name</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;sheet&quot;</span><span class="p">),</span>
+                    <span class="n">column_name</span> <span class="o">=</span> <span class="n">col</span> 
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">log_violation</span><span class="p">(</span>
+                        <span class="n">run_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+                        <span class="n">rule_id</span><span class="o">=</span><span class="n">rule_name</span><span class="p">,</span>                <span class="c1"># optionally: map rule → rule_id</span>
+                        <span class="n">participant_id</span><span class="o">=</span><span class="n">participant_id</span><span class="p">,</span>
+                        <span class="n">column_id</span><span class="o">=</span> <span class="n">column_id</span><span class="p">,</span>               <span class="c1"># or your internal column_id</span>
+                        <span class="n">normalized</span><span class="o">=</span><span class="n">normalized</span><span class="p">,</span>
+                        <span class="n">raw_value</span><span class="o">=</span><span class="n">raw_value</span><span class="p">,</span>
+                        <span class="n">severity</span><span class="o">=</span><span class="n">severity</span>
+                    <span class="p">)</span>
+
+                <span class="c1">#print(f&quot;Logging an error for {participant_id} at {col}.&quot;)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">flush_violations</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="o">.</span><span class="n">columns</span>
+            <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_|_|_&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_logger</span><span class="o">.</span><span class="n">complete_run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">)</span></div>
+
+
+                <span class="c1">## remove sheet name delimiter before passing back </span>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_apply_cross_rules</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">workbook_type</span><span class="p">,</span> <span class="n">workbook_format</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply all configured cross-sheet and cross-column validation rules.</span>
+
+<span class="sd">        This method delegates enforcement to `CrossRuleEngine`, which evaluates</span>
+<span class="sd">        rule objects defined in `self.cross_rules`. Cross-sheet rules compare</span>
+<span class="sd">        values across multiple sheets (e.g., connected presence, conditional</span>
+<span class="sd">        requirements, date comparisons, etc.) and generate violations when</span>
+<span class="sd">        inconsistencies or unmet conditions are detected.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            workbook_type (str):</span>
+<span class="sd">                Dataset family (e.g., &quot;CareerConneCT&quot;, &quot;Participant Data&quot;).</span>
+<span class="sd">            workbook_format (str):</span>
+<span class="sd">                Layout format (e.g., &quot;simple format&quot;, &quot;four sheet format&quot;).</span>
+<span class="sd">            file (str, optional):</span>
+<span class="sd">                Workbook identifier (&quot;org|quarter|filename&quot;) used for error lineage.</span>
+<span class="sd">            row_offset (int, optional):</span>
+<span class="sd">                Offset applied when converting DataFrame indices to Excel row numbers.</span>
+<span class="sd">                Passed to the rule engine but typically remains at the default.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Combined DataFrame of all cross-sheet rule violations with columns:</span>
+<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;, &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;].</span>
+<span class="sd">                Returns an empty DataFrame with the same schema if no violations occur.</span>
+
+<span class="sd">        Behavior:</span>
+<span class="sd">            • Initializes a `CrossRuleEngine` using the already-normalized sheet data.</span>
+<span class="sd">            • Iterates through each rule group in `self.cross_rules`</span>
+<span class="sd">              (e.g., connected presence, conditional blank, conditional required).</span>
+<span class="sd">            • Executes each rule set and collects all violation DataFrames.</span>
+<span class="sd">            • Concatenates all violations into a single DataFrame.</span>
+<span class="sd">            • Marks the engine state as `_cross_checked = True`.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • Cross rules depend on `self.normalized_data`, which must already be</span>
+<span class="sd">              produced by `_validate_sheet()` calls in `validate_workbook()`.</span>
+<span class="sd">            • Missing or empty rule sets are silently skipped.</span>
+<span class="sd">            • Downstream code (e.g., the logger) attaches `participant_id` after this step.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># 1️⃣ Initialize the engine</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">CrossRuleEngine</span><span class="p">(</span>
+            <span class="n">workbook_type</span> <span class="o">=</span> <span class="n">workbook_type</span><span class="p">,</span>
+            <span class="n">workbook_format</span> <span class="o">=</span> <span class="n">workbook_format</span><span class="p">,</span>
+            <span class="n">normalized_single_sheet</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_sheet</span><span class="p">,</span>
+            <span class="n">normalization_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">workbook_definitions</span><span class="p">,</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span>
+        <span class="p">)</span>
+
+        <span class="c1"># 2️⃣ Run each rule category through the engine</span>
+        <span class="n">all_violations</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">rule_sets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cross_rules</span>
+
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">ruleset</span> <span class="ow">in</span> <span class="n">rule_sets</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">ruleset</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">violations</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">run_all_rules</span><span class="p">(</span><span class="n">ruleset</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">violations</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">violations</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="n">all_violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">violations</span><span class="p">)</span>
+
+        <span class="c1"># 3️⃣ Combine all violation DataFrames</span>
+        <span class="k">if</span> <span class="n">all_violations</span><span class="p">:</span>
+            <span class="n">combined</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">all_violations</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">combined</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">,</span> <span class="s2">&quot;sheet&quot;</span><span class="p">,</span> <span class="s2">&quot;row_number&quot;</span><span class="p">,</span> <span class="s2">&quot;column&quot;</span><span class="p">,</span> <span class="s2">&quot;rule&quot;</span><span class="p">,</span> <span class="s2">&quot;raw_value&quot;</span><span class="p">,</span> <span class="s2">&quot;normalized&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cross_checked</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">combined</span>
+
+    
+
+<div class="viewcode-block" id="ValidationEngine.get_all_errors">
+<a class="viewcode-back" href="../../validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.get_all_errors">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_all_errors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a single DataFrame containing all accumulated validation errors.</span>
+
+<span class="sd">        This method aggregates:</span>
+<span class="sd">        - Sheet-level column-type validation errors generated during</span>
+<span class="sd">          `_validate_sheet()`</span>
+<span class="sd">        - Any cross-sheet rule violations produced by `_apply_cross_rules()`</span>
+
+<span class="sd">        Errors are returned in a consistent, flat structure suitable for:</span>
+<span class="sd">        - Export to Excel/CSV</span>
+<span class="sd">        - Display in UI dashboards</span>
+<span class="sd">        - Insertion into logging or auditing pipelines</span>
+<span class="sd">        - Downstream analytics (e.g., error frequency reports)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pandas.DataFrame:</span>
+<span class="sd">                A DataFrame with the standardized columns:</span>
+<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;, &quot;rule&quot;,</span>
+<span class="sd">                 &quot;raw_value&quot;, &quot;normalized&quot;]</span>
+
+<span class="sd">                If no errors have been recorded, an empty DataFrame with</span>
+<span class="sd">                the correct schema is returned.</span>
+
+<span class="sd">        Notes:</span>
+<span class="sd">            • This does *not* modify internal state.</span>
+<span class="sd">            • Errors remain stored in `self.errors`.</span>
+<span class="sd">            • Calling this multiple times is inexpensive and safe.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;file&quot;</span><span class="p">,</span><span class="s2">&quot;sheet&quot;</span><span class="p">,</span><span class="s2">&quot;row_number&quot;</span><span class="p">,</span><span class="s2">&quot;column&quot;</span><span class="p">,</span><span class="s2">&quot;rule&quot;</span><span class="p">,</span><span class="s2">&quot;raw_value&quot;</span><span class="p">,</span><span class="s2">&quot;normalized&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, CT State - Office of Workforce Strategy
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=9262e05c"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

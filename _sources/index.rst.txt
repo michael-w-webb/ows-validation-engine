@@ -32,10 +32,9 @@ Core Engine
    :maxdepth: 2
    :caption: Core Engine 
 
-   cc_validation_engine
-   cc_validation_workbook_loader
-   cc_workbook_definitions
-   cc_validation_column_types
+   validation_engine/validation_engine
+   validation_engine/workbook_loader
+   validation_engine/column_types
 
 Cross-Rules
 -----------
@@ -43,9 +42,9 @@ Cross-Rules
    :maxdepth: 2
    :caption: Cross-Rules
 
-   cc_cross_rule_engine
-   cc_cross_rule_classes
-   cc_validation_cross_rule_sets 
+   validation_engine/cross_rule_engine
+   validation_engine/cross_rule_classes
+   validation_engine/validation_cross_rule_sets 
 
 
 Logging
@@ -54,5 +53,5 @@ Logging
    :maxdepth: 2
    :caption: SQL Logging
 
-   cc_key_creator
-   validation_db_logger
+   validation_engine/key_creator
+   validation_engine/db_logger

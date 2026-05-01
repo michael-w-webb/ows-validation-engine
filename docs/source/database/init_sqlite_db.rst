@@ -4,7 +4,7 @@ Database Initialization
 Script to initialize the SQLite database for logging validation results. It only needs to be run once.
 It effectively defines the schema for the logging database currently in use. 
 
-.. automodule:: init_sqlite_db
+.. automodule:: database.init_sqlite_db
    :members:
    :undoc-members:
    :show-inheritance:

@@ -287,6 +287,21 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
     with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
 
         
+        key_mismatches = pd.read_sql_query("""
+            SELECT
+                mismatch_id,
+                sheet_name,
+                id_key,
+                issue,
+                timestamp
+            FROM participant_key_mismatch
+            WHERE run_id = ?
+            ORDER BY sheet_name, id_key
+        """, conn, params=[run_id])
+
+        has_mismatches = not key_mismatches.empty
+
+        
         # ---------------------------------------------------
         # Build Missing Participants Sheet
         # ---------------------------------------------------
@@ -387,10 +402,16 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
             missing_sheet = missing_sheet.reindex(columns=ordered_cols)
 
         else:
-            missing_sheet = pd.DataFrame({
-                "last_quarter_seen": ["—"],
-                "Message": ["No missing participants identified"]
-            })
+            if has_mismatches:
+                missing_sheet = pd.DataFrame({
+                    "last_quarter_seen": ["—"],
+                    "Message": ["No missing participants identified, but mismatched records were excluded from this run"]
+                })
+            else:
+                missing_sheet = pd.DataFrame({
+                    "last_quarter_seen": ["—"],
+                    "Message": ["No missing participants identified"]
+                })
 
         # missing_sheet.to_excel(
         #     writer,
@@ -469,6 +490,8 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
             ORDER BY sheet_name, id_key
         """, conn, params=[run_id])
 
+        has_mismatches = not key_mismatches.empty
+
         km_title = "Key Mismatches"
         km_body = (
             "This tab lists keys that are either duplicated or only partially present in the staggered spreadsheet. Participants should appear in only one row and should be present across all four sheets.\n"
@@ -505,12 +528,20 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
             )
 
             # Remove matching rows from missing_sheet
-            missing_sheet = missing_sheet[
-                ~missing_sheet.apply(
-                    lambda r: (r["First Name"].strip(), r["Last Name"].strip()) in mismatch_names,
-                    axis=1
-                )
-            ]
+            if (
+                not missing_sheet.empty
+                and "First Name" in missing_sheet.columns
+                and "Last Name" in missing_sheet.columns
+            ):
+                missing_sheet = missing_sheet[
+                    ~missing_sheet.apply(
+                        lambda r: (
+                            str(r["First Name"]).strip(),
+                            str(r["Last Name"]).strip()
+                        ) in mismatch_names,
+                        axis=1
+                    )
+                ]
 
         ### write missing participants to file after key matches have been found 
 
@@ -593,10 +624,23 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
                 worksheet.set_column(i, i, max_len)
 
         # ---------------------------------------------------
-        # VALUE CHANGES (NEW APPROACH - RUN_ID SCOPED)
+        # VALUE CHANGES (FIXED + ALIGNED VERSION)
         # ---------------------------------------------------
 
-# --- Get run metadata ---
+        name_lookup = pd.read_sql_query("""
+            SELECT 
+                p.participant_id,
+                per.first_name,
+                per.last_name
+            FROM participant p
+            LEFT JOIN person per
+                ON p.person_id = per.person_id
+            WHERE p.dataset_name = ?
+            AND p.org = ?
+        """, conn, params=[dataset_name, org])
+
+
+        # --- Get run metadata ---
         run_meta = pd.read_sql_query("""
             SELECT organization, dataset_name, run_timestamp
             FROM validation_run
@@ -605,12 +649,11 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
 
         if run_meta.empty:
             value_changes = pd.DataFrame({"Message": ["Run not found."]})
+
         else:
             org = run_meta.loc[0, "organization"]
             dataset_name = run_meta.loc[0, "dataset_name"]
-            run_ts = run_meta.loc[0, "run_timestamp"]
 
-            # --- Get all completed runs up to this run for this org ---
             run_lookup = pd.read_sql_query("""
                 SELECT run_id, quarter, run_timestamp
                 FROM validation_run
@@ -624,40 +667,63 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
                 value_changes = pd.DataFrame({
                     "Message": [f"No prior runs available for comparison for {org}."]
                 })
+
             else:
 
-                # keep latest run per quarter
+                # --- keep latest run per quarter (timestamp-safe) ---
                 latest_runs = (
                     run_lookup
                     .sort_values("run_timestamp")
                     .drop_duplicates("quarter", keep="last")
-                    .sort_values("quarter")
+                    .sort_values("run_timestamp")
                     .reset_index(drop=True)
                 )
 
-                # --- helper to get diffs ---
+                # --- CLEAN FUNCTION (single source of truth) ---
+                def clean(v):
+                    if pd.isna(v):
+                        return None
+                    v = str(v).strip().lower()
+                    if v in ["", "nan", "<na>", "<nat>", "none"]:
+                        return None
+                    return v
+
+                # --- DIFF FUNCTION (FIXED: scoped + clean) ---
                 def get_value_changes(conn, curr_id, prev_id):
                     return pd.read_sql_query("""
-                        WITH current_run AS (
-                            SELECT participant_id, column_id,
-                                CASE
-                                    WHEN value_normalized IS NULL THEN NULL
-                                    WHEN LOWER(TRIM(value_normalized)) IN ('', 'nan', '<na>', '<nat>', 'none') THEN NULL
-                                    ELSE TRIM(value_normalized)
-                                END AS val
-                            FROM cell_value_history
+                        WITH present_ids AS (
+                            SELECT DISTINCT participant_id
+                            FROM participant_presence_log
                             WHERE run_id = :curr_id
+                            AND status <> 'missing'
                         ),
-                        previous_run AS (
-                            SELECT participant_id, column_id,
+
+                        current_run AS (
+                            SELECT cvh.participant_id, cvh.column_id,
                                 CASE
-                                    WHEN value_normalized IS NULL THEN NULL
-                                    WHEN LOWER(TRIM(value_normalized)) IN ('', 'nan', '<na>', '<nat>', 'none') THEN NULL
-                                    ELSE TRIM(value_normalized)
+                                    WHEN cvh.value_normalized IS NULL THEN NULL
+                                    WHEN LOWER(TRIM(cvh.value_normalized)) IN ('', 'nan', '<na>', '<nat>', 'none') THEN NULL
+                                    ELSE TRIM(cvh.value_normalized)
                                 END AS val
-                            FROM cell_value_history
-                            WHERE run_id = :prev_id
+                            FROM cell_value_history cvh
+                            JOIN present_ids pid
+                                ON cvh.participant_id = pid.participant_id
+                            WHERE cvh.run_id = :curr_id
+                        ),
+
+                        previous_run AS (
+                            SELECT cvh.participant_id, cvh.column_id,
+                                CASE
+                                    WHEN cvh.value_normalized IS NULL THEN NULL
+                                    WHEN LOWER(TRIM(cvh.value_normalized)) IN ('', 'nan', '<na>', '<nat>', 'none') THEN NULL
+                                    ELSE TRIM(cvh.value_normalized)
+                                END AS val
+                            FROM cell_value_history cvh
+                            JOIN present_ids pid
+                                ON cvh.participant_id = pid.participant_id
+                            WHERE cvh.run_id = :prev_id
                         )
+
                         SELECT 
                             COALESCE(c.participant_id, p.participant_id) AS participant_id,
                             COALESCE(c.column_id, p.column_id) AS column_id,
@@ -670,10 +736,13 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
                         AND c.column_id = p.column_id
                         LEFT JOIN dataset_column dc
                             ON dc.column_id = COALESCE(c.column_id, p.column_id)
-                        WHERE c.val IS NOT p.val;
+                        WHERE
+                        (p.val IS NOT NULL AND c.val IS NULL)  -- lost value
+                        OR
+                        (p.val IS NOT NULL AND c.val IS NOT NULL AND c.val <> p.val)  -- real change
                     """, conn, params={"curr_id": curr_id, "prev_id": prev_id})
 
-                # --- collect all changes ---
+                # --- collect all diffs ---
                 all_dfs = []
 
                 for i in range(1, len(latest_runs)):
@@ -697,34 +766,17 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
                     value_changes = pd.DataFrame({
                         "Message": [f"No value changes detected for {org}."]
                     })
+
                 else:
 
-                    # --- quarter ordering ---
+                    # --- ordering ---
                     def quarter_key(q):
                         py, qtr = q.split("_")
                         return int(py.replace("PY", "")) * 10 + int(qtr.replace("Q", ""))
 
                     final_df["quarter_order"] = final_df["to_quarter"].apply(quarter_key)
 
-                    # --- latest change per field ---
-                    latest_changes = (
-                        final_df
-                        .sort_values("quarter_order")
-                        .drop_duplicates(
-                            subset=["organization", "participant_id", "column_id"],
-                            keep="last"
-                        )
-                    )
-
-                    # --- rule evaluation ---
-                    def clean(v):
-                        if pd.isna(v):
-                            return None
-                        v = str(v).strip().lower()
-                        if v in ["", "nan", "<na>", "<nat>", "none"]:
-                            return None
-                        return v
-
+                    # --- evaluate rules BEFORE collapsing ---
                     def evaluate_change(row):
                         col = row["column_name"]
                         if col not in value_change_rules:
@@ -754,36 +806,34 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
 
                         return False
 
-                    latest_changes["flagged"] = latest_changes.apply(evaluate_change, axis=1)
-                    flagged_df = latest_changes[latest_changes["flagged"]].copy()
+                    final_df["flagged"] = final_df.apply(evaluate_change, axis=1)
 
-                    if flagged_df.empty:
+                    flagged_keys = final_df[final_df["flagged"]][
+                        ["organization", "participant_id", "column_id"]
+                    ].drop_duplicates()
+
+                    if flagged_keys.empty:
                         value_changes = pd.DataFrame({
                             "Message": [f"No rule-breaking value changes for {org}."]
                         })
+
                     else:
 
-                        # --- filter full history to flagged keys ---
-                        flagged_keys = flagged_df[
-                            ["organization", "participant_id", "column_id"]
-                        ].drop_duplicates()
-
-                        filtered_final_df = final_df.merge(
-                            flagged_keys,
-                            on=["organization", "participant_id", "column_id"],
-                            how="inner"
-                        ).sort_values(
-                            ["organization", "participant_id", "column_id", "quarter_order"]
+                        filtered_final_df = (
+                            final_df
+                            .merge(flagged_keys, on=["organization", "participant_id", "column_id"])
+                            .sort_values(["organization", "participant_id", "column_id", "quarter_order"])
                         )
 
-                        filtered_final_df["new_value_clean"] = filtered_final_df["new_value"].map(clean)
-
-                        # --- build full history ---
+                        # --- build clean history ---
                         def build_history(group):
                             history = []
+
                             first_old = clean(group.iloc[0]["old_value"])
                             history.append(first_old)
-                            history.extend(group["new_value_clean"].tolist())
+
+                            history.extend(group["new_value"].map(clean).tolist())
+
                             return history
 
                         history_df = (
@@ -793,36 +843,52 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
                             .reset_index(name="value_history")
                         )
 
-                        # --- merge history ---
-                        value_changes = filtered_final_df.merge(
-                            history_df,
-                            on=["organization", "participant_id", "column_id"],
+                        value_changes = (
+                            filtered_final_df
+                            .sort_values("quarter_order")
+                            .drop_duplicates(
+                                subset=["organization", "participant_id", "column_id"],
+                                keep="last"
+                            )
+                            .merge(
+                                history_df,
+                                on=["organization", "participant_id", "column_id"],
+                                how="left"
+                            )
+                        )
+
+                        # --- stringify safely ---
+                        value_changes["previous_values"] = value_changes["value_history"].apply(
+                            lambda x: "|".join([str(v) for v in x[:-1] if v is not None])
+                            if isinstance(x, list) and len(x) > 0
+                            else ""
+                        )
+
+                        # --- attach current value ---
+                        value_changes["current_value"] = value_changes["value_history"].apply(
+                            lambda x: x[-1] if isinstance(x, list) and len(x) > 0 else None
+                        )
+
+                        # --- remove empty histories ---
+                        def has_prior_value(hist):
+                            if not isinstance(hist, list):
+                                return False
+                            return any(v is not None for v in hist[:-1])
+
+                        value_changes = value_changes[
+                            value_changes["value_history"].apply(has_prior_value)
+                        ]
+
+                        value_changes = value_changes.merge(
+                            name_lookup,
+                            on="participant_id",
                             how="left"
                         )
 
-                        # --- format for report ---
-                        value_changes["current_value"] = value_changes["new_value"]
-
-                        value_changes["previous_values"] = value_changes["value_history"].apply(
-                            lambda x: "|".join(
-                                [str(v) for v in x[:-1]]
-                            ) if isinstance(x, list) else ""
-                        )
-
-                        # cleanup
                         value_changes = value_changes.drop(
-                            columns=["new_value", "old_value", "value_history", "column_id"],
+                            columns=["new_value", "old_value", "value_history", "column_id", "flagged"],
                             errors="ignore"
                         )
-
-                        value_changes["list_length"] = value_changes["previous_values"].apply(lambda x: len(x.split("|")) if x else 0)
-
-                        cond_length = value_changes['list_length'] == 1
-                        cond_none = value_changes['previous_values'].astype(str).str.split('|').str[0] == None
-
-                        mask = ~(cond_length & cond_none)
-
-                        filtered_value_changes = value_changes[mask]
 
         mp_title = "Changed Values"
         mp_body = (
@@ -831,38 +897,36 @@ def rebuild_submission(run_id: str, output_path: Path, conn):
             "• The previous values column provides a '|' delimited list of all prior non-blank values for that cell, with the most recent values listed last. In many cases there will only be one historical value, but in some cases there may be multiple if the value has changed multiple times across submissions.\n"
         )
 
-        if filtered_value_changes.empty:
-            filtered_value_changes = pd.DataFrame(columns=["organization", "participant_id", "current_value", "previous_values"])
+        if value_changes.empty:
+            value_changes = pd.DataFrame(columns=["organization", "participant_id", "current_value", "previous_values"])
             worksheet, startrow = write_sheet_with_banner(
             writer,
             sheet_name="Changed Values",
-            df=filtered_value_changes,
+            df=value_changes,
             title=mp_title,
             body=mp_body,
             banner_rows=3
         )
             
         else:
-            filtered_value_changes.insert(0, "confirmed_correct", "")
+            value_changes.insert(0, "confirmed_correct", "")
 
-            if "source_file" in filtered_value_changes.columns:
-                if filtered_value_changes["source_file"].fillna("").str.strip().eq("").all():
-                    filtered_value_changes.drop(columns=["source_file"], inplace=True)
-
-            filtered_value_changes.drop(columns=["list_length"], inplace=True)
+            if "source_file" in value_changes.columns:
+                if value_changes["source_file"].fillna("").str.strip().eq("").all():
+                    value_changes.drop(columns=["source_file"], inplace=True)
 
             worksheet, startrow = write_sheet_with_banner(
                 writer,
                 sheet_name="Changed Values",
-                df=filtered_value_changes,
+                df=value_changes,
                 title=mp_title,
                 body=mp_body,
                 banner_rows=3
             )
 
         # Auto-fit columns (same as before)
-        for i, col in enumerate(filtered_value_changes.columns):
-            column_series = filtered_value_changes[col].astype(str)
+        for i, col in enumerate(value_changes.columns):
+            column_series = value_changes[col].astype(str)
             max_len = max(
                 column_series.map(len).max(),
                 len(col)
@@ -1134,7 +1198,7 @@ for org in orgs["organization"]:
 
     print(f"Rebuilding {org} ({quarter}) using run_id {run_id}")
 
-    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report_4_24.xlsx"
+    output_path = OUTPUT_DIRECTORY / f"{config_key}_{org}_{quarter}_Data_Refinement_Report_4_28.xlsx"
 
     rebuild_submission(
         run_id=run_id,

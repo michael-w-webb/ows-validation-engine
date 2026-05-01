@@ -853,7 +853,7 @@ program_enrollment_accepted_responses_w_types = {
             "Bacon Academy": ["bacon academy"],
             "EO Smith High School": ["eo smith high school"],
             "Griswold High School": ["griswold high school"],
-            "RHAM High School": ["rham high school"],
+            "RHAM High School": ["rham high school", "RHAM"],
             "Norwich Free Academy (NFA)": ["norwich free academy (nfa)"],
             "Stonington High School": ["stonington high school"],
             "Tourtellotte Memorial High School": ["tourtellotte memorial high school"],
@@ -864,7 +864,8 @@ program_enrollment_accepted_responses_w_types = {
             "Community College Rhode Island": ["community college rhode island"],
             "Lyman Memorial High School": ["lyman memorial high school"],
             "Windham High School": ["windham high school"],
-            "Parish Hill High School": ["parish hill"]
+            "Parish Hill High School": ["parish hill"],
+            "Plainfield High School": ["plainfield high school"]
         },
         "EWIB_HC": {
             "CT State Community College - Quinebaug Valley": [
@@ -894,7 +895,9 @@ program_enrollment_accepted_responses_w_types = {
             "Norwich Free Academy (NFA)": ["norwich free academy (nfa)"],
             "Lyman Memorial High School": ["lyman memorial high school"],
             "Tourtellotte Memorial High School": ["tourtellotte memorial high school"],
-            "Woodstock Academy": ["woodstock academy"]
+            "Woodstock Academy": ["woodstock academy"],
+            "RHAM High School": ["rham high school", "RHAM"],
+            "Plainfield High School": ["plainfield high school"]
         },
         "GNHCC": {
             "Connecticut Center for Arts and Technology": [
@@ -908,7 +911,10 @@ program_enrollment_accepted_responses_w_types = {
             ],
             "Northeast Medical Institute": ["northeast medical institute"],
             "Southern Connecticut State University": ["southern connecticut state university"],
-            "Excel Academy": ["excel academy"]
+            "Excel Academy": ["excel academy"],
+            "Albertus Magnus College": ["albertus magnus college"],
+            "Wallingford Adult Education": ["wallingford adult education"]
+
         },
         "TWP": {
             "Southern Connecticut State University": ["southern connecticut state university"],
@@ -1049,10 +1055,12 @@ program_enrollment_accepted_responses_w_types = {
             ],
             "BioLaunch Advanced Training Program": ["biolaunch advanced training program"],
             "Patient Care Technician": ["patient care technician training program"],
-            "Phlebotomy": ["phlebotomy"],
+            "Phlebotomy": ["phlebotomy", "phlebotomy technician"],
             "Certified Nurses Aide":["cna training program",
                                      "cna training program (8 week)",
-                                     "cna training program (11 week)"]
+                                     "cna training program (11 week)",
+                                     "certified nursing assistant course (8 week)",
+                                     "certified nursing assistant course"],
         },
         "TWP": {
             "Generative AI": ["generative ai"],

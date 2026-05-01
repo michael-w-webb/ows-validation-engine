@@ -14,7 +14,7 @@ from applications.good_jobs_challenge_grantee_sheets.cross_rule_sets import COND
 workbook_definitions = workbook_definitions
 # Containers for results
 
-LOGGING = True
+LOGGING = False
 LOG_DESCRIPTION = " 4/27 - Full run through to ensure we have at least one run with completed = 1 for each org/quarter combo"
 
 cross_rules = [
@@ -23,7 +23,7 @@ cross_rules = [
 ]
 
 TARGET_ORGS = None#["WIB_HC"]
-TARGET_PERIODS = ["PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
+TARGET_PERIODS = ["PY4 Q3"]
 
 ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
 

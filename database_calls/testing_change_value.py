@@ -2,23 +2,46 @@ import pandas as pd
 import sqlite3
 from config import DB_PATH
 
-value_change_rules = {
-                    "CTHires Username or State ID #": {"type": "any"},
-                    "City": {"type": "any"},
-                    "Zip Code": {"type": "any"},
-                    "Date of Birth": {"type": "date_change", "tolerance_days": 30},
-                    "Training Start Date": {"type": "date_change", "tolerance_days": 30},
-                    "Training End Date": {"type": "date_change", "tolerance_days": 30},
-                    "Job Start Date": {"type": "date_change", "tolerance_days": 30},
-                    "Employment Status": {"type": "forbidden_value_change",
-                                        "initial_value_set":["employed in-field by an employer who doesn't partner with your training program",
-                        "employed in-field by an employer who partners with your training program",
-                        "employed out of field"],
-                                        "current_value_set":["still seeking employment", "in job search assistance","not seeking employment in-field","could not contact","","<na>","nan",None]},
-                    "Training Completion Status": {"type": "forbidden_value_change",
-                                                "initial_value_set":["completed training on time","yes but not continuous"],
-                                        "current_value_set":["did not complete training (please code exit reason)","","<na>","nan",None]},
-                        }
+value_change_rules = value_change_rules = {
+                "CT Hires Username": {"type": "any"},
+                "Training Completed?": {"type": "forbidden_value_change", 
+                                        "initial_value_set":["1", "yes", "true"], 
+                                        "current_value_set":["0", "no", "false","<na>","nan",None]},
+                "Client Date of Birth": {"type": "date_change","tolerance_days": 30},
+                "Date Attained Recognized Credential": {"type": "date_change","tolerance_days": 30},
+                "Date Completed or Withdrew From Training #1": {"type": "date_change","tolerance_days": 30},
+                "Date Entered Training": {"type": "date_change","tolerance_days": 30},
+                "Date of Program Entry (Enrollment Date)": {"type": "date_change","tolerance_days": 30},
+                "Date of Program Exit": {"type": "date_change","tolerance_days": 30},
+                "Zip Code": {"type": "any"},
+                "Date Attained Recognized Credential #2": {"type": "date_change","tolerance_days": 30},
+                "Date Attained Recognized Credential #3": {"type": "date_change","tolerance_days": 30},
+                "Date Attained Recognized Credential #4": {"type": "date_change","tolerance_days": 30},
+                "Date Attained Recognized Credential #5": {"type": "date_change","tolerance_days": 30},
+                "Date Completed, or Withdrew from, Training #2": {"type": "date_change","tolerance_days": 30},
+                "Date Completed, or Withdrew from, Training #3": {"type": "date_change","tolerance_days": 30},
+                "Date Entered Training #2": {"type": "date_change","tolerance_days": 30},
+                "Received Training?": {"type": "forbidden_value_change",
+                                       "initial_value_set":["1", "yes", "true"],
+                                       "current_value_set":["0", "no", "false","","<na>","nan",None]},
+                "Employment Status at exit": {"type": "forbidden_value_change",
+                                    "initial_value_set": [
+                                        "employed; part-time",
+                                        "employed; full-time",
+                                        "temporarily employed",
+                                        "internship",
+                                        "apprenticeship"
+                                    ],
+                                    "current_value_set": [
+                                        "unemployed",
+                                        "",
+                                        "<na>",
+                                        "nan",
+                                        None
+                                    ]
+}
+            }
+ 
     
 
 def get_value_changes(conn, curr_id, prev_id):
@@ -64,9 +87,9 @@ def get_value_changes(conn, curr_id, prev_id):
 
 conn = sqlite3.connect(DB_PATH)
 
-dataset_name = "TPI"
+dataset_name = "training data"
 
-orgs = ["TWP"]
+orgs = ["Charter_Oak_State_College_Foundation"]
 
 if orgs == None:
 

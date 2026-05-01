@@ -14,8 +14,9 @@ def cleanup_py4_q3_none_runs():
             SELECT run_id
             FROM validation_run
             WHERE quarter = ?
-              AND (run_description IS NULL OR LOWER(run_description) = 'none')
-        """, ("PY4_Q3",)).fetchall()]
+            AND organization = ?
+            AND dataset_name = ?                                   
+              """, ("PY4_Q3", "CWP", "TPI")).fetchall()]
 
         if not run_ids:
             print("No matching runs found.")

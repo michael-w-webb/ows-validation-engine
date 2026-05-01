@@ -1,50 +1,55 @@
 import os
 import sys
 
+# Ensure your project root is on path
 sys.path.insert(0, os.path.abspath("../.."))
 
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
 # -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'OWS Validation'
-html_title = "OWS Validation"
+project = "OWS Validation"
+html_title = "OWS Validation Documentation"
 html_short_title = "OWS Validation"
-copyright = '2025, CT State - Office of Workforce Strategy'
-author = 'Michael Webb'
-release = '1.1.2026'
+copyright = "2025, CT State - Office of Workforce Strategy"
+author = "Michael Webb"
+release = "1.1.2026"
 
 # -- General configuration ---------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = [    
+extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",   # for Google / NumPy style docstrings
+    "sphinx.ext.napoleon",   # Google / NumPy docstrings
     "sphinx.ext.viewcode",
-    ]
+]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
+# Autodoc settings (important for your API docs)
+autodoc_member_order = "bysource"
+autodoc_typehints = "description"
 
+# Napoleon settings (cleaner docstring parsing)
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
 
-# -- Options for HTML output -------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+# -- HTML output -------------------------------------------------------------
 
-html_theme = 'alabaster'
+# Recommended theme (install with: pip install furo)
+html_theme = "furo"
 
 html_theme_options = {
-    "sidebar_header": "OWS Validation"
+    "navigation_with_keys": True,
 }
 
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
-import sys
-print("=== Sphinx sys.path ===")
-for p in sys.path[:5]:
-    print(p)
-print("======================")
+# Optional custom CSS (create file if you want overrides)
+html_css_files = [
+    "custom.css",
+]
+
+# Code highlighting
+pygments_style = "sphinx"
+
+# -- Remove debug prints (no longer needed) ----------------------------------

@@ -3,7 +3,7 @@ SQL Logger
 
 The logger class which is called to handle writing to SQL.   
 
-.. automodule:: validation_db_logger
+.. automodule:: validation_engine.db_logger
    :members:
    :undoc-members:
    :show-inheritance:

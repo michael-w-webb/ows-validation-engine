@@ -10,8 +10,9 @@ These pages provide documentation for the various methods and classes that suppo
 which aims to quickly transform disparate excel spreadsheets into a clean, usable dataset while also recording errors, 
 and producing an error log that can easily be used by data owners to remedy issues. 
 
-The implementation as it is presented here also includes SQL logging functionality to a SQLite table, connecting separate runs 
-to allow for fast cross-grant comparison and assessments of state change (over time) for a given grant. If you aren't interested
+The implementation as it is presented here also includes SQL logging functionality to a SQLite database, connecting separate runs 
+to allow for fast cross-grant comparison and assessments of state change (over time) for a given grant. With multiple applications 
+implemented, the database can also be used to quickly identify the same participant across multiple programs. If you aren't interested
 in the SQL logging and just want the data consolidation and error log creation, this can be toggled when the validation engine 
 is called. 
 
@@ -26,33 +27,44 @@ The general architecture of the project is laid out below:
    :alt: Validation engine architecture
    :align: center
 
-Core Engine
------------
 .. toctree::
    :maxdepth: 2
    :caption: Core Engine 
+   :hidden:
 
-   cc_validation_engine
-   cc_validation_workbook_loader
-   cc_workbook_definitions
-   cc_validation_column_types
+   validation_engine/validation_engine
+   validation_engine/workbook_loader
+   validation_engine/column_types
 
-Cross-Rules
------------
 .. toctree::
    :maxdepth: 2
    :caption: Cross-Rules
+   :hidden:
 
-   cc_cross_rule_engine
-   cc_cross_rule_classes
-   cc_validation_cross_rule_sets 
+   validation_engine/cross_rule_engine
+   validation_engine/cross_rule_classes
+   validation_engine/cross_rule_descriptions
 
-
-Logging
------------
 .. toctree::
    :maxdepth: 2
    :caption: SQL Logging
+   :hidden:
 
-   cc_key_creator
-   validation_db_logger
+
+   validation_engine/key_creator
+   validation_engine/db_logger
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Helpers and Normalizations
+   :hidden:
+
+   validation_engine/helpers
+   validation_engine/standard_normalizations
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Database Initialization
+   :hidden:
+
+   database/init_sqlite_db

@@ -48,7 +48,7 @@ from validation_engine.standard_normalizations import strict_alphabetic_normaliz
 
 ### Application Specific Imports
 from applications.career_connect_grantee_sheets.workbook_definitions import workbook_definitions
-from applications.career_connect_grantee_sheets.file_directory import file_directory
+from applications.career_connect_grantee_sheets.file_directory_daly import file_directory
 from applications.career_connect_grantee_sheets.cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
 
 ### specify cross rule sets, these are dataset specific and should be adjusted for each program (e.g. GJC, CC, etc.)
@@ -61,11 +61,11 @@ cross_rules = [
             ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES),
     ]
 
-GRAB_LATEST = False
+GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "Running for Charter Oak Reference"
+LOG_DESCRIPTION = "4/28 Running with data handling issues resolved."
 
-TARGET_ORGS = ["Charter Oak State College Foundation"]
+TARGET_ORGS = None
 TARGET_PERIODS = ["PY4 Q3"]
 
 ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
@@ -108,11 +108,11 @@ for target_period in periods_to_run:
             selected_period = target_period
 
         elif GRAB_LATEST:
-            current_period = list(data_types[file_type].keys())[-1]
+            selected_period = list(data_types[file_type].keys())[-1]
 
             print(
                 f"{org}: {target_period} not found. "
-                f"Using latest available period {current_period}."
+                f"Using latest available period {selected_period}."
             )
 
         else:
@@ -286,7 +286,7 @@ for target_period in periods_to_run:
             mismatches["period"] = target_period
 
         all_mismatches.append(engine.mismatches)
-        all_normalized.append(engine.single_sheet)
+        all_normalized.append(engine.returnable_data)
         ##### End - Key Evaluation #####
 
     ###### Start - Print Out ###### 

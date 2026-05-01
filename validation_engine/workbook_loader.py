@@ -155,7 +155,9 @@ def ensure_unprotected_visible(excel, file_path, password="workforce"):
     wb = None
     try:
         print(f"🔓 Unprotecting and unhiding sheets in: {file_path}")
+        t0 = time.time()
         wb = excel.Workbooks.Open(file_path, UpdateLinks=0)
+        print("Excel open time:", time.time() - t0)
         time.sleep(0.5)
         # Unprotect the workbook itself (if protected)
         try:
@@ -380,8 +382,6 @@ def find_sheet_by_headers(file_obj, config, max_header_row=4, min_match_ratio=0.
 
         for row in range(check_length):
 
-            
-
             headers = {
                 str(x).strip().lower()
                 for x in preview.iloc[row].tolist()
@@ -588,6 +588,7 @@ class WorkbookLoader:
         # multi_sheet_mode = len(sheet_defs_for_type) > 1
 
         for sheet_key, config in sheet_defs_for_type.items():
+
             starting_col = config.get("starting_column", 0)
 
             sheet_specific_starting_row = config.get("starting_row", self.starting_row)
@@ -654,6 +655,8 @@ class WorkbookLoader:
                             f"(header row {found_row}) instead of '{sheet_key}'"
                         )
 
+
+
                         with open(self.file_path, "rb") as f:
                             raw_df = pd.read_excel(
                                 f,
@@ -661,7 +664,7 @@ class WorkbookLoader:
                                 header=found_row,
                                 engine="openpyxl",
                                 usecols=config.get("columns_used", None),
-                            ).applymap(clean_text)
+                            )
 
                         break
 
@@ -867,8 +870,6 @@ class MultiWorkbookLoader:
               may be added depending on program requirements.
         """
         all_sheets = {}
-
-        
 
         for file_path in self.file_paths:
             print(f"\n📘 Loading workbook: {file_path}")

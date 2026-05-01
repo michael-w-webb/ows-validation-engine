@@ -581,6 +581,16 @@ class ValidationDBLogger:
             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, self._participant_presence_buffer)
             self.conn.commit()
+
+            self.conn.execute("SELECT 1").fetchone()
+
+            cursor = self.conn.execute("""
+                SELECT COUNT(*) 
+                FROM participant_presence_log 
+                WHERE run_id = ?
+            """, (self._participant_presence_buffer[0][0],))
+
+            print("Rows visible immediately after commit:", cursor.fetchone()[0])
         except Exception:
             self.conn.rollback()
             raise

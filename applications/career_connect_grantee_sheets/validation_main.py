@@ -63,7 +63,7 @@ cross_rules = [
 
 GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "4/30 PY4 Q3 Reporting"
+LOG_DESCRIPTION = "5/5 PY4 Q3 Reporting"
 
 # TARGET_ORGS = ["Charter Oak State College Foundation"]
 TARGET_ORGS = None
@@ -109,11 +109,11 @@ for target_period in periods_to_run:
             selected_period = target_period
 
         elif GRAB_LATEST:
-            current_period = list(data_types[file_type].keys())[-1]
+            selected_period = list(data_types[file_type].keys())[-1]
 
             print(
                 f"{org}: {target_period} not found. "
-                f"Using latest available period {current_period}."
+                f"Using latest available period {selected_period}."
             )
 
         else:

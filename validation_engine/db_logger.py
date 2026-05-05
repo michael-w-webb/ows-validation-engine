@@ -623,15 +623,30 @@ class ValidationDBLogger:
 
         df = df[df["participant_id"].notna()].copy()
 
+        DELIM = "_|_|_"
+
+        def split_col(col):
+            # remove normalization marker first
+            col = col.replace("_normalized", "")
+            
+            if DELIM in col:
+                base, sheet = col.split(DELIM, 1)
+            else:
+                base, sheet = col, "combined"  # fallback
+
+            return base, sheet
+
         # -------------------------------------------------------
         # Identify normalized columns
         # -------------------------------------------------------
-        norm_cols = [c for c in df.columns if c.endswith("_normalized")]
+        norm_cols = [c for c in df.columns if "_normalized_" in c]
 
         if not norm_cols:
             return
 
         raw_cols = [c.replace("_normalized", "") for c in norm_cols]
+
+        
 
         # -------------------------------------------------------
         # Melt normalized values
@@ -643,9 +658,10 @@ class ValidationDBLogger:
             value_name="value_normalized"
         )
 
-        long_norm["column_name"] = long_norm["column_name"].str.replace(
-            "_normalized", "", regex=False
-        )
+        parsed = long_norm["column_name"].apply(split_col)
+
+        long_norm["column_name"] = parsed.map(lambda x: x[0])
+        long_norm["sheet_name"] = parsed.map(lambda x: x[1])
 
         # -------------------------------------------------------
         # Melt raw values
@@ -659,9 +675,24 @@ class ValidationDBLogger:
             value_name="value_raw"
         )
 
+        parsed_raw = long_raw["column_name"].apply(split_col)
+
+        long_raw["column_name"] = parsed_raw.map(lambda x: x[0])
+        long_raw["sheet_name"] = parsed_raw.map(lambda x: x[1])
+
         # -------------------------------------------------------
         # Combine
         # -------------------------------------------------------
+
+        ### confirm alignment before merging, this is a critical failure if it doesn't pass
+        assert len(long_norm) == len(long_raw)
+
+        assert (long_norm["participant_id"].values == long_raw["participant_id"].values).all()
+
+        assert (long_norm["column_name"].values == long_raw["column_name"].values).all()
+
+        assert (long_norm["sheet_name"].values == long_raw["sheet_name"].values).all()
+        
         long_df = long_norm.copy()
         long_df["value_raw"] = long_raw["value_raw"].values
 
@@ -669,15 +700,16 @@ class ValidationDBLogger:
         # Column ID mapping
         # -------------------------------------------------------
         column_ids = {
-            col: self.get_or_create_column(
+            (row["column_name"], row["sheet_name"]): self.get_or_create_column(
                 dataset_name=dataset_name,
-                sheet_name="combined",
-                column_name=col
+                sheet_name=row["sheet_name"],
+                column_name=row["column_name"]
             )
-            for col in long_df["column_name"].unique()
+            for _, row in long_df[["column_name", "sheet_name"]].drop_duplicates().iterrows()
         }
 
-        long_df["column_id"] = long_df["column_name"].map(column_ids)
+        key_series = list(zip(long_df["column_name"], long_df["sheet_name"]))
+        long_df["column_id"] = [column_ids[k] for k in key_series]
 
         # -------------------------------------------------------
         # Metadata

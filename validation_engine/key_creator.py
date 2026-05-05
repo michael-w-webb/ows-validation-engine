@@ -67,6 +67,7 @@ class KeyCreator:
     - required_fields: list[str]
     - return_unhashed: if True, return the composite string instead of a hashed ID
     """
+    
 
     def __init__(
         self,
@@ -85,6 +86,7 @@ class KeyCreator:
         self.sep = sep
         self.hash_fn = hash_fn
         self.return_unhashed = return_unhashed
+        self.DELIM = "_|_|_"
 
     # --------------------------
     # Hash utility
@@ -115,7 +117,7 @@ class KeyCreator:
         parts = []
 
         for field in self.key_fields:
-            raw = row.get(field, None)
+            raw = self._resolve_field(row, field)
             normed = self._apply_normalizer(field, raw)
 
             if field in self.required_fields and (pd.isna(normed) or normed in (None, "")):
@@ -137,3 +139,45 @@ class KeyCreator:
         df[key_col] = df.apply(self.create_key_from_row, axis=1)
         df[f"{key_col}_invalid"] = df[key_col].isna()
         return df
+    
+    
+    def _resolve_field(self, row, field):
+        """
+        Resolve a field from a row.
+
+        Rules:
+        1. Prefer normalized columns if they exist
+        2. Handle _|_|_ sheet suffix
+        3. Fall back to raw columns
+        """
+
+        base = field.replace("_normalized", "")
+
+        norm_prefix = base + "_normalized"
+        raw_prefix = base
+
+        # --- 1. Collect candidates ---
+        norm_candidates = [
+            c for c in row.index
+            if c == norm_prefix or c.startswith(norm_prefix + self.DELIM)
+        ]
+
+        raw_candidates = [
+            c for c in row.index
+            if c == raw_prefix or c.startswith(raw_prefix + self.DELIM)
+        ]
+
+        # --- 2. Prefer normalized ---
+        candidates = norm_candidates if norm_candidates else raw_candidates
+
+        if not candidates:
+            return None
+
+        # --- 3. Prefer non-null values ---
+        for col in candidates:
+            val = row[col]
+            if pd.notna(val) and val not in ("", None):
+                return val
+
+        # --- 4. Fallback ---
+        return row[candidates[0]]

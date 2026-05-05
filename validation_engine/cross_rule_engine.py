@@ -205,7 +205,8 @@ class CrossRuleEngine:
         self.workbook_format = workbook_format      # e.g. "four sheet format" or "simple format (workbook format)"
         self.single_sheet_df = normalized_single_sheet                   # normalized DataFrames by sheet
         self.schema = normalization_schema          # e.g. cc_column_label_list
-        self.file = file                            # file name reference (for error reporting)
+        self.file = file
+        self.DELIM = "_|_|_"                            # file name reference (for error reporting)
 
     def _collect_vars(self, logic):
         """
@@ -247,11 +248,13 @@ class CrossRuleEngine:
 
         for (sheet, col) in vars_used:
             df = self.single_sheet_df
-            if df is None or col not in df.columns:
+            try:
+                series = self._resolve_series(df, col, sheet)
+            except KeyError:
                 continue
 
             values = (
-                df.loc[violation_mask, col]
+                series.loc[violation_mask]
                 .astype(str)
                 .fillna("")
                 .values
@@ -268,6 +271,46 @@ class CrossRuleEngine:
             return pd.concat(snapshots, axis=1)
         else:
             return pd.DataFrame(index=violation_mask[violation_mask].index)
+
+    def _resolve_series(self, df, var_name, sheet_key):
+        """
+        Resolve a column Series from a DataFrame with _|_|_ encoded sheet names.
+
+        Prefers:
+        1. normalized columns
+        2. specified sheet
+        3. left-to-right fallback
+        """
+
+        base = var_name.replace("_normalized", "")
+
+        norm_prefix = base + "_normalized"
+        raw_prefix = base
+
+        # --- collect candidates ---
+        norm_candidates = [
+            c for c in df.columns
+            if c == norm_prefix or c.startswith(norm_prefix + self.DELIM)
+        ]
+
+        raw_candidates = [
+            c for c in df.columns
+            if c == raw_prefix or c.startswith(raw_prefix + self.DELIM)
+        ]
+
+        candidates = norm_candidates if norm_candidates else raw_candidates
+
+        if not candidates:
+            raise KeyError(f"'{var_name}' not found in DataFrame (no matching columns).")
+
+        # --- prefer explicit sheet ---
+        if sheet_key:
+            for col in candidates:
+                if col.endswith(f"{self.DELIM}{sheet_key}"):
+                    return df[col]
+
+        # --- fallback: first candidate ---
+        return df[candidates[0]]
 
     # ============================================================
     # 🔹 Variable retrieval
@@ -341,11 +384,9 @@ class CrossRuleEngine:
         df = self.single_sheet_df
         if df is None:
             raise KeyError(f"DataFrame for sheet '{sheet_key}' not found in dfs_by_sheet.")
-        if var_name not in df.columns:
-            raise KeyError(f"'{var_name}' not found in DataFrame for sheet '{sheet_key}'.")
-
-        # Instantiate variable object
-        series = df[var_name]
+        
+        series = self._resolve_series(df, var_name, sheet_key)
+        
         var_obj = cls_ref(var_name, sheet_key, series, self.single_sheet_df, self.schema)
         var_obj.engine = self
         var_obj.accepted_responses = accepted
@@ -653,14 +694,18 @@ class CrossRuleEngine:
         if self.workbook_format == "simple format":
             main_sheet = "Report"
 
+        row_col = next(
+            (c for c in df.columns if c.startswith(f"row_number_{main_sheet}") and self.DELIM in c),
+            None
+        )
+
+        row_values = df.loc[violations, row_col].values if row_col else None
+
         # 4️⃣ Produce unified, normalization-compatible output
         out = pd.DataFrame({
             "file": self.file or "",
             "sheet": main_sheet,
-            "row_number": (
-                df.loc[violations, f"row_number_{main_sheet}"].values
-                if f"row_number_{main_sheet}" in df else None
-            ),
+            "row_number": row_values,
             "column": main_col,
             "rule": rule_text,
             "raw_value": "Not Applicable.",

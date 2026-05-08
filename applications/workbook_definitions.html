@@ -3,10 +3,10 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Database Initialization" href="../database/init_sqlite_db.html"><link rel="prev" title="Validation Crossrule Classes" href="cross_rule_classes.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="File Directory" href="file_directory.html"><link rel="prev" title="SQL Logger" href="../validation_engine/db_logger.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
-        <title>Validation Crossrule Descriptions - OWS Validation Documentation</title>
+        <title>Workbook Definitions - OWS Validation Documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -193,27 +193,27 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <p class="caption" role="heading"><span class="caption-text">Core Engine</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine.html">Validation Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="workbook_loader.html">Workbook Loader</a></li>
-<li class="toctree-l1"><a class="reference internal" href="column_types.html">Validation Column Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/validation_engine.html">Validation Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/workbook_loader.html">Workbook Loader</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/column_types.html">Validation Column Types</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Cross-Rules</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="cross_rule_engine.html">Validation Crossrule Engine</a></li>
-<li class="toctree-l1"><a class="reference internal" href="cross_rule_classes.html">Validation Crossrule Classes</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Validation Crossrule Descriptions</a></li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/cross_rule_engine.html">Validation Crossrule Engine</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
-<li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="db_logger.html">SQL Logger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/key_creator.html">Validation Key Creator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../validation_engine/db_logger.html">SQL Logger</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../applications/workbook_definitions.html">Workbook Definitions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../applications/file_directory.html">File Directory</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../applications/validation_main.html">Validation Main</a></li>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -234,7 +234,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/validation_engine/cross_rule_descriptions.rst.txt" title="View this page">
+  <a class="muted-link" href="../_sources/applications/workbook_definitions.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -252,167 +252,162 @@
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="validation-crossrule-descriptions">
-<h1>Validation Crossrule Descriptions<a class="headerlink" href="#validation-crossrule-descriptions" title="Link to this heading">¶</a></h1>
-<p>The descriptions that are used by the cross rule engine’s recursive error statement generation.</p>
-<dl class="py function" id="module-validation_engine.cross_rule_descriptions">
-<dt class="sig sig-object py" id="validation_engine.cross_rule_descriptions.describe_compound">
-<span class="sig-prename descclassname"><span class="pre">validation_engine.cross_rule_descriptions.</span></span><span class="sig-name descname"><span class="pre">describe_compound</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subdescs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/cross_rule_descriptions.html#describe_compound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.cross_rule_descriptions.describe_compound" title="Link to this definition">¶</a></dt>
-<dd><p>Construct a natural-language description for a compound logical clause.</p>
-<p>This function combines already-rendered subclause descriptions into a
-single human-readable logical expression.</p>
-<p>Unlike <code class="docutils literal notranslate"><span class="pre">describe_logic()</span></code>, this function does not recurse through
-clause trees directly. Instead, it operates on pre-rendered textual
-fragments representing descendant clauses.</p>
-<p>Supported operators include:</p>
+          <section id="workbook-definitions">
+<h1>Workbook Definitions<a class="headerlink" href="#workbook-definitions" title="Link to this heading">¶</a></h1>
+<p>This is an example of a primary schema object driving the validation process for a specific application. It defines the expected structure, headers, and column types for each sheet in the workbook.</p>
+<section id="workbook-definitions-label-maps-and-schema-metadata">
+<span id="module-applications.career_connect_grantee_sheets.workbook_definitions"></span><h2>Workbook Definitions, Label Maps, and Schema Metadata<a class="headerlink" href="#workbook-definitions-label-maps-and-schema-metadata" title="Link to this heading">¶</a></h2>
+<p>This module contains the authoritative schema specification for all
+CareerConneCT “training data” workbooks supported by the validation
+pipeline. It encodes:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p>AND</p></li>
-<li><p>OR</p></li>
-<li><p>NOT</p></li>
-<li><p>IF_THEN</p></li>
-<li><p>IF_THEN_ELSE</p></li>
-<li><p>EQUIVALENT / IFF</p></li>
-<li><p>XOR</p></li>
-<li><p>ONE_OF</p></li>
-<li><p>AT_LEAST</p></li>
+<li><p>Canonical column names used throughout the pipeline</p></li>
+<li><p>All known spelling / formatting variants (“label maps”) that appear
+in provider-submitted Excel files</p></li>
+<li><p>Column-level metadata describing expected types, requirements, and
+accepted categorical responses</p></li>
+<li><p>Workbook-level structure (sheet names, starting rows/columns, and
+schema for both <em>simple format</em> and <em>four-sheet format</em>)</p></li>
+<li><p>Logic template phrases used by natural-language rule descriptions</p></li>
 </ul>
 </div></blockquote>
-<section id="overview">
-<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
-<p>Compound logical operators combine multiple subclauses into larger
-logical expressions.</p>
-<p>Example:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">describe_compound</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="s2">&quot;AND&quot;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="p">[</span>
-<span class="gp">... </span>        <span class="s2">&quot;&#39;Completed Date&#39; must be filled&quot;</span><span class="p">,</span>
-<span class="gp">... </span>        <span class="s2">&quot;&#39;Employment Status&#39; must be filled&quot;</span>
-<span class="gp">... </span>    <span class="p">]</span>
-<span class="gp">... </span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Produces:</p>
+<p>These definitions serve as the central contract between:</p>
 <blockquote>
-<div><p>“(‘Completed Date’ must be filled) and
-(‘Employment Status’ must be filled)”</p>
+<div><ol class="arabic simple">
+<li><p><strong>WorkbookLoader</strong> – to map raw header text → canonical names</p></li>
+<li><p><strong>NormalizationEngine / ColumnType classes</strong> – to validate, clean,
+and coerce column values into standardized formats</p></li>
+<li><p><strong>CrossRuleEngine</strong> – to interpret variable types and retrieve the
+correct pandas Series for cross-sheet logic evaluation</p></li>
+<li><p><strong>UI or reporting layers</strong> – to generate intelligible messages and
+consistent descriptions of rule expectations</p></li>
+</ol>
+</div></blockquote>
+<section id="label-maps-labels">
+<h3>Label Maps (“labels”)<a class="headerlink" href="#label-maps-labels" title="Link to this heading">¶</a></h3>
+<p>Each sheet definition includes a mapping:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>{</dt><dd><p>“Canonical Name”: [“Variant A”, “Variant B”, …]</p>
+</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>The workbook loader uses these maps to:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Match raw column headers from provider files</p></li>
+<li><p>Normalize them into predictable, canonical field names</p></li>
+<li><p>Tolerate typos, punctuation differences, capitalization,
+OWS-specific export labels, and Salesforce-style field names</p></li>
+</ul>
+</div></blockquote>
+<p>These maps are <em>lossless</em>: they never drop fields, they only expand the
+set of acceptable column headers.</p>
+</section>
+<section id="accepted-responses-and-types-accepted-responses-w-types">
+<h3>Accepted Responses and Types (“accepted_responses_w_types”)<a class="headerlink" href="#accepted-responses-and-types-accepted-responses-w-types" title="Link to this heading">¶</a></h3>
+<p>Each canonical column has a metadata block describing:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>type – one of the defined column classes
+(e.g., “dateTime”, “categorical”, “boolean”, “identifier”,
+“hourlyWage”, “hoursWorked”, “stateID7”, “CIPCode”, “ONETCode”)</p></li>
+<li><p>required – whether the field must be present and non-blank</p></li>
+<li><p>accepted_responses – (optional) list of canonical categorical
+values used by CategoricalColumn normalization and by
+CrossRuleEngine for logical operations</p></li>
+</ul>
+</div></blockquote>
+<p>These definitions are consumed by:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>BaseColumn subclasses during normalization</p></li>
+<li><p>CrossRuleEngine.get_variable() when creating Variable instances</p></li>
+<li><p>Rule authoring and error-message templates</p></li>
+</ul>
 </div></blockquote>
 </section>
-<section id="conditional-tone-rewriting">
-<h2>Conditional Tone Rewriting<a class="headerlink" href="#conditional-tone-rewriting" title="Link to this heading">¶</a></h2>
-<p>Conditional operators such as <code class="docutils literal notranslate"><span class="pre">IF_THEN</span></code> and <code class="docutils literal notranslate"><span class="pre">IF_THEN_ELSE</span></code> soften
-the antecedent phrasing by rewriting:</p>
+<section id="workbook-structure-workbook-definitions">
+<h3>Workbook Structure (“workbook_definitions”)<a class="headerlink" href="#workbook-structure-workbook-definitions" title="Link to this heading">¶</a></h3>
+<p>The outer <cite>workbook_definitions</cite> object organizes schemas by:</p>
 <blockquote>
-<div><p>“must”</p>
+<div><p>workbook_type → workbook_format → sheet_name → sheet_definition</p>
 </div></blockquote>
-<p>to:</p>
+<p>For example:</p>
 <blockquote>
-<div><p>“is”</p>
-</div></blockquote>
-<p>This produces more natural conditional language.</p>
-<p class="rubric">Example</p>
-<p>“If ‘Completed Date’ is filled, then
-‘Employment Status’ must be filled”</p>
-<p>rather than:</p>
-<blockquote>
-<div><p>“If ‘Completed Date’ must be filled…”</p>
-</div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">param op<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Compound logical operator name.</p>
+<div><dl class="simple">
+<dt>“training data” →</dt><dd><dl class="simple">
+<dt>“simple format” →</dt><dd><p>“Report” → {labels, accepted_responses, starting_row, …}</p>
 </dd>
-<dt class="field-even">type op<span class="colon">:</span></dt>
-<dd class="field-even"><p>str</p>
-</dd>
-<dt class="field-odd">param subdescs<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Pre-rendered natural-language descriptions of subclauses.</p>
-</dd>
-<dt class="field-even">type subdescs<span class="colon">:</span></dt>
-<dd class="field-even"><p>list[str]</p>
-</dd>
-<dt class="field-odd">param extra<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Additional operator metadata used by certain operators such as
-<code class="docutils literal notranslate"><span class="pre">AT_LEAST</span></code>.</p>
-</dd>
-<dt class="field-even">type extra<span class="colon">:</span></dt>
-<dd class="field-even"><p>int | None, optional</p>
-</dd>
-<dt class="field-odd">returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Human-readable logical description.</p>
-</dd>
-<dt class="field-even">rtype<span class="colon">:</span></dt>
-<dd class="field-even"><p>str</p>
+<dt>“four sheet format” →</dt><dd><p>“Personal Information”
+“Training”
+“Credential”
+“Outcomes”</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>Unknown operators fall back to a defensive generic rendering rather
-than raising exceptions. This behavior helps preserve debuggability
-during rule-authoring or grammar-extension workflows.</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>Each sheet definition includes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>labels – a full header normalization map</p></li>
+<li><p>accepted_responses – the column metadata schema</p></li>
+<li><p>starting_row – where data begins (allows skipping header clutter)</p></li>
+<li><p>starting_column – permits partial-sheet ingestion</p></li>
+<li><p>columns_used – reserved for restricting the importable subset</p></li>
+</ul>
+</div></blockquote>
+<p>This structure makes it easy for the loader to select the correct
+parsing logic depending on which workbook format the provider uploaded.</p>
 </section>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="validation_engine.cross_rule_descriptions.describe_atomic">
-<span class="sig-prename descclassname"><span class="pre">validation_engine.cross_rule_descriptions.</span></span><span class="sig-name descname"><span class="pre">describe_atomic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">var_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">var_sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">op</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_condition</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_negated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/cross_rule_descriptions.html#describe_atomic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.cross_rule_descriptions.describe_atomic" title="Link to this definition">¶</a></dt>
-<dd><p>Construct a natural-language description for a single atomic clause.</p>
-<p>This is used for leaf nodes in a clause tree. It interprets operators
-such as <cite>is_blank</cite>, <cite>before</cite>, or <cite>connected_presence</cite>, and chooses
-tone-appropriate phrasing depending on whether the clause appears
-in a conditional antecedent.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>var_name</strong> (<em>str</em>) – Column name being referenced.</p></li>
-<li><p><strong>var_sheet</strong> (<em>str</em>) – Sheet where the column resides.</p></li>
-<li><p><strong>op</strong> (<em>str</em>) – Atomic operator applied to the variable
-(e.g., “is_blank”, “before”, “equals”).</p></li>
-<li><p><strong>ref</strong> (<em>Any</em>) – Reference value or (sheet, column) tuple to compare against.
-Passed through <cite>format_reference()</cite>.</p></li>
-<li><p><strong>is_condition</strong> (<em>bool</em>) – If True, phrasing uses descriptive rather than prescriptive tone
-(e.g., “is filled” instead of “must be filled”).</p></li>
+<section id="logic-templates-and-expectations">
+<h3>Logic Templates and Expectations<a class="headerlink" href="#logic-templates-and-expectations" title="Link to this heading">¶</a></h3>
+<p>Two auxiliary dictionaries define natural-language templates used by
+<cite>CrossRuleEngine.describe_logic()</cite>:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Logic_Templates – maps operator categories to English snippets
+(e.g., “is in the past”, “is blank”, “is {values}”)</p></li>
+<li><p>Logic_Expectations – indicates whether a field is “required” or
+“should be blank” in IF/THEN constructions</p></li>
 </ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A human-readable description of the atomic requirement.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="validation_engine.cross_rule_descriptions.format_reference">
-<span class="sig-prename descclassname"><span class="pre">validation_engine.cross_rule_descriptions.</span></span><span class="sig-name descname"><span class="pre">format_reference</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ref</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/cross_rule_descriptions.html#format_reference"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.cross_rule_descriptions.format_reference" title="Link to this definition">¶</a></dt>
-<dd><p>Format a comparison reference into a human-readable English phrase.</p>
-<p>This function standardizes the various ways references can appear in
-cross-sheet rules, including literal values, dates, or references to
-other variables.</p>
-<dl class="simple">
-<dt>Supports:</dt><dd><ul class="simple">
-<li><p>(sheet, column) tuples → “‘Column’ (sheet ‘Sheet’)”</p></li>
-<li><p>pandas / datetime date types → “the date YYYY-MM-DD”</p></li>
-<li><p>numbers → “the value X”</p></li>
-<li><p>“__BLANK__” and “__NOT_BLANK__” indicators</p></li>
-<li><p>Strings that appear date-like → “the date YYYY-MM-DD”</p></li>
-<li><p>All other types → stringified</p></li>
+</div></blockquote>
+<p>These templates ensure that every rule written in clause-tree syntax can
+be rendered into a readable English explanation without custom text.</p>
+</section>
+<section id="extending-or-updating-this-module">
+<h3>Extending or Updating This Module<a class="headerlink" href="#extending-or-updating-this-module" title="Link to this heading">¶</a></h3>
+<p>To add new fields or update schemas:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Add new label variants under the correct sheet’s <cite>labels</cite> dict</p></li>
+<li><p>Add (or update) a canonical entry under <cite>accepted_responses</cite>
+with its correct type and accepted categorical responses</p></li>
+<li><p>If a new sheet or workbook format is added, create a new
+nested dictionary under <cite>workbook_definitions</cite> following the
+established pattern</p></li>
+<li><p>If a new variable type is introduced (e.g., NAICSCode),
+ensure that BaseColumn+Variable subclasses support the type
+before referencing it here</p></li>
+</ol>
+</div></blockquote>
+<p>All changes propagate automatically through:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Column mapping</p></li>
+<li><p>Data normalization</p></li>
+<li><p>Cross-sheet rule evaluation</p></li>
+<li><p>Validation reporting</p></li>
 </ul>
-</dd>
-</dl>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>ref</strong> (<em>Any</em>) – The comparison target or special marker.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A formatted reference string suitable for inclusion in
-natural-language rule descriptions.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-</dd></dl>
-
+</div></blockquote>
+<p>This module is therefore the <strong>single source of truth</strong> for schema
+consistency across every component of the CareerConneCT validation
+pipeline.</p>
+</section>
+</section>
 </section>
 
         </article>
@@ -420,23 +415,23 @@ natural-language rule descriptions.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../database/init_sqlite_db.html">
+          <a class="next-page" href="file_directory.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Database Initialization</div>
+                <div class="title">File Directory</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="cross_rule_classes.html">
+          <a class="prev-page" href="../validation_engine/db_logger.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Validation Crossrule Classes</div>
+                <div class="title">SQL Logger</div>
                 
               </div>
             </a>
@@ -470,10 +465,15 @@ natural-language rule descriptions.</p>
         <div class="toc-tree-container">
           <div class="toc-tree">
             <ul>
-<li><a class="reference internal" href="#">Validation Crossrule Descriptions</a><ul>
-<li><a class="reference internal" href="#validation_engine.cross_rule_descriptions.describe_compound"><code class="docutils literal notranslate"><span class="pre">describe_compound()</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.cross_rule_descriptions.describe_atomic"><code class="docutils literal notranslate"><span class="pre">describe_atomic()</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.cross_rule_descriptions.format_reference"><code class="docutils literal notranslate"><span class="pre">format_reference()</span></code></a></li>
+<li><a class="reference internal" href="#">Workbook Definitions</a><ul>
+<li><a class="reference internal" href="#workbook-definitions-label-maps-and-schema-metadata">Workbook Definitions, Label Maps, and Schema Metadata</a><ul>
+<li><a class="reference internal" href="#label-maps-labels">Label Maps (“labels”)</a></li>
+<li><a class="reference internal" href="#accepted-responses-and-types-accepted-responses-w-types">Accepted Responses and Types (“accepted_responses_w_types”)</a></li>
+<li><a class="reference internal" href="#workbook-structure-workbook-definitions">Workbook Structure (“workbook_definitions”)</a></li>
+<li><a class="reference internal" href="#logic-templates-and-expectations">Logic Templates and Expectations</a></li>
+<li><a class="reference internal" href="#extending-or-updating-this-module">Extending or Updating This Module</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

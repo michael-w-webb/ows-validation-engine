@@ -204,17 +204,15 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/db_logger.html">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -248,11 +246,95 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>Source code for database.init_sqlite_db</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">SQLite Schema Initialization</span>
+<span class="sd">============================</span>
+
+<span class="sd">This module defines and initializes the core SQLite schema used by the</span>
+<span class="sd">OWS validation engine. The database supports:</span>
+
+<span class="sd">- participant identity resolution,</span>
+<span class="sd">- longitudinal validation tracking,</span>
+<span class="sd">- normalized cell-value history,</span>
+<span class="sd">- rule-based validation auditing,</span>
+<span class="sd">- participant presence monitoring across runs, and</span>
+<span class="sd">- cross-run change detection.</span>
+
+<span class="sd">Overview</span>
+<span class="sd">--------</span>
+<span class="sd">The schema is designed to support reproducible, auditable validation of</span>
+<span class="sd">externally submitted Excel workbooks (e.g., CareerConneCT and Good Jobs</span>
+<span class="sd">Challenge datasets). Rather than treating each workbook as an isolated</span>
+<span class="sd">file, the database preserves historical validation context across runs.</span>
+
+<span class="sd">Core Tables</span>
+<span class="sd">-----------</span>
+<span class="sd">person</span>
+<span class="sd">    Canonical identity table representing the &quot;golden record&quot; for an</span>
+<span class="sd">    individual participant. Stores deterministic matching keys used for</span>
+<span class="sd">    participant resolution across submissions.</span>
+
+<span class="sd">participant</span>
+<span class="sd">    Dataset-specific participant instance linked to a canonical person.</span>
+<span class="sd">    Allows the same individual to appear across organizations, datasets,</span>
+<span class="sd">    and reporting periods.</span>
+
+<span class="sd">validation_run</span>
+<span class="sd">    Metadata describing a single validation execution, including dataset,</span>
+<span class="sd">    organization, quarter, timestamp, and completion status.</span>
+
+<span class="sd">participant_presence_log</span>
+<span class="sd">    Tracks whether participants were present or missing during a given</span>
+<span class="sd">    validation run. Supports longitudinal monitoring and disappearance</span>
+<span class="sd">    detection across submissions.</span>
+
+<span class="sd">dataset_column</span>
+<span class="sd">    Registry of normalized dataset columns used for historical value</span>
+<span class="sd">    tracking and rule evaluation.</span>
+
+<span class="sd">cell_value_history</span>
+<span class="sd">    Stores raw and normalized cell values over time for each participant</span>
+<span class="sd">    and column combination. Enables change detection and audit tracing.</span>
+
+<span class="sd">validation_rule</span>
+<span class="sd">    Registry of configured validation rules and associated metadata.</span>
+
+<span class="sd">validation_violation</span>
+<span class="sd">    Stores rule violations generated during validation runs.</span>
+
+<span class="sd">participant_key_mismatch</span>
+<span class="sd">    Tracks identifier inconsistencies and duplicate-key issues detected</span>
+<span class="sd">    across sheets or workbooks.</span>
+
+<span class="sd">Design Notes</span>
+<span class="sd">------------</span>
+<span class="sd">The schema emphasizes:</span>
+
+<span class="sd">- auditability over minimal storage,</span>
+<span class="sd">- deterministic participant tracking,</span>
+<span class="sd">- support for cross-run comparisons,</span>
+<span class="sd">- normalized relational structure, and</span>
+<span class="sd">- compatibility with SQLite-based local workflows.</span>
+
+<span class="sd">Indexes are included for the most common validation-engine access</span>
+<span class="sd">patterns, including:</span>
+
+<span class="sd">- participant presence lookups,</span>
+<span class="sd">- historical value retrieval,</span>
+<span class="sd">- run-based reporting, and</span>
+<span class="sd">- rule violation analysis.</span>
+
+<span class="sd">Functions</span>
+<span class="sd">---------</span>
+<span class="sd">init_db()</span>
+<span class="sd">    Creates all tables and indexes defined in ``SCHEMA_SQL`` if they do</span>
+<span class="sd">    not already exist.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">config</span><span class="w"> </span><span class="kn">import</span> <span class="n">DB_PATH</span>
 
-<span class="n">SCHEMA_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="n">VALIDATION_SCHEMA_SQL</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">PRAGMA foreign_keys = ON;</span>
 
 <span class="s2">CREATE TABLE IF NOT EXISTS person (</span>
@@ -385,9 +467,23 @@
 <div class="viewcode-block" id="init_db">
 <a class="viewcode-back" href="../../database/init_sqlite_db.html#database.init_sqlite_db.init_db">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">init_db</span><span class="p">():</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Initialize the SQLite validation database.</span>
+
+<span class="sd">    Creates all tables, indexes, and constraints defined in</span>
+<span class="sd">    ``VALIDATION_SCHEMA_SQL`` if they do not already exist.</span>
+
+<span class="sd">    Foreign-key enforcement is enabled prior to schema creation.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_PATH</span><span class="p">)</span>
     <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA foreign_keys = ON;&quot;</span><span class="p">)</span>
-    <span class="n">conn</span><span class="o">.</span><span class="n">executescript</span><span class="p">(</span><span class="n">SCHEMA_SQL</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">executescript</span><span class="p">(</span><span class="n">VALIDATION_SCHEMA_SQL</span><span class="p">)</span>
     <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
     <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ SQLite DB initialized at: </span><span class="si">{</span><span class="n">DB_PATH</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>

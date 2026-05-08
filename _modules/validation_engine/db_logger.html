@@ -202,20 +202,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/db_logger.html">SQL Logger</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
-</ul>
 
 </div>
 </div>
@@ -277,6 +263,21 @@
 <span class="sd">    SQLite is configured for concurrent-safe access using WAL mode and</span>
 <span class="sd">    foreign key enforcement. All timestamps are generated at write time</span>
 <span class="sd">    using the database clock.</span>
+
+<span class="sd">    Persistence Model</span>
+<span class="sd">    -----------------</span>
+<span class="sd">    Some logging operations are buffered in memory and persisted in batches</span>
+<span class="sd">    for performance reasons. Methods such as:</span>
+
+<span class="sd">    - ``mark_presence_participant``</span>
+<span class="sd">    - ``log_violation``</span>
+<span class="sd">    - ``resolve_person`` (new people)</span>
+<span class="sd">    - ``get_or_create_participant`` (new participants)</span>
+
+<span class="sd">    defer database writes until their corresponding ``flush_*`` methods are</span>
+<span class="sd">    called.</span>
+
+<span class="sd">    This design reduces transaction overhead during large validation runs.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
@@ -356,12 +357,31 @@
     <span class="n">org</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Preload participant identifiers into an in-memory map for fast lookup.</span>
+<span class="sd">        Preload participant identifiers into an in-memory lookup map.</span>
 
-<span class="sd">        Populates self._participant_map with keys of the form:</span>
+<span class="sd">        Loads existing participant records from the database into</span>
+<span class="sd">        ``self._participant_map`` for O(1) participant resolution during</span>
+<span class="sd">        validation.</span>
+
+<span class="sd">        Keys are stored as:</span>
+
 <span class="sd">            (person_id, dataset_name, org) -&gt; participant_id</span>
 
-<span class="sd">        This should be called once per run, before validation begins.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dataset_name : str</span>
+<span class="sd">            Dataset scope to preload.</span>
+<span class="sd">        org : str, optional</span>
+<span class="sd">            If provided, restricts loading to a single organization.</span>
+<span class="sd">            Otherwise all organizations for the dataset are loaded.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This method clears any previously loaded participant map state before</span>
+<span class="sd">        loading new records.</span>
+
+<span class="sd">        Typically called once at the beginning of a validation run to avoid</span>
+<span class="sd">        repeated database lookups during participant resolution.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_participant_map</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
@@ -393,7 +413,24 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">load_person_maps</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Preload person identity key maps into memory.</span>
+<span class="sd">        Preload deterministic identity-key maps into memory.</span>
+
+<span class="sd">        Loads strict and medium-strength identity hashes from the ``person``</span>
+<span class="sd">        table into in-memory dictionaries used during participant resolution.</span>
+
+<span class="sd">        Loaded maps include:</span>
+
+<span class="sd">        - strict: name + DOB + ZIP</span>
+<span class="sd">        - medium: name + DOB</span>
+<span class="sd">        - medium: name + ZIP</span>
+
+<span class="sd">        Weak-name-only matching is intentionally excluded to reduce the risk</span>
+<span class="sd">        of false-positive merges.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This method should typically be called once before processing rows in</span>
+<span class="sd">        a validation run.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_person_by_strict</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
@@ -663,9 +700,34 @@
 <a class="viewcode-back" href="../../validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.resolve_person">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">resolve_person</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Resolve a person using in-memory identity key maps.</span>
-<span class="sd">        Creates a new person *logically* if no match is found,</span>
-<span class="sd">        deferring persistence until later.</span>
+<span class="sd">        Resolve or logically create a person identifier using deterministic</span>
+<span class="sd">        identity keys.</span>
+
+<span class="sd">        Matching priority:</span>
+<span class="sd">        1. strict key (name + DOB + ZIP)</span>
+<span class="sd">        2. medium key (name + DOB)</span>
+<span class="sd">        3. medium key (name + ZIP)</span>
+
+<span class="sd">        If no match is found, a new ``person_id`` is generated and staged in</span>
+<span class="sd">        ``self._new_people_buffer`` for later persistence.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        row : pandas.Series or dict-like</span>
+<span class="sd">            Row containing identity-key fields and participant attributes.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            Resolved or newly generated ``person_id``.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        New people are not immediately written to the database. Persistence</span>
+<span class="sd">        occurs when ``flush_new_people_buffer`` is called.</span>
+
+<span class="sd">        Weak-name-only matching is intentionally disabled to reduce false</span>
+<span class="sd">        positive merges.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">strict</span>  <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id_key_strict_name_dob_zip&quot;</span><span class="p">)</span>
@@ -714,6 +776,19 @@
 <div class="viewcode-block" id="ValidationDBLogger.flush_new_people_buffer">
 <a class="viewcode-back" href="../../validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.flush_new_people_buffer">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">flush_new_people_buffer</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Persist buffered person records to the database.</span>
+
+<span class="sd">        Writes all pending entries from ``self._new_people_buffer`` into the</span>
+<span class="sd">        ``person`` table using a batched insert operation.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        This method is typically called once near the end of a validation run</span>
+<span class="sd">        after all rows have been processed.</span>
+
+<span class="sd">        The in-memory buffer is cleared after a successful commit.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_new_people_buffer</span><span class="p">:</span>
             <span class="k">return</span>
 
@@ -864,6 +939,18 @@
 <a class="viewcode-back" href="../../validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.flush_participant_presence">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">flush_participant_presence</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Persist buffered participant presence records.</span>
+
+<span class="sd">        Writes all queued presence records to</span>
+<span class="sd">        ``participant_presence_log`` using a batched transaction.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Insertion uses ``INSERT OR REPLACE`` semantics so repeated writes for</span>
+<span class="sd">        the same ``(run_id, participant_id)`` pair overwrite prior state.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_participant_presence_buffer</span><span class="p">:</span>
             <span class="k">return</span>
         <span class="k">try</span><span class="p">:</span>
@@ -899,6 +986,110 @@
         <span class="n">dataset_name</span><span class="p">,</span>
         <span class="n">df</span>   <span class="c1"># &lt;- this is self.single_sheet</span>
     <span class="p">):</span>
+<span class="w">            </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Persist normalized and raw cell values in long-form history tables.</span>
+
+<span class="sd">        Transforms a validation dataframe from wide format into a normalized</span>
+<span class="sd">        long-form structure suitable for longitudinal storage in the</span>
+<span class="sd">        ``cell_value_history`` table. Both raw and normalized representations</span>
+<span class="sd">        of each tracked value are preserved.</span>
+
+<span class="sd">        This method is designed to support:</span>
+<span class="sd">            - historical auditing of participant data</span>
+<span class="sd">            - value change detection across runs</span>
+<span class="sd">            - cross-sheet normalization analysis</span>
+<span class="sd">            - downstream rule evaluation and diagnostics</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        run_id : str</span>
+<span class="sd">            Validation run identifier associated with the logged values.</span>
+<span class="sd">        dataset_name : str</span>
+<span class="sd">            Dataset name used for column metadata normalization and lookup.</span>
+<span class="sd">        df : pandas.DataFrame</span>
+<span class="sd">            Combined validation dataframe containing:</span>
+<span class="sd">            </span>
+<span class="sd">            - ``person_id``</span>
+<span class="sd">            - ``participant_id``</span>
+<span class="sd">            - normalized columns</span>
+<span class="sd">            - corresponding raw columns</span>
+
+<span class="sd">            Normalized columns are expected to follow the convention:</span>
+
+<span class="sd">                &lt;column_name&gt;_normalized_|_|_&lt;sheet_name&gt;</span>
+
+<span class="sd">            Raw columns are expected to share the same base structure</span>
+<span class="sd">            without the ``_normalized`` marker.</span>
+
+<span class="sd">        Expected DataFrame Structure</span>
+<span class="sd">        ----------------------------</span>
+<span class="sd">        The dataframe should contain paired raw/normalized columns generated</span>
+<span class="sd">        during workbook normalization. For example:</span>
+
+<span class="sd">            First Name_|_|_Training</span>
+<span class="sd">            First Name_normalized_|_|_Training</span>
+
+<span class="sd">        The delimiter ``_|_|_`` is used to preserve sheet provenance while</span>
+<span class="sd">        allowing multiple sheets to be merged into a single dataframe.</span>
+
+<span class="sd">        Columns without sheet delimiters are assigned the fallback sheet name</span>
+<span class="sd">        ``&quot;combined&quot;``.</span>
+
+<span class="sd">        Transformation Process</span>
+<span class="sd">        ----------------------</span>
+<span class="sd">        The method performs the following operations:</span>
+
+<span class="sd">        1. Identifies all normalized columns</span>
+<span class="sd">        2. Derives corresponding raw column names</span>
+<span class="sd">        3. Converts both normalized and raw values into long format using</span>
+<span class="sd">        ``pandas.melt``</span>
+<span class="sd">        4. Parses logical column names and sheet names from suffixed columns</span>
+<span class="sd">        5. Verifies alignment between raw and normalized representations</span>
+<span class="sd">        6. Resolves persistent ``column_id`` values</span>
+<span class="sd">        7. Inserts records into ``cell_value_history``</span>
+
+<span class="sd">        Alignment Validation</span>
+<span class="sd">        --------------------</span>
+<span class="sd">        Several assertions are intentionally enforced before merging raw and</span>
+<span class="sd">        normalized values:</span>
+
+<span class="sd">            - equal row counts</span>
+<span class="sd">            - matching participant ordering</span>
+<span class="sd">            - matching logical column names</span>
+<span class="sd">            - matching sheet names</span>
+
+<span class="sd">        Failure of these assertions indicates a structural mismatch between</span>
+<span class="sd">        raw and normalized dataframe representations and should be treated as</span>
+<span class="sd">        a critical pipeline error.</span>
+
+<span class="sd">        Column Normalization</span>
+<span class="sd">        --------------------</span>
+<span class="sd">        Logical columns are normalized into persistent ``column_id`` values</span>
+<span class="sd">        using ``get_or_create_column``. This allows:</span>
+
+<span class="sd">            - stable column tracking across runs</span>
+<span class="sd">            - cross-sheet comparisons</span>
+<span class="sd">            - schema evolution analysis</span>
+<span class="sd">            - reduced storage duplication</span>
+
+<span class="sd">        Persistence Behavior</span>
+<span class="sd">        --------------------</span>
+<span class="sd">        Records are inserted in batches using ``executemany`` to reduce SQLite</span>
+<span class="sd">        transaction overhead during large validation runs.</span>
+
+<span class="sd">        Values are cleaned using ``_clean_sql_value`` before insertion so that:</span>
+
+<span class="sd">            - Pandas missing values become ``NULL``</span>
+<span class="sd">            - datetime objects become ISO-8601 strings</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        Only rows with non-null ``participant_id`` values are logged.</span>
+
+<span class="sd">        This method assumes that normalized and raw columns were generated</span>
+<span class="sd">        through the standard validation-engine normalization pipeline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="s2">&quot;person_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;single_sheet must contain person_id&quot;</span><span class="p">)</span>
@@ -1093,6 +1284,34 @@
 <div class="viewcode-block" id="ValidationDBLogger.flush_violations">
 <a class="viewcode-back" href="../../validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.flush_violations">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">flush_violations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Persist buffered validation violations to the database.</span>
+
+<span class="sd">        Writes all queued entries from ``self._violation_buffer`` into the</span>
+<span class="sd">        ``validation_violation`` table using a batched transaction.</span>
+
+<span class="sd">        Violations are accumulated during validation through</span>
+<span class="sd">        ``log_violation`` and deferred until this method is called in order</span>
+<span class="sd">        to reduce transaction overhead during large validation runs.</span>
+
+<span class="sd">        Persistence is performed using ``executemany`` within an explicit</span>
+<span class="sd">        transaction boundary.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        Exception</span>
+<span class="sd">            Re-raises any database exception encountered during insertion</span>
+<span class="sd">            after rolling back the transaction.</span>
+
+<span class="sd">        Notes</span>
+<span class="sd">        -----</span>
+<span class="sd">        The in-memory violation buffer is cleared after successful insertion</span>
+<span class="sd">        or rollback.</span>
+
+<span class="sd">        This method is typically called near the end of a validation run</span>
+<span class="sd">        after all rule evaluation has completed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_violation_buffer</span><span class="p">:</span>
             <span class="k">return</span>

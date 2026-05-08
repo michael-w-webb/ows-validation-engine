@@ -205,17 +205,15 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="db_logger.html">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -259,65 +257,92 @@
 <p>Workbook loader classes for single and multi-workbook preparation.</p>
 <section id="workbook-loading-and-preprocessing-utilities">
 <span id="module-validation_engine.workbook_loader"></span><h2>Workbook Loading and Preprocessing Utilities<a class="headerlink" href="#workbook-loading-and-preprocessing-utilities" title="Link to this heading">¶</a></h2>
-<p>This module provides high-reliability tools for loading CareerConneCT / GJC Excel
-workbooks in environments where files may be protected, contain inconsistent
-schemas, differ across organizations, or be intermittently locked by OneDrive
-or user activity. It handles:</p>
-<ol class="arabic simple">
-<li><p><strong>Excel COM automation</strong>
-- Unprotecting sheets
-- Unhiding sheets
-- Saving and stabilizing workbook visibility
-- Robust initialization and teardown of <cite>win32com</cite> Excel instances</p></li>
-<li><p><strong>Dynamic or static sheet loading</strong>
-- Retry logic for transient <cite>PermissionError</cite> (common with OneDrive syncing)
-- Config-driven <cite>starting_row</cite>, <cite>starting_column</cite>, and <cite>columns_used</cite>
-- Header extraction using noisy, variant-aware matching against canonical labels</p></li>
-<li><p><strong>Key creation</strong>
-- Optional integration with <code class="xref py py-class docutils literal notranslate"><span class="pre">KeyCreator</span></code> for row-level ID generation
-- Automatic dropping of invalid rows (e.g., non-alphabetic name fields)
-- Provenance tagging (e.g., file-of-origin for multi-workbook ingestion)</p></li>
-<li><p><strong>Multi-workbook concatenation</strong>
-- Load multiple files for a single organization or reporting period
-- Merge sheets across files while preserving source metadata
-- Final de-duplication and index resetting</p></li>
+<p>This module provides tools for loading CareerConneCT / GJC Excel workbooks
+in environments where files may be protected, contain inconsistent schemas,
+differ across organizations, or be intermittently locked by OneDrive or
+concurrent users.</p>
+<section id="capabilities">
+<h3>Capabilities<a class="headerlink" href="#capabilities" title="Link to this heading">¶</a></h3>
+<ol class="arabic">
+<li><p><strong>Excel COM preprocessing (optional)</strong>
+- Attempts to unprotect and unhide worksheets
+- Saves workbooks in a readable state for downstream processing
+- Uses defensive (best-effort) initialization and cleanup of</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">win32com</span></code> Excel instances</p>
+</div></blockquote>
+</li>
+<li><p><strong>Resilient sheet loading</strong>
+- Unbounded retry on <code class="docutils literal notranslate"><span class="pre">PermissionError</span></code> with capped backoff</p>
+<blockquote>
+<div><p>(to tolerate transient file locks)</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Config-driven <code class="docutils literal notranslate"><span class="pre">starting_row</span></code>, <code class="docutils literal notranslate"><span class="pre">starting_column</span></code>, and <code class="docutils literal notranslate"><span class="pre">columns_used</span></code></p></li>
+<li><p>Fallback sheet detection via header matching when expected sheets
+are missing</p></li>
+</ul>
+</li>
+<li><p><strong>Header normalization</strong>
+- Dynamic mode: tolerant, variant-aware matching of column headers</p>
+<blockquote>
+<div><p>via <a class="reference internal" href="#validation_engine.workbook_loader.extract_columns_noisy" title="validation_engine.workbook_loader.extract_columns_noisy"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a></p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Static mode: positional slicing with assumed alignment to configured labels</p></li>
+</ul>
+</li>
+<li><p><strong>Row-level processing</strong>
+- Optional integration with <code class="xref py py-class docutils literal notranslate"><span class="pre">KeyCreator</span></code> for identifier generation
+- Lightweight text normalization via <a class="reference internal" href="#validation_engine.workbook_loader.clean_text" title="validation_engine.workbook_loader.clean_text"><code class="xref py py-func docutils literal notranslate"><span class="pre">clean_text()</span></code></a>
+- Conditional filtering of rows based on name field validity</p></li>
+<li><p><strong>Multi-workbook aggregation</strong>
+- Batch loading of multiple files using a shared schema
+- Sheet-wise concatenation across workbooks
+- Provenance tracking via <code class="docutils literal notranslate"><span class="pre">source_file</span></code> column
+- Final row-wise deduplication and index normalization</p></li>
 </ol>
+</section>
 <section id="major-components">
 <h3>Major Components<a class="headerlink" href="#major-components" title="Link to this heading">¶</a></h3>
 <section id="functions">
 <h4>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h4>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">ensure_unprotected_visible</span></code>
-Unprotects and unhides all sheets in a workbook using Excel COM.</p></li>
+Attempts to remove protection and unhide all sheets via Excel COM.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">extract_columns_noisy</span></code>
-Maps messy/variant Excel headers to canonical labels using normalization
-and tolerant matching. Useful for inconsistent partner submissions.</p></li>
+Maps variant Excel headers to canonical labels using normalization
+and tolerant matching.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">clean_text</span></code>
-Basic string cleaning for Excel messiness (nonbreaking spaces, stray encodings).</p></li>
+Performs conservative normalization of cell-level text values.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">find_sheet_by_headers</span></code>
+Heuristically identifies the correct sheet and header row when expected
+sheets are missing.</p></li>
 </ul>
 </section>
 <section id="classes">
 <h4>Classes<a class="headerlink" href="#classes" title="Link to this heading">¶</a></h4>
 <ul class="simple">
 <li><p><a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a>
-Loads a single workbook according to a schema-defined set of sheets.
-Handles COM preprocessing (optional), header extraction, dynamic column mapping,
-and row-level cleanup + key creation.</p></li>
+Loads a single workbook using a schema definition. Handles resilient
+file access, optional header normalization, fallback sheet detection,
+and row-level processing.</p></li>
 <li><p><a class="reference internal" href="#validation_engine.workbook_loader.MultiWorkbookLoader" title="validation_engine.workbook_loader.MultiWorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiWorkbookLoader</span></code></a>
-Loads and concatenates multiple workbooks that conform to the same schema.
-Useful for partners who submit multiple files by region, cohort, or location.</p></li>
+Aggregates multiple workbooks into a unified sheet-by-sheet structure
+using a shared schema. Ingestion is best-effort; missing or failed
+sheets do not halt processing.</p></li>
 </ul>
 </section>
 </section>
 <section id="typical-workflow">
 <h3>Typical Workflow<a class="headerlink" href="#typical-workflow" title="Link to this heading">¶</a></h3>
 <ol class="arabic simple">
-<li><p>Preprocess the workbook (unprotect/hide/clean).</p></li>
-<li><p>Read each configured sheet using pandas.</p></li>
-<li><p>Apply canonical header mapping (dynamic or fixed).</p></li>
-<li><p>Insert <code class="docutils literal notranslate"><span class="pre">id_key</span></code> or other KeyCreator-derived identifiers.</p></li>
-<li><p>Clean unusable rows (blank/invalid names).</p></li>
-<li><p>Return <code class="docutils literal notranslate"><span class="pre">dict[sheet_name</span> <span class="pre">→</span> <span class="pre">DataFrame]</span></code> to the validation engine.</p></li>
+<li><p>(Optional) Preprocess workbooks to remove protection and unhide sheets.</p></li>
+<li><p>Load configured sheets using <a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a>.</p></li>
+<li><p>Apply canonical header mapping (dynamic or static).</p></li>
+<li><p>Optionally generate row-level identifiers.</p></li>
+<li><p>Apply basic row filtering and text normalization.</p></li>
+<li><p>(Optional) Aggregate multiple workbooks via <a class="reference internal" href="#validation_engine.workbook_loader.MultiWorkbookLoader" title="validation_engine.workbook_loader.MultiWorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">MultiWorkbookLoader</span></code></a>.</p></li>
 </ol>
 </section>
 <section id="dependencies">
@@ -327,52 +352,51 @@ Useful for partners who submit multiple files by region, cohort, or location.</p
 <li><p>win32com (Excel COM automation)</p></li>
 <li><p>pythoncom</p></li>
 <li><p>traceback / datetime / os / time</p></li>
-<li><p>KeyCreator (optional row-level ID generator)</p></li>
-<li><p>strict_alphabetic_normalize (optional row filtering helper)</p></li>
+<li><p>KeyCreator (optional)</p></li>
+<li><p>strict_alphabetic_normalize (optional)</p></li>
 </ul>
 <p class="rubric">Notes</p>
-<p>This module assumes:
-- Windows environment (due to COM).
-- Excel is installed.
-- User has permissions to unprotect sheets (passwords may vary per program).
-- The provided <cite>sheet_defs</cite> schema contains label specifications and</p>
-<blockquote>
-<div><p>starting rows/columns.</p>
-</div></blockquote>
-<p>It is intentionally robust against inconsistent partner data submissions,
-permission locks, and malformed Excel headers.</p>
+<ul class="simple">
+<li><p>Requires a Windows environment with Microsoft Excel installed (for COM).</p></li>
+<li><p>Preprocessing is optional but may be required for protected workbooks.</p></li>
+<li><p>File loading is resilient by design; partial results may be returned when
+errors occur.</p></li>
+<li><p>Assumes <code class="docutils literal notranslate"><span class="pre">sheet_defs</span></code> provides label definitions and positional metadata.</p></li>
+</ul>
 </section>
 </section>
 <dl class="py function">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.ensure_unprotected_visible">
 <span class="sig-prename descclassname"><span class="pre">validation_engine.workbook_loader.</span></span><span class="sig-name descname"><span class="pre">ensure_unprotected_visible</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">excel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'workforce'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#ensure_unprotected_visible"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.ensure_unprotected_visible" title="Link to this definition">¶</a></dt>
-<dd><p>Open an Excel workbook via COM automation, unprotect all sheets, and make them visible.</p>
-<p>This utility is designed for partner-submitted CareerConneCT/GJC workbooks that may
-arrive locked, password-protected, or with hidden sheets. It modifies the file
-<em>in-place</em>, ensuring that all sheets can be read downstream by pandas.</p>
-<dl class="simple">
-<dt>The function:</dt><dd><ol class="arabic simple">
+<dd><p>Open an Excel workbook via COM automation, attempt to remove protection,
+and ensure all worksheets are visible.</p>
+<p>This utility is intended for partner-submitted CareerConneCT/GJC workbooks
+that may be locked, password-protected, or contain hidden sheets. It modifies
+the file <em>in-place</em> to improve downstream readability (e.g., by pandas).</p>
+<dl>
+<dt>Behavior:</dt><dd><ol class="arabic simple">
 <li><p>Opens the workbook using a provided Excel COM instance.</p></li>
-<li><p>Attempts to unprotect the workbook-level protection (if present).</p></li>
-<li><p>Iterates through all worksheets:
-- Unprotects each sheet using the provided password.
-- Sets sheet visibility (<code class="docutils literal notranslate"><span class="pre">ws.Visible</span> <span class="pre">=</span> <span class="pre">-1</span></code>).</p></li>
-<li><p>Saves the workbook.</p></li>
-<li><p>Ensures proper cleanup and closes the workbook object in a <code class="docutils literal notranslate"><span class="pre">finally</span></code> block.</p></li>
+<li><p>Attempts to remove workbook-level protection.</p></li>
 </ol>
+<p>3. Iterates through all worksheets:
+- Attempts to unprotect each sheet using the provided password.
+- Sets sheet visibility to visible (<code class="docutils literal notranslate"><span class="pre">xlSheetVisible</span> <span class="pre">=</span> <span class="pre">-1</span></code>).
+4. Saves the workbook.
+5. Closes the workbook in a <code class="docutils literal notranslate"><span class="pre">finally</span></code> block, with retry logic to
+mitigate transient COM failures.</p>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>excel</strong> – An active <code class="docutils literal notranslate"><span class="pre">win32com.client.Dispatch(&quot;Excel.Application&quot;)</span></code> instance.
-The caller is responsible for creating and later quitting this instance.</p></li>
-<li><p><strong>file_path</strong> (<em>str</em>) – Absolute path to the Excel file to modify.</p></li>
-<li><p><strong>password</strong> (<em>str</em><em>, </em><em>optional</em>) – Password used to unprotect sheets and workbooks. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;workforce&quot;</span></code>.</p></li>
+<li><p><strong>excel</strong> – Active <code class="docutils literal notranslate"><span class="pre">win32com.client.Dispatch(&quot;Excel.Application&quot;)</span></code> instance.
+Caller is responsible for lifecycle management (including <code class="docutils literal notranslate"><span class="pre">Quit()</span></code>).</p></li>
+<li><p><strong>file_path</strong> (<em>str</em>) – Absolute path to the Excel file.</p></li>
+<li><p><strong>password</strong> (<em>str</em><em>, </em><em>optional</em>) – Password used for unprotect operations. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;workforce&quot;</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The original <code class="docutils literal notranslate"><span class="pre">file_path</span></code> (for chaining or logging).</p>
+<dd class="field-even"><p>The original <code class="docutils literal notranslate"><span class="pre">file_path</span></code>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
@@ -380,79 +404,85 @@ The caller is responsible for creating and later quitting this instance.</p></li
 </dl>
 <dl class="simple">
 <dt>Side Effects:</dt><dd><ul class="simple">
-<li><p>Modifies the workbook on disk (saves changes immediately).</p></li>
-<li><p>Unhides all sheets.</p></li>
-<li><p>Removes sheet- and workbook-level protection when the password matches.</p></li>
-<li><p>Prints status messages and warnings to stdout.</p></li>
+<li><p>Modifies and saves the workbook on disk.</p></li>
+<li><p>Attempts to unhide all worksheets.</p></li>
+<li><p>Emits diagnostic output to stdout.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>None explicitly. Errors during unprotect/unhide operations are caught and logged.</strong> – </p></li>
-<li><p><strong>Non-COM failures during file opening may propagate.</strong> – </p></li>
-</ul>
+<dd class="field-odd"><p><strong>Exception</strong> – Propagates errors from <code class="docutils literal notranslate"><span class="pre">Workbooks.Open</span></code> and other non-handled COM failures.</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>This function assumes a Windows environment with Microsoft Excel installed.</p></li>
-<li><p>If the supplied password is incorrect, sheets may remain protected.</p></li>
-<li><p>Hidden sheets that are explicitly “very hidden” (xlSheetVeryHidden = 2)
-can still be unhidden using this approach unless protected.</p></li>
-<li><p>Caller must ensure <code class="docutils literal notranslate"><span class="pre">excel.Quit()</span></code> is eventually called.</p></li>
+<li><p>Requires Windows with Microsoft Excel installed.</p></li>
+<li><p>If the password is incorrect, some sheets may remain protected.</p></li>
+<li><p>Handles hidden and “very hidden” sheets when not blocked by protection.</p></li>
+<li><p>Workbook close is retried to handle intermittent COM issues.</p></li>
 </ul>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.extract_columns_noisy">
 <span class="sig-prename descclassname"><span class="pre">validation_engine.workbook_loader.</span></span><span class="sig-name descname"><span class="pre">extract_columns_noisy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_map</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preview_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#extract_columns_noisy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.extract_columns_noisy" title="Link to this definition">¶</a></dt>
-<dd><p>Select and reorder columns from a messy Excel DataFrame using a canonical-to-variants
-mapping, with tolerant header matching and optional debug output.</p>
-<p>This function is designed for partner-submitted Excel files where header labels may
-vary across submissions (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;First</span> <span class="pre">Name&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;FirstName&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;FName&quot;</span></code>).
-It normalizes the raw column headers (strip + lowercase), then matches them against
-a set of variants for each canonical label in <code class="docutils literal notranslate"><span class="pre">col_map</span></code>. For each canonical label:</p>
-<ul class="simple">
-<li><p>If a matching header is found, that column is selected.</p></li>
-<li><p>If no matching header is found, a column of <code class="docutils literal notranslate"><span class="pre">NA</span></code> is inserted.</p></li>
-<li><p>Columns are returned in the order of keys in <code class="docutils literal notranslate"><span class="pre">col_map</span></code>.</p></li>
+<dd><p>Select and reorder columns from a noisy Excel-derived DataFrame using a
+canonical-to-variant header mapping.</p>
+<p>This function is designed for partner-submitted Excel files where header
+labels vary across submissions (e.g., “First Name”, “FirstName”, “FName”).
+It performs tolerant matching by normalizing column headers via:</p>
+<blockquote>
+<div><p>str(header).strip().lower()</p>
+</div></blockquote>
+<p>and comparing against normalized variants provided in <code class="docutils literal notranslate"><span class="pre">col_map</span></code>.</p>
+<dl>
+<dt>For each canonical label (in order of <code class="docutils literal notranslate"><span class="pre">col_map</span></code>):</dt><dd><ul class="simple">
+<li><p>The first matching variant is selected (“first-match wins”).</p></li>
+<li><p>If no match is found, a column of <code class="docutils literal notranslate"><span class="pre">NA</span></code> values is inserted.</p></li>
+<li><p>Output columns preserve the order of <code class="docutils literal notranslate"><span class="pre">col_map</span></code>.</p></li>
 </ul>
-<p>The result is:
-* A DataFrame containing the selected/reordered columns, with <strong>integer</strong> column
-labels (0..n-1) suitable for downstream relabeling.
-* The list of canonical labels corresponding to those columns.</p>
+</dd>
+<dt>Matching behavior:</dt><dd><ul class="simple">
+<li><p>Raw column names are normalized once and stored as a lookup map.</p></li>
+<li><p>If multiple raw columns normalize to the same key, only the first</p></li>
+</ul>
+<p>occurrence is used (duplicates are optionally reported in debug mode).</p>
+</dd>
+</dl>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>raw_df</strong> (<em>pd.DataFrame</em>) – Raw DataFrame read from Excel. Column names are treated as-is and
-normalized internally via <code class="docutils literal notranslate"><span class="pre">str(c).strip().lower()</span></code>.</p></li>
-<li><p><strong>col_map</strong> (<em>dict</em>) – <p>Mapping of canonical column labels to one or more possible header variants.
-Example:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">col_map</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;First Name&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;First Name&quot;</span><span class="p">,</span> <span class="s2">&quot;FirstName&quot;</span><span class="p">,</span> <span class="s2">&quot;FName&quot;</span><span class="p">],</span>
-    <span class="s2">&quot;Last Name&quot;</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;Last Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Surname&quot;</span><span class="p">,</span> <span class="s2">&quot;LName&quot;</span><span class="p">],</span>
-<span class="p">}</span>
-</pre></div>
-</div>
+<li><p><strong>raw_df</strong> (<em>pd.DataFrame</em>) – Input DataFrame (e.g., from <code class="docutils literal notranslate"><span class="pre">pd.read_excel</span></code>). Column names are
+treated as-is and normalized internally.</p></li>
+<li><p><strong>col_map</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>list</em><em>[</em><em>str</em><em>] </em><em>| </em><em>str</em><em>]</em>) – Mapping of canonical labels to one or more header variants.
+Variants are matched after normalization.</p></li>
+<li><p><strong>preview_rows</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of rows to display in debug preview output. Default is 5.</p></li>
+<li><p><strong>debug</strong> (<em>bool</em><em>, </em><em>optional</em>) – <dl class="simple">
+<dt>If True, prints diagnostic output including:</dt><dd><ul>
+<li><p>raw and normalized headers</p></li>
+<li><p>duplicate header warnings</p></li>
+<li><p>match/miss decisions per column</p></li>
+<li><p>small data preview</p></li>
+<li><p>summary statistics</p></li>
+</ul>
+</dd>
+</dl>
+<p>Default is False.</p>
 </p></li>
-<li><p><strong>preview_rows</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of rows to show in the debug preview of <code class="docutils literal notranslate"><span class="pre">raw_df</span></code>. Default is 5.</p></li>
-<li><p><strong>debug</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, prints detailed information about header normalization,
-matches/misses, and NA-only columns. Default is True.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p><ul class="simple">
 <li><dl class="simple">
-<dt>df_no_headers:</dt><dd><p>DataFrame containing the selected columns in the order of <code class="docutils literal notranslate"><span class="pre">col_map</span></code>.
-Columns are relabeled to consecutive integers starting at 0.</p>
+<dt>df_no_headers:</dt><dd><p>DataFrame with selected columns, ordered by <code class="docutils literal notranslate"><span class="pre">col_map</span></code>.
+Columns are relabeled to integer indices (0..n-1).</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt>canonical_labels:</dt><dd><p>List of canonical column labels corresponding to the columns in
-<code class="docutils literal notranslate"><span class="pre">df_no_headers</span></code>.</p>
+<dt>canonical_labels:</dt><dd><p>List of canonical labels aligned positionally with
+<code class="docutils literal notranslate"><span class="pre">df_no_headers.columns</span></code>.</p>
 </dd>
 </dl>
 </li>
@@ -465,12 +495,12 @@ Columns are relabeled to consecutive integers starting at 0.</p>
 </dl>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>If no variant for a canonical label is found in <code class="docutils literal notranslate"><span class="pre">raw_df</span></code>, the corresponding</p></li>
+<li><p>Missing canonical labels result in all-NA columns.</p></li>
+<li><p>Output column order strictly follows <code class="docutils literal notranslate"><span class="pre">col_map</span></code> key order.</p></li>
+<li><p>This function does not mutate <code class="docutils literal notranslate"><span class="pre">raw_df</span></code>.</p></li>
+<li><p>Positional alignment between returned DataFrame columns and</p></li>
 </ul>
-<p>column in <code class="docutils literal notranslate"><span class="pre">df_no_headers</span></code> will be entirely <code class="docutils literal notranslate"><span class="pre">NA</span></code>.
-- Duplicate normalized header names in <code class="docutils literal notranslate"><span class="pre">raw_df</span></code> are reported via debug
-messages, but only the first occurrence is used.
-- This function does not mutate <code class="docutils literal notranslate"><span class="pre">raw_df</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">canonical_labels</span></code> is intentional and required for downstream use.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -504,23 +534,122 @@ values or attempt more aggressive normalization.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.find_sheet_by_headers">
 <span class="sig-prename descclassname"><span class="pre">validation_engine.workbook_loader.</span></span><span class="sig-name descname"><span class="pre">find_sheet_by_headers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_header_row</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_match_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#find_sheet_by_headers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.find_sheet_by_headers" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Heuristically identify the most likely worksheet and header row based on
+overlap with expected column label variants.</p>
+<p>This function scans all sheets in an Excel file and evaluates candidate
+header rows by comparing their normalized cell values against a set of
+expected header variants derived from <code class="docutils literal notranslate"><span class="pre">config[&quot;labels&quot;]</span></code>. The sheet/row
+pair with the highest overlap score is selected, subject to a minimum
+match threshold.</p>
+<dl>
+<dt>Matching logic:</dt><dd><ul class="simple">
+<li><p>Cell values are normalized via <code class="docutils literal notranslate"><span class="pre">str(x).strip().lower()</span></code>.</p></li>
+<li><p>Expected variants are constructed from all values in</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">config[&quot;labels&quot;]</span></code>.
+- For each sheet and candidate row (up to <code class="docutils literal notranslate"><span class="pre">max_header_row</span></code>), a score
+is computed as the count of overlapping normalized values.
+- The (sheet, row) pair with the highest score is selected.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_obj</strong> – File-like object or path compatible with <code class="docutils literal notranslate"><span class="pre">pandas.ExcelFile</span></code>.</p></li>
+<li><p><strong>config</strong> (<em>dict</em>) – Sheet configuration containing a <code class="docutils literal notranslate"><span class="pre">&quot;labels&quot;</span></code> mapping of canonical
+column names to variant header strings.</p></li>
+<li><p><strong>max_header_row</strong> (<em>int</em><em>, </em><em>optional</em>) – Maximum number of top rows (per sheet) to evaluate as potential
+header rows. Default is 4.</p></li>
+<li><p><strong>min_match_ratio</strong> (<em>float</em><em>, </em><em>optional</em>) – <p>Minimum acceptable ratio of matched headers, defined as:</p>
+<blockquote>
+<div><p>best_score / len(config[“labels”])</p>
+</div></blockquote>
+<p>If the best candidate falls below this threshold, an error is raised.
+Default is 0.5.</p>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><dl class="simple">
+<dt>best_sheet:</dt><dd><p>Name of the selected worksheet.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>best_row:</dt><dd><p>Zero-based row index identified as the header row.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[str, int]</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – <ul class="simple">
+<li><p>If no candidate sheet/row pair achieves a positive match.
+    - If the best match does not meet <code class="docutils literal notranslate"><span class="pre">min_match_ratio</span></code>.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<dl class="simple">
+<dt>Side Effects:</dt><dd><ul class="simple">
+<li><p>Prints a warning indicating the selected sheet and header row.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>This is a heuristic method and assumes that header rows contain a</p></li>
+</ul>
+<p>sufficient number of recognizable label variants.
+- Only the top <code class="docutils literal notranslate"><span class="pre">max_header_row</span></code> rows of each sheet are evaluated.
+- In cases of ties, the first encountered maximum is selected.</p>
+</dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.WorkbookLoader">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">validation_engine.workbook_loader.</span></span><span class="sig-name descname"><span class="pre">WorkbookLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workbook_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet_defs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starting_row</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'workforce'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keycreator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_sheet_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#WorkbookLoader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.WorkbookLoader" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Loader for a single Excel workbook using a schema-driven sheet definition.</p>
-<p>This class encapsulates all logic for:
-* Preprocessing a workbook via Excel COM (unprotecting/unhiding sheets).
-* Reading one or more sheets into pandas DataFrames using <cite>sheet_defs</cite>.
-* Optionally performing dynamic, variant-aware header extraction.
-* Adding row-level identifiers (via <cite>KeyCreator</cite>) and <cite>row_number</cite>.
-* Filtering out rows with invalid or missing first/last name values.</p>
-<p>It is designed to handle noisy, partner-submitted workbooks where:
-* Headers may differ across submissions.
-* Workbooks may arrive protected or with hidden sheets.
-* Files may be intermittently locked (OneDrive, concurrent users, etc.).</p>
+<p>This class handles the ingestion of partner-submitted Excel workbooks into
+structured pandas DataFrames, with support for inconsistent schemas,
+protected files, and transient file access issues.</p>
+<dl>
+<dt>Core responsibilities:</dt><dd><ul class="simple">
+<li><p>Optional preprocessing via Excel COM (unprotecting/unhiding sheets).</p></li>
+<li><p>Reading configured sheets using <code class="docutils literal notranslate"><span class="pre">sheet_defs</span></code>.</p></li>
+<li><p>Resilient file access with indefinite retry on <code class="docutils literal notranslate"><span class="pre">PermissionError</span></code></p></li>
+</ul>
+<p>(e.g., OneDrive or concurrent access locks).
+- Fallback sheet detection using header matching when expected sheets
+are missing.
+- Optional dynamic, variant-aware header extraction.
+- Assignment of canonical column labels.
+- Optional row-level identifier generation via <code class="docutils literal notranslate"><span class="pre">KeyCreator</span></code>.
+- Addition of row-level metadata (e.g., row number).
+- Basic row filtering based on name field validity.</p>
+</dd>
+<dt>The loader is designed for noisy, partner-provided workbooks where:</dt><dd><ul class="simple">
+<li><p>Header names vary across submissions.</p></li>
+<li><p>Sheets may be missing or renamed.</p></li>
+<li><p>Files may be protected or partially inaccessible.</p></li>
+<li><p>Data quality is inconsistent.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Dynamic mode (<code class="docutils literal notranslate"><span class="pre">dynamic=True</span></code>) performs tolerant header matching via</p></li>
+</ul>
+<p><a class="reference internal" href="#validation_engine.workbook_loader.extract_columns_noisy" title="validation_engine.workbook_loader.extract_columns_noisy"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a>.
+- Static mode assumes column alignment with configured labels and does
+not validate header correctness.
+- Row filtering is applied only when both “First Name” and “Last Name”
+columns are present, and retains rows where at least one field is valid.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -537,31 +666,28 @@ values or attempt more aggressive normalization.</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>file_path</strong> (<em>str</em>) – Path to the Excel workbook to load.</p></li>
-<li><p><strong>workbook_type</strong> (<em>str</em>) – Key into <cite>sheet_defs</cite> indicating which workbook definition to use
+<li><p><strong>workbook_type</strong> (<em>str</em>) – Key into <code class="docutils literal notranslate"><span class="pre">sheet_defs</span></code> identifying the workbook configuration
 (e.g., “training data”).</p></li>
-<li><p><strong>sheet_defs</strong> (<em>dict</em>) – <p>Schema describing sheet-specific configuration. Typically of the form:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sheet_defs</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;training data&quot;</span><span class="p">:</span> <span class="p">{</span>
-        <span class="s2">&quot;Report&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;starting_row&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-            <span class="s2">&quot;starting_column&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
-            <span class="s2">&quot;labels&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
-            <span class="s2">&quot;columns_used&quot;</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
-        <span class="p">},</span>
-        <span class="o">...</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-</div>
+<li><p><strong>sheet_defs</strong> (<em>dict</em>) – <p>Schema describing sheet-specific configuration. Each workbook type
+maps to one or more sheet definitions containing:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">starting_row</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">starting_column</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">labels</span></code> (canonical column names or mapping)</p></li>
+<li><p>optional <code class="docutils literal notranslate"><span class="pre">columns_used</span></code></p></li>
+</ul>
+</div></blockquote>
 </p></li>
-<li><p><strong>dynamic</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, use <cite>extract_columns_noisy</cite> to match headers against
-canonical labels. If False, assume headers align with <cite>labels</cite>
-and use static positional slicing. Default is False.</p></li>
-<li><p><strong>password</strong> (<em>str</em><em>, </em><em>optional</em>) – Password used to unprotect the workbook and sheets. Default is
-“workforce”.</p></li>
-<li><p><strong>keycreator</strong> (<a class="reference internal" href="key_creator.html#validation_engine.key_creator.KeyCreator" title="validation_engine.key_creator.KeyCreator"><em>KeyCreator</em></a><em>, </em><em>optional</em>) – Optional key generator used to add an <cite>id_key</cite> column for each
-row in multi-sheet mode.</p></li>
-<li><p><strong>multi_sheet_mode</strong> (<em>bool</em>)</p></li>
+<li><p><strong>dynamic</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, performs tolerant header matching using
+<a class="reference internal" href="#validation_engine.workbook_loader.extract_columns_noisy" title="validation_engine.workbook_loader.extract_columns_noisy"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a>. If False, assumes columns align
+with <code class="docutils literal notranslate"><span class="pre">labels</span></code> and applies positional slicing. Default is False.</p></li>
+<li><p><strong>password</strong> (<em>str</em><em>, </em><em>optional</em>) – Password used for optional COM-based unprotect operations.
+Default is “workforce”.</p></li>
+<li><p><strong>keycreator</strong> (<a class="reference internal" href="key_creator.html#validation_engine.key_creator.KeyCreator" title="validation_engine.key_creator.KeyCreator"><em>KeyCreator</em></a><em>, </em><em>optional</em>) – Optional key generator used to add an <code class="docutils literal notranslate"><span class="pre">id_key</span></code> column when
+<code class="docutils literal notranslate"><span class="pre">multi_sheet_mode</span></code> is enabled.</p></li>
+<li><p><strong>multi_sheet_mode</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, enables behaviors intended for multi-sheet ingestion,
+including optional key creation. Default is True.</p></li>
 </ul>
 </dd>
 </dl>
@@ -570,25 +696,33 @@ row in multi-sheet mode.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.WorkbookLoader.preprocess_excel">
 <span class="sig-name descname"><span class="pre">preprocess_excel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#WorkbookLoader.preprocess_excel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.WorkbookLoader.preprocess_excel" title="Link to this definition">¶</a></dt>
-<dd><p>Unprotect and unhide the workbook using Excel COM automation.</p>
-<dl class="simple">
+<dd><p>Preprocess the workbook by attempting to remove protection and ensure
+all worksheets are visible via Excel COM automation.</p>
+<dl>
 <dt>This method:</dt><dd><ul class="simple">
 <li><p>Initializes COM for the current thread.</p></li>
-<li><p>Creates an Excel Application instance via <cite>win32.Dispatch</cite>.</p></li>
-<li><p>Attempts to set <cite>Visible=False</cite> and <cite>DisplayAlerts=False</cite>.</p></li>
-<li><p>Calls <a class="reference internal" href="#validation_engine.workbook_loader.ensure_unprotected_visible" title="validation_engine.workbook_loader.ensure_unprotected_visible"><code class="xref py py-func docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a> to unprotect/unhide sheets.</p></li>
-<li><p>Cleans up the Excel instance and uninitializes COM in a <cite>finally</cite> block.</p></li>
+<li><p>Creates or attaches to an Excel Application instance via</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">win32.Dispatch(&quot;Excel.Application&quot;)</span></code>.
+- Attempts to set <code class="docutils literal notranslate"><span class="pre">Visible=False</span></code> and <code class="docutils literal notranslate"><span class="pre">DisplayAlerts=False</span></code>.
+- Calls <a class="reference internal" href="#validation_engine.workbook_loader.ensure_unprotected_visible" title="validation_engine.workbook_loader.ensure_unprotected_visible"><code class="xref py py-func docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a> to unprotect and unhide sheets.
+- Attempts to close the Excel instance and uninitialize COM in a
+<code class="docutils literal notranslate"><span class="pre">finally</span></code> block.</p>
+</dd>
+<dt>Initialization behavior:</dt><dd><ul class="simple">
+<li><p>If Excel COM initialization fails, a single retry is attempted</p></li>
+</ul>
+<p>after a short delay.</p>
+</dd>
+<dt>Error handling:</dt><dd><ul class="simple">
+<li><p>Errors during unprotect/unhide are caught and logged.</p></li>
+<li><p>Failures to initialize Excel after retry will propagate.</p></li>
 </ul>
 </dd>
-</dl>
-<p>It is robust against intermittent COM initialization issues and will retry
-<cite>Excel.Application</cite> creation once after a short delay if the first attempt
-fails. Errors during unprotect/unhide are logged but not re-raised.</p>
-<dl class="simple">
 <dt>Side Effects:</dt><dd><ul class="simple">
 <li><p>Modifies the workbook on disk (unprotects/unhides, then saves).</p></li>
-<li><p>Writes progress and warning messages to stdout.</p></li>
-<li><p>Starts and stops an Excel COM instance.</p></li>
+<li><p>Emits progress and warning messages to stdout.</p></li>
+<li><p>Starts (or attaches to) an Excel COM instance and attempts cleanup.</p></li>
 </ul>
 </dd>
 </dl>
@@ -599,40 +733,53 @@ fails. Errors during unprotect/unhide are logged but not re-raised.</p>
 <span class="sig-name descname"><span class="pre">load_sheets</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#WorkbookLoader.load_sheets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.WorkbookLoader.load_sheets" title="Link to this definition">¶</a></dt>
 <dd><p>Load all configured sheets from the workbook into pandas DataFrames.</p>
 <p>For each sheet defined in <code class="docutils literal notranslate"><span class="pre">sheet_defs[self.workbook_type]</span></code> this method:</p>
-<blockquote>
-<div><ol class="arabic">
-<li><p>Repeatedly attempts to read the sheet using <cite>pandas.read_excel</cite>:
-- Retries indefinitely on <code class="docutils literal notranslate"><span class="pre">PermissionError</span></code> (e.g., OneDrive lock),</p>
-<blockquote>
-<div><p>with a capped backoff.</p>
-</div></blockquote>
-<ul class="simple">
-<li><p>Logs non-permission errors and skips the sheet.</p></li>
+<ol class="arabic">
+<li><dl>
+<dt>Attempts to read the sheet using <code class="docutils literal notranslate"><span class="pre">pandas.read_excel</span></code>:</dt><dd><ul class="simple">
+<li><p>Retries indefinitely on <code class="docutils literal notranslate"><span class="pre">PermissionError</span></code> (e.g., OneDrive locks),</p></li>
 </ul>
+<p>using a capped backoff.
+- Logs non-permission errors and skips the sheet.
+- If the specified sheet is not found, attempts to locate a suitable
+fallback using <a class="reference internal" href="#validation_engine.workbook_loader.find_sheet_by_headers" title="validation_engine.workbook_loader.find_sheet_by_headers"><code class="xref py py-func docutils literal notranslate"><span class="pre">find_sheet_by_headers()</span></code></a>.</p>
+</dd>
+</dl>
 </li>
-<li><p>Applies one of two header strategies:
-- <strong>Dynamic mode</strong> (<cite>self.dynamic=True</cite>): uses</p>
-<blockquote>
-<div><p><a class="reference internal" href="#validation_engine.workbook_loader.extract_columns_noisy" title="validation_engine.workbook_loader.extract_columns_noisy"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a> to map messy headers to canonical labels.</p>
-</div></blockquote>
-<ul class="simple">
-<li><p><strong>Static mode</strong>: slices columns starting at <code class="docutils literal notranslate"><span class="pre">starting_column</span></code> and
-assigns labels from the configuration.</p></li>
+<li><dl>
+<dt>Applies one of two header strategies:</dt><dd><ul class="simple">
+<li><p><strong>Dynamic mode</strong> (<code class="docutils literal notranslate"><span class="pre">self.dynamic=True</span></code>):</p></li>
 </ul>
+<p>Uses <a class="reference internal" href="#validation_engine.workbook_loader.extract_columns_noisy" title="validation_engine.workbook_loader.extract_columns_noisy"><code class="xref py py-func docutils literal notranslate"><span class="pre">extract_columns_noisy()</span></code></a> to map variant headers to
+canonical labels.
+- <strong>Static mode</strong>:
+Slices columns starting at <code class="docutils literal notranslate"><span class="pre">starting_column</span></code> and assigns labels
+directly from configuration (no validation of alignment).</p>
+</dd>
+</dl>
 </li>
-<li><p>Adds a <code class="docutils literal notranslate"><span class="pre">row_number</span></code> column (1-based Excel-style row index, offset by 2
-to account for header rows) to each sheet.</p></li>
-<li><p>In multi-sheet mode, optionally adds an <code class="docutils literal notranslate"><span class="pre">id_key</span></code> column using
-<code class="docutils literal notranslate"><span class="pre">self.keycreator</span></code>.</p></li>
-<li><p>Filters out rows where both “First Name” and “Last Name” fail strict
-alphabetic normalization, if those columns exist.</p></li>
+<li><dl>
+<dt>Adds metadata columns:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">row_number_{sheet}</span></code>: derived from <code class="docutils literal notranslate"><span class="pre">df.index</span> <span class="pre">+</span> <span class="pre">2</span></code> (approximate</p></li>
+</ul>
+<p>Excel row reference, not strictly tied to <code class="docutils literal notranslate"><span class="pre">starting_row</span></code>).
+- <code class="docutils literal notranslate"><span class="pre">id_key</span></code> (optional): added via <code class="docutils literal notranslate"><span class="pre">self.keycreator</span></code> in multi-sheet mode.</p>
+</dd>
+</dl>
+</li>
+<li><dl>
+<dt>Applies row-level filtering (per iteration):</dt><dd><ul class="simple">
+<li><p>If both “First Name” and “Last Name” columns exist, removes rows</p></li>
+</ul>
+<p>where both fail strict alphabetic normalization.</p>
+</dd>
+</dl>
+</li>
 </ol>
-</div></blockquote>
-<p>The result is a dictionary keyed by sheet name, ready to be passed into the
-validation engine.</p>
+<p>The result is a dictionary keyed by sheet name, suitable for downstream
+validation.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Mapping of sheet name → cleaned DataFrame for that sheet.</p>
+<dd class="field-odd"><p>Mapping of sheet name → processed DataFrame.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>dict[str, pd.DataFrame]</p>
@@ -640,19 +787,20 @@ validation engine.</p>
 </dl>
 <dl class="simple">
 <dt>Side Effects:</dt><dd><ul class="simple">
-<li><p>Populates/updates <code class="docutils literal notranslate"><span class="pre">self.permission_denied_log</span></code> with any load errors.</p></li>
-<li><p>Prints progress and error messages to stdout.</p></li>
+<li><p>Populates/updates <code class="docutils literal notranslate"><span class="pre">self.permission_denied_log</span></code> with load errors.</p></li>
+<li><p>Emits progress and diagnostic output to stdout.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>This method assumes <cite>self.sheet_defs</cite> is structured with
-<code class="docutils literal notranslate"><span class="pre">starting_row</span></code>, <code class="docutils literal notranslate"><span class="pre">starting_column</span></code>, <code class="docutils literal notranslate"><span class="pre">labels</span></code>, and optionally
-<code class="docutils literal notranslate"><span class="pre">columns_used</span></code> for each sheet.</p></li>
-<li><p>The retry loop for <cite>PermissionError</cite> is intentional to deal with
-transient sync/locking issues in shared OneDrive environments.</p></li>
+<li><p>Retry on <code class="docutils literal notranslate"><span class="pre">PermissionError</span></code> is unbounded by design to tolerate</p></li>
 </ul>
+<p>transient file locks.
+- Filtering is applied during iteration and may run multiple times
+as sheets are accumulated.
+- Assumes <code class="docutils literal notranslate"><span class="pre">self.sheet_defs</span></code> provides <code class="docutils literal notranslate"><span class="pre">starting_row</span></code>,
+<code class="docutils literal notranslate"><span class="pre">starting_column</span></code>, <code class="docutils literal notranslate"><span class="pre">labels</span></code>, and optionally <code class="docutils literal notranslate"><span class="pre">columns_used</span></code>.</p>
 </dd></dl>
 
 </dd></dl>
@@ -661,24 +809,38 @@ transient sync/locking issues in shared OneDrive environments.</p></li>
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.MultiWorkbookLoader">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">validation_engine.workbook_loader.</span></span><span class="sig-name descname"><span class="pre">MultiWorkbookLoader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workbook_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sheet_defs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">starting_row</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">password</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'workforce'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keycreator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multi_sheet_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#MultiWorkbookLoader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.MultiWorkbookLoader" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Loader for concatenating multiple Excel workbooks into a unified
-sheet-by-sheet structure according to a shared schema definition.</p>
+<p>Loader for aggregating multiple Excel workbooks into a unified
+sheet-by-sheet structure using a shared schema definition.</p>
 <p>This class wraps <a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a> to provide batch ingestion when
 partners submit multiple files for the same reporting period, program, or
-location (e.g., separate New Haven / Bridgeport / Hartford spreadsheets).</p>
-<dl class="simple">
-<dt>It handles:</dt><dd><ul class="simple">
-<li><p>Preprocessing all files via Excel COM (unprotect/hide/unlock).</p></li>
-<li><p>Loading each file’s sheets using the same <cite>sheet_defs</cite> configuration.</p></li>
-<li><p>Injecting an optional <cite>id_key</cite> via a shared <cite>KeyCreator</cite>.</p></li>
-<li><p>Preserving file-level provenance via a <cite>source_file</cite> column.</p></li>
-<li><p>Concatenating sheets across workbooks and applying final cleanup
-(deduplication, index reset, etc.).</p></li>
+location (e.g., separate regional spreadsheets).</p>
+<dl>
+<dt>Core responsibilities:</dt><dd><ul class="simple">
+<li><p>Iterating over multiple workbook paths and loading each via</p></li>
+</ul>
+<p><a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a>.
+- Applying a shared <code class="docutils literal notranslate"><span class="pre">sheet_defs</span></code> configuration across all files.
+- Preserving file-level provenance via a <code class="docutils literal notranslate"><span class="pre">source_file</span></code> column.
+- Concatenating DataFrames by sheet name across workbooks.
+- Performing simple final cleanup (row-wise deduplication, index reset).</p>
+</dd>
+<dt>Optional capabilities:</dt><dd><ul class="simple">
+<li><p>Preprocessing workbooks via Excel COM (see <a class="reference internal" href="#validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all" title="validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all"><code class="xref py py-meth docutils literal notranslate"><span class="pre">preprocess_all()</span></code></a>).</p></li>
+<li><p>Injecting row-level identifiers via a shared <code class="docutils literal notranslate"><span class="pre">KeyCreator</span></code>.</p></li>
 </ul>
 </dd>
+<dt>Behavioral notes:</dt><dd><ul class="simple">
+<li><p>Ingestion is best-effort: missing sheets or partial failures in</p></li>
+</ul>
+<p>individual workbooks do not prevent other files from loading.
+- Sheet aggregation is dynamic; only sheets successfully loaded are
+included in the final output.
+- No strict validation is performed to ensure schema consistency
+across files.</p>
+</dd>
 </dl>
-<p>Designed for noisy, inconsistent partner submissions that still follow a
-common schema (labels, starting rows, required sheets).</p>
+<p>Designed for noisy, inconsistent partner submissions that broadly follow
+a common schema but may vary in structure, naming, or completeness.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -715,61 +877,75 @@ Default is “workforce”.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all">
 <span class="sig-name descname"><span class="pre">preprocess_all</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#MultiWorkbookLoader.preprocess_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all" title="Link to this definition">¶</a></dt>
-<dd><p>Unprotect and unhide all workbooks prior to loading, using a shared
-Excel COM instance.</p>
-<dl class="simple">
+<dd><p>Preprocess all workbooks by attempting to remove protection and ensure
+all worksheets are visible, using a shared Excel COM instance.</p>
+<dl>
 <dt>This method:</dt><dd><ul class="simple">
 <li><p>Initializes COM for the current thread.</p></li>
-<li><p>Creates a single Excel application instance.</p></li>
-<li><p>Iterates over all files in <cite>self.file_paths</cite> and calls
-<a class="reference internal" href="#validation_engine.workbook_loader.ensure_unprotected_visible" title="validation_engine.workbook_loader.ensure_unprotected_visible"><code class="xref py py-func docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a> on each.</p></li>
-<li><p>Ensures Excel is always quit and COM is uninitialized cleanly.</p></li>
+<li><p>Creates or attaches to a single Excel Application instance.</p></li>
+<li><p>Attempts to set <code class="docutils literal notranslate"><span class="pre">Visible=False</span></code> and <code class="docutils literal notranslate"><span class="pre">DisplayAlerts=False</span></code>.</p></li>
+<li><p>Iterates over <code class="docutils literal notranslate"><span class="pre">self.file_paths</span></code> and calls</p></li>
 </ul>
+<p><a class="reference internal" href="#validation_engine.workbook_loader.ensure_unprotected_visible" title="validation_engine.workbook_loader.ensure_unprotected_visible"><code class="xref py py-func docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a> for each workbook.
+- Attempts to close the Excel instance and uninitialize COM in a
+<code class="docutils literal notranslate"><span class="pre">finally</span></code> block.</p>
 </dd>
 </dl>
-<p>This reduces overhead compared to creating a new Excel instance per file,
-and is robust against intermittent COM initialization failures.</p>
-<dl class="simple">
+<p>Using a shared Excel instance reduces overhead compared to launching a
+separate instance per file.</p>
+<dl>
+<dt>Initialization behavior:</dt><dd><ul class="simple">
+<li><p>If Excel COM initialization fails, a single retry is attempted</p></li>
+</ul>
+<p>after a short delay.</p>
+</dd>
+<dt>Error handling:</dt><dd><ul class="simple">
+<li><p>Errors during individual workbook processing are handled within</p></li>
+</ul>
+<p><a class="reference internal" href="#validation_engine.workbook_loader.ensure_unprotected_visible" title="validation_engine.workbook_loader.ensure_unprotected_visible"><code class="xref py py-func docutils literal notranslate"><span class="pre">ensure_unprotected_visible()</span></code></a>.
+- Failures to initialize Excel after retry will propagate.</p>
+</dd>
 <dt>Side Effects:</dt><dd><ul class="simple">
-<li><p>Modifies each workbook on disk (unprotect/unhide/save).</p></li>
-<li><p>Prints progress and warning messages to stdout.</p></li>
-<li><p>Starts a COM Excel instance and terminates it.</p></li>
+<li><p>Modifies each workbook on disk (unprotects/unhides, then saves).</p></li>
+<li><p>Emits progress and warning messages to stdout.</p></li>
+<li><p>Starts (or attaches to) an Excel COM instance and attempts cleanup.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>Assumes Windows + Microsoft Excel installed.</p></li>
-<li><p>If the password is incorrect for any workbook, sheets may remain
-protected but loading may still succeed depending on how pandas
-handles locked files.</p></li>
+<li><p>Requires Windows with Microsoft Excel installed.</p></li>
+<li><p>If the password is incorrect, some sheets may remain protected.</p></li>
+<li><p>Cleanup of the Excel instance is attempted but not guaranteed in</p></li>
 </ul>
+<p>the presence of COM failures.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.workbook_loader.MultiWorkbookLoader.load_all">
 <span class="sig-name descname"><span class="pre">load_all</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/workbook_loader.html#MultiWorkbookLoader.load_all"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.workbook_loader.MultiWorkbookLoader.load_all" title="Link to this definition">¶</a></dt>
-<dd><p>Load and concatenate all workbooks in <cite>self.file_paths</cite>.</p>
-<dl class="simple">
+<dd><p>Load and concatenate all workbooks in <code class="docutils literal notranslate"><span class="pre">self.file_paths</span></code> into a unified
+sheet-by-sheet structure.</p>
+<dl>
 <dt>For each file:</dt><dd><ol class="arabic simple">
 <li><p>Logs which workbook is being processed.</p></li>
-<li><p>Creates a <a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a> with the shared schema.</p></li>
-<li><p>Calls <cite>loader.load_sheets()</cite> to obtain a dict of
-{sheet_name: DataFrame}.</p></li>
-<li><p>Adds a <cite>source_file</cite> column to track data provenance.</p></li>
-<li><p>Concatenates each sheet across workbooks.</p></li>
+<li><p>Instantiates a <a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a> with the shared schema.</p></li>
 </ol>
+<p>3. Calls <code class="docutils literal notranslate"><span class="pre">loader.load_sheets()</span></code> to obtain a mapping of
+<code class="docutils literal notranslate"><span class="pre">{sheet_name:</span> <span class="pre">DataFrame}</span></code>.
+4. Adds a <code class="docutils literal notranslate"><span class="pre">source_file</span></code> column to each DataFrame to preserve provenance.
+5. Concatenates DataFrames by sheet name across all workbooks.</p>
 </dd>
-<dt>After loading all files, a final cleanup step:</dt><dd><ul class="simple">
-<li><p>Drops duplicate rows within each combined sheet.</p></li>
-<li><p>Resets indexes for every sheet.</p></li>
+<dt>After all files are processed, a final cleanup step:</dt><dd><ul class="simple">
+<li><p>Drops duplicate rows within each combined sheet (full-row comparison).</p></li>
+<li><p>Resets the index for each sheet.</p></li>
 </ul>
 </dd>
 </dl>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A mapping of sheet_name → concatenated DataFrame containing
-rows from all provided workbooks.</p>
+<dd class="field-odd"><p>Mapping of <code class="docutils literal notranslate"><span class="pre">sheet_name</span> <span class="pre">→</span> <span class="pre">concatenated</span> <span class="pre">DataFrame</span></code> containing rows
+from all successfully loaded workbooks.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>dict[str, pd.DataFrame]</p>
@@ -777,21 +953,21 @@ rows from all provided workbooks.</p>
 </dl>
 <dl class="simple">
 <dt>Side Effects:</dt><dd><ul class="simple">
-<li><p>Prints progress information to stdout.</p></li>
-<li><p>Uses <a class="reference internal" href="#validation_engine.workbook_loader.WorkbookLoader" title="validation_engine.workbook_loader.WorkbookLoader"><code class="xref py py-class docutils literal notranslate"><span class="pre">WorkbookLoader</span></code></a>, which may create an Excel COM
-instance if preprocessing is used.</p></li>
-<li><p>Adds a <cite>source_file</cite> column to each sheet’s DataFrame.</p></li>
+<li><p>Emits progress information to stdout.</p></li>
+<li><p>Adds a <code class="docutils literal notranslate"><span class="pre">source_file</span></code> column to each sheet’s DataFrame.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>Sheet names must match across files according to <cite>sheet_defs</cite>.</p></li>
-<li><p>This method does not call <cite>preprocess_all()</cite> automatically;
-the caller should invoke it when required.</p></li>
-<li><p>Deduplication is simple (row-wise). Additional deconfliction rules
-may be added depending on program requirements.</p></li>
+<li><p>Sheets are included on a best-effort basis; missing or failed sheets</p></li>
 </ul>
+<p>in individual workbooks are skipped.
+- Sheet names do not need to be identical across all files; only
+observed sheets are included in the final output.
+- This method does not perform preprocessing; callers should invoke
+<a class="reference internal" href="#validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all" title="validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all"><code class="xref py py-meth docutils literal notranslate"><span class="pre">preprocess_all()</span></code></a> beforehand if required.
+- Deduplication is row-wise and does not use keys or subset matching.</p>
 </dd></dl>
 
 </dd></dl>
@@ -855,6 +1031,7 @@ may be added depending on program requirements.</p></li>
             <ul>
 <li><a class="reference internal" href="#">Workbook Loader</a><ul>
 <li><a class="reference internal" href="#workbook-loading-and-preprocessing-utilities">Workbook Loading and Preprocessing Utilities</a><ul>
+<li><a class="reference internal" href="#capabilities">Capabilities</a></li>
 <li><a class="reference internal" href="#major-components">Major Components</a><ul>
 <li><a class="reference internal" href="#functions">Functions</a></li>
 <li><a class="reference internal" href="#classes">Classes</a></li>

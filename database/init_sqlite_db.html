@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="prev" title="Standard Normalizations" href="../validation_engine/standard_normalizations.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Validation Key Creator" href="../validation_engine/key_creator.html"><link rel="prev" title="Validation Crossrule Descriptions" href="../validation_engine/cross_rule_descriptions.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>Database Initialization - OWS Validation Documentation</title>
@@ -204,18 +204,16 @@
 <li class="toctree-l1"><a class="reference internal" href="../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../validation_engine/key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../validation_engine/db_logger.html">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul class="current">
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -258,10 +256,99 @@
 <h1>Database Initialization<a class="headerlink" href="#database-initialization" title="Link to this heading">¶</a></h1>
 <p>Script to initialize the SQLite database for logging validation results. It only needs to be run once.
 It effectively defines the schema for the logging database currently in use.</p>
-<dl class="py function" id="module-database.init_sqlite_db">
+<section id="sqlite-schema-initialization">
+<span id="module-database.init_sqlite_db"></span><h2>SQLite Schema Initialization<a class="headerlink" href="#sqlite-schema-initialization" title="Link to this heading">¶</a></h2>
+<p>This module defines and initializes the core SQLite schema used by the
+OWS validation engine. The database supports:</p>
+<ul class="simple">
+<li><p>participant identity resolution,</p></li>
+<li><p>longitudinal validation tracking,</p></li>
+<li><p>normalized cell-value history,</p></li>
+<li><p>rule-based validation auditing,</p></li>
+<li><p>participant presence monitoring across runs, and</p></li>
+<li><p>cross-run change detection.</p></li>
+</ul>
+<section id="overview">
+<h3>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h3>
+<p>The schema is designed to support reproducible, auditable validation of
+externally submitted Excel workbooks (e.g., CareerConneCT and Good Jobs
+Challenge datasets). Rather than treating each workbook as an isolated
+file, the database preserves historical validation context across runs.</p>
+</section>
+<section id="core-tables">
+<h3>Core Tables<a class="headerlink" href="#core-tables" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>person</dt><dd><p>Canonical identity table representing the “golden record” for an
+individual participant. Stores deterministic matching keys used for
+participant resolution across submissions.</p>
+</dd>
+<dt>participant</dt><dd><p>Dataset-specific participant instance linked to a canonical person.
+Allows the same individual to appear across organizations, datasets,
+and reporting periods.</p>
+</dd>
+<dt>validation_run</dt><dd><p>Metadata describing a single validation execution, including dataset,
+organization, quarter, timestamp, and completion status.</p>
+</dd>
+<dt>participant_presence_log</dt><dd><p>Tracks whether participants were present or missing during a given
+validation run. Supports longitudinal monitoring and disappearance
+detection across submissions.</p>
+</dd>
+<dt>dataset_column</dt><dd><p>Registry of normalized dataset columns used for historical value
+tracking and rule evaluation.</p>
+</dd>
+<dt>cell_value_history</dt><dd><p>Stores raw and normalized cell values over time for each participant
+and column combination. Enables change detection and audit tracing.</p>
+</dd>
+<dt>validation_rule</dt><dd><p>Registry of configured validation rules and associated metadata.</p>
+</dd>
+<dt>validation_violation</dt><dd><p>Stores rule violations generated during validation runs.</p>
+</dd>
+<dt>participant_key_mismatch</dt><dd><p>Tracks identifier inconsistencies and duplicate-key issues detected
+across sheets or workbooks.</p>
+</dd>
+</dl>
+</section>
+<section id="design-notes">
+<h3>Design Notes<a class="headerlink" href="#design-notes" title="Link to this heading">¶</a></h3>
+<p>The schema emphasizes:</p>
+<ul class="simple">
+<li><p>auditability over minimal storage,</p></li>
+<li><p>deterministic participant tracking,</p></li>
+<li><p>support for cross-run comparisons,</p></li>
+<li><p>normalized relational structure, and</p></li>
+<li><p>compatibility with SQLite-based local workflows.</p></li>
+</ul>
+<p>Indexes are included for the most common validation-engine access
+patterns, including:</p>
+<ul class="simple">
+<li><p>participant presence lookups,</p></li>
+<li><p>historical value retrieval,</p></li>
+<li><p>run-based reporting, and</p></li>
+<li><p>rule violation analysis.</p></li>
+</ul>
+</section>
+<section id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>init_db()</dt><dd><p>Creates all tables and indexes defined in <code class="docutils literal notranslate"><span class="pre">SCHEMA_SQL</span></code> if they do
+not already exist.</p>
+</dd>
+</dl>
+</section>
+</section>
+<dl class="py function">
 <dt class="sig sig-object py" id="database.init_sqlite_db.init_db">
 <span class="sig-prename descclassname"><span class="pre">database.init_sqlite_db.</span></span><span class="sig-name descname"><span class="pre">init_db</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/database/init_sqlite_db.html#init_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#database.init_sqlite_db.init_db" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Initialize the SQLite validation database.</p>
+<p>Creates all tables, indexes, and constraints defined in
+<code class="docutils literal notranslate"><span class="pre">VALIDATION_SCHEMA_SQL</span></code> if they do not already exist.</p>
+<p>Foreign-key enforcement is enabled prior to schema creation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 
@@ -270,15 +357,23 @@ It effectively defines the schema for the logging database currently in use.</p>
       <footer>
         
         <div class="related-pages">
-          
-          <a class="prev-page" href="../validation_engine/standard_normalizations.html">
+          <a class="next-page" href="../validation_engine/key_creator.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Validation Key Creator</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../validation_engine/cross_rule_descriptions.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Standard Normalizations</div>
+                <div class="title">Validation Crossrule Descriptions</div>
                 
               </div>
             </a>
@@ -313,6 +408,13 @@ It effectively defines the schema for the logging database currently in use.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Database Initialization</a><ul>
+<li><a class="reference internal" href="#sqlite-schema-initialization">SQLite Schema Initialization</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#core-tables">Core Tables</a></li>
+<li><a class="reference internal" href="#design-notes">Design Notes</a></li>
+<li><a class="reference internal" href="#functions">Functions</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#database.init_sqlite_db.init_db"><code class="docutils literal notranslate"><span class="pre">init_db()</span></code></a></li>
 </ul>
 </li>

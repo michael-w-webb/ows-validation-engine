@@ -202,20 +202,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/db_logger.html">SQL Logger</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
-</ul>
 
 </div>
 </div>
@@ -248,7 +234,33 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>Source code for validation_engine.standard_normalizations</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Lightweight normalization helpers for strict identity-style matching.</span>
+
+<span class="sd">This module provides highly conservative normalization utilities used in</span>
+<span class="sd">contexts where approximate or permissive matching is undesirable. The</span>
+<span class="sd">functions are primarily intended for deterministic identity resolution,</span>
+<span class="sd">record linkage, and participant-key generation workflows.</span>
+
+<span class="sd">Normalization behavior prioritizes:</span>
+<span class="sd">    • removal of spreadsheet/export artifacts</span>
+<span class="sd">    • rejection of placeholder or junk values</span>
+<span class="sd">    • canonical lowercase representations</span>
+<span class="sd">    • stable comparison-friendly outputs</span>
+
+<span class="sd">The helpers intentionally return `None` for ambiguous, malformed, or</span>
+<span class="sd">insufficiently informative values rather than attempting aggressive</span>
+<span class="sd">recovery or fuzzy interpretation.</span>
+
+<span class="sd">Functions:</span>
+<span class="sd">    strict_alphabetic_normalize:</span>
+<span class="sd">        Normalize alphabetic identity-style fields such as names.</span>
+
+<span class="sd">    strict_date_normalize:</span>
+<span class="sd">        Normalize date-like values into ISO date strings (`YYYY-MM-DD`).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 

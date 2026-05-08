@@ -202,20 +202,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/db_logger.html">SQL Logger</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
-</ul>
 
 </div>
 </div>
@@ -248,7 +234,85 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>Source code for validation_engine.validation_column_types</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span> 
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Column validation and normalization framework.</span>
+
+<span class="sd">This module defines reusable column-validator classes used to standardize,</span>
+<span class="sd">validate, and format structured tabular data originating from Excel-based</span>
+<span class="sd">workforce and training-provider reporting systems.</span>
+
+<span class="sd">The validators are designed for high-variability real-world datasets where</span>
+<span class="sd">values may contain:</span>
+<span class="sd">    • inconsistent formatting</span>
+<span class="sd">    • spreadsheet export artifacts</span>
+<span class="sd">    • mixed data types</span>
+<span class="sd">    • malformed categorical responses</span>
+<span class="sd">    • placeholder or junk values</span>
+<span class="sd">    • organization-specific conventions</span>
+
+<span class="sd">Core Responsibilities</span>
+<span class="sd">---------------------</span>
+<span class="sd">Each validator is responsible for some combination of:</span>
+
+<span class="sd">    • normalization</span>
+<span class="sd">        Converting messy raw values into canonical internal representations.</span>
+
+<span class="sd">    • validation</span>
+<span class="sd">        Applying type- and domain-specific validation rules.</span>
+
+<span class="sd">    • formatting</span>
+<span class="sd">        Converting normalized values into standardized output forms.</span>
+
+<span class="sd">    • error reporting</span>
+<span class="sd">        Producing structured row-level validation metadata suitable for</span>
+<span class="sd">        QA workflows, audit reporting, and downstream review interfaces.</span>
+
+<span class="sd">Validation Workflow</span>
+<span class="sd">-------------------</span>
+<span class="sd">Most validators follow a common lifecycle:</span>
+
+<span class="sd">    1. base_clean()</span>
+<span class="sd">        Shared low-level preprocessing such as whitespace cleanup and</span>
+<span class="sd">        normalization of spreadsheet error tokens.</span>
+
+<span class="sd">    2. normalize()</span>
+<span class="sd">        Type-specific parsing and canonicalization logic.</span>
+
+<span class="sd">    3. format()</span>
+<span class="sd">        Optional output formatting or presentation normalization.</span>
+
+<span class="sd">    4. errors_df()</span>
+<span class="sd">        Structured validation-error generation.</span>
+
+<span class="sd">Validator Types</span>
+<span class="sd">---------------</span>
+<span class="sd">Included validators support a range of common workforce-reporting fields,</span>
+<span class="sd">including:</span>
+
+<span class="sd">    • categorical responses</span>
+<span class="sd">    • booleans</span>
+<span class="sd">    • dates</span>
+<span class="sd">    • ZIP codes</span>
+<span class="sd">    • State IDs</span>
+<span class="sd">    • O*NET occupation codes</span>
+<span class="sd">    • NAICS industry codes</span>
+<span class="sd">    • hourly wages</span>
+<span class="sd">    • hours-worked values</span>
+
+<span class="sd">Design Notes</span>
+<span class="sd">------------</span>
+<span class="sd">The framework prioritizes:</span>
+<span class="sd">    • deterministic normalization behavior</span>
+<span class="sd">    • explicit handling of malformed data</span>
+<span class="sd">    • transparent validation logic</span>
+<span class="sd">    • spreadsheet-oriented reporting compatibility</span>
+<span class="sd">    • vectorized pandas operations where practical</span>
+
+<span class="sd">These validators are primarily intended for structured reporting pipelines</span>
+<span class="sd">rather than permissive end-user form validation systems.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span> 
 <span class="kn">from</span><span class="w"> </span><span class="nn">rapidfuzz</span><span class="w"> </span><span class="kn">import</span> <span class="n">process</span><span class="p">,</span> <span class="n">fuzz</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span> 
@@ -278,13 +342,18 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.BaseColumn.base_clean">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">base_clean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Perform low-level normalization of a column before type-specific validation.</span>
+<span class="sd">        Apply shared low-level cleaning used by all column validators.</span>
 
-<span class="sd">        Operations performed:</span>
-<span class="sd">        - Convert to pandas `&quot;string&quot;` dtype</span>
-<span class="sd">        - Strip leading/trailing whitespace</span>
-<span class="sd">        - Replace empty strings or whitespace-only strings with `pd.NA`</span>
-<span class="sd">        - Replace common Excel/CSV error tokens (e.g. &quot;#VALUE!&quot;, &quot;NaN&quot;) with `pd.NA`</span>
+<span class="sd">        This method standardizes missing-value handling and performs lightweight</span>
+<span class="sd">        string normalization before type-specific parsing or validation logic is</span>
+<span class="sd">        applied.</span>
+
+<span class="sd">        Cleaning steps:</span>
+<span class="sd">            1. Convert values to pandas `&quot;string&quot;` dtype</span>
+<span class="sd">            2. Strip leading and trailing whitespace</span>
+<span class="sd">            3. Replace empty or whitespace-only values with `pd.NA`</span>
+<span class="sd">            4. Replace known spreadsheet error tokens and null-like literals</span>
+<span class="sd">            (e.g. &quot;#VALUE!&quot;, &quot;NaN&quot;, &quot;&lt;NA&gt;&quot;) with `pd.NA`</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            s (pd.Series):</span>
@@ -292,7 +361,7 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.Series:</span>
-<span class="sd">                Cleaned series with standardized missing-value representation.</span>
+<span class="sd">                Cleaned Series with standardized missing-value representation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span><span class="p">)</span>
@@ -300,105 +369,62 @@
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ERROR_TOKENS</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">s</span></div>
 
+    
 <div class="viewcode-block" id="BaseColumn.errors_df">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.BaseColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        This is a function shell in the base column class, each sublcass implements its own</span>
-<span class="sd">        version. </span>
+<span class="sd">        Construct a standardized validation-error DataFrame.</span>
 
-<span class="sd">        Construct a standardized DataFrame describing validation errors for this</span>
-<span class="sd">        column type.</span>
+<span class="sd">        Subclasses implement column-specific validation logic and return</span>
+<span class="sd">        row-level error metadata using a consistent schema.</span>
 
-<span class="sd">        Each subclass defines its own validation rules (e.g., required values,</span>
-<span class="sd">        type constraints, range checks, format rules), but all error reports</span>
-<span class="sd">        returned from column validators share the same structure.</span>
-
-<span class="sd">        Typical error conditions include (depending on subclass logic):</span>
-<span class="sd">            - Missing required values</span>
-<span class="sd">            - Values that cannot be normalized or parsed</span>
-<span class="sd">            - Values that violate type- or format-specific constraints</span>
-<span class="sd">            - Values that fall outside allowed or expected ranges</span>
-
-<span class="sd">        Args:</span>
-<span class="sd">            col (str):</span>
-<span class="sd">                Name of the column being validated.</span>
-<span class="sd">            raw (pd.Series):</span>
-<span class="sd">                Original unnormalized values as read from the dataset.</span>
-<span class="sd">            s_norm (pd.Series):</span>
-<span class="sd">                Normalized or canonicalized values produced by `normalize()`.</span>
-<span class="sd">            file (str or None):</span>
-<span class="sd">                Optional identifier of the source file, included for reporting.</span>
-<span class="sd">            sheet (str or None):</span>
-<span class="sd">                Sheet name or dataset section used for contextual error reporting.</span>
-<span class="sd">            row_offset (int):</span>
-<span class="sd">                Offset applied when converting DataFrame index positions to</span>
-<span class="sd">                Excel-style row numbers.</span>
+<span class="sd">        Expected output columns:</span>
+<span class="sd">            [</span>
+<span class="sd">                &quot;file&quot;,</span>
+<span class="sd">                &quot;sheet&quot;,</span>
+<span class="sd">                &quot;row_number&quot;,</span>
+<span class="sd">                &quot;column&quot;,</span>
+<span class="sd">                &quot;rule&quot;,</span>
+<span class="sd">                &quot;raw_value&quot;,</span>
+<span class="sd">                &quot;normalized&quot;</span>
+<span class="sd">            ]</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.DataFrame:</span>
-<span class="sd">                A structured validation error table with columns:</span>
-<span class="sd">                [</span>
-<span class="sd">                    &quot;file&quot;,</span>
-<span class="sd">                    &quot;sheet&quot;,</span>
-<span class="sd">                    &quot;row_number&quot;,</span>
-<span class="sd">                    &quot;column&quot;,</span>
-<span class="sd">                    &quot;rule&quot;,</span>
-<span class="sd">                    &quot;raw_value&quot;,</span>
-<span class="sd">                    &quot;normalized&quot;</span>
-<span class="sd">                ]</span>
-
-<span class="sd">                If no errors are found, returns an empty DataFrame with this schema.</span>
-<span class="sd">    </span>
+<span class="sd">                Validation errors for the column. Implementations should return</span>
+<span class="sd">                an empty DataFrame with the standard schema when no errors exist.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize a raw value into a canonical representation suitable for</span>
+<span class="sd">        comparison and downstream validation logic.</span>
 
-<span class="sd">        This is a function shell in the base column class, each sublcass implements its own</span>
-<span class="sd">        version. </span>
-
-<span class="sd">        Normalize a raw value into a standardized string representation suitable</span>
-<span class="sd">        for comparison and downstream validation logic.</span>
-
-<span class="sd">        This helper performs lightweight canonicalization to ensure consistent</span>
-<span class="sd">        matching across different input formats.</span>
-
-<span class="sd">        Typical cleaning steps:</span>
-<span class="sd">            - Convert value to string if needed</span>
-<span class="sd">            - Convert to lowercase for case-insensitive comparison</span>
-<span class="sd">            - Collapse excessive internal whitespace</span>
-<span class="sd">            - Strip leading/trailing whitespace</span>
-<span class="sd">            - Treat sequences of zeros (&quot;0&quot;, &quot;00&quot;, etc.) or empty strings as missing</span>
+<span class="sd">        Subclasses implement type-specific cleaning behavior. Typical operations</span>
+<span class="sd">        may include whitespace normalization, case normalization, formatting</span>
+<span class="sd">        cleanup, or conversion of placeholder values to missing representations.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">            text (str or any):</span>
+<span class="sd">            text:</span>
 <span class="sd">                Raw input value.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            str:</span>
-<span class="sd">                A normalized string representation, or an empty string if the value</span>
-<span class="sd">                is considered missing.</span>
+<span class="sd">                Cleaned canonical representation of the value.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
     
 <div class="viewcode-block" id="BaseColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.BaseColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        This is a function shell in the base column class, each sublcass implements its own</span>
-<span class="sd">        version. </span>
-
-<span class="sd">        Normalize a column&#39;s raw values into a standardized representation suitable</span>
+<span class="sd">        Normalize raw column values into a standardized representation suitable</span>
 <span class="sd">        for validation and downstream processing.</span>
 
-<span class="sd">        Normalization typically includes:</span>
-<span class="sd">            1. Applying the shared base cleaning (string coercion, trimming,</span>
-<span class="sd">            whitespace collapsing, and removal of known error tokens)</span>
-<span class="sd">            2. Performing type-specific transformations (e.g., parsing dates,</span>
-<span class="sd">            numeric coercion, mapping to canonical labels)</span>
-<span class="sd">            3. Producing a clean, consistent output that downstream validators</span>
-<span class="sd">            can rely on</span>
+<span class="sd">        Subclasses implement type-specific normalization behavior. Implementations</span>
+<span class="sd">        typically apply shared base cleaning followed by transformations such as</span>
+<span class="sd">        parsing, coercion, canonical mapping, or formatting standardization.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            s (pd.Series):</span>
@@ -406,43 +432,47 @@
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.Series:</span>
-<span class="sd">                A normalized representation of the column. The specific form depends</span>
-<span class="sd">                on the column subtype (e.g., strings, codes, dates, booleans). Values</span>
-<span class="sd">                that cannot be meaningfully interpreted should be represented as</span>
-<span class="sd">                `pd.NA`.</span>
+<span class="sd">                Normalized column values. Values that cannot be meaningfully</span>
+<span class="sd">                interpreted should generally be represented as `pd.NA`.</span>
 <span class="sd">        &quot;&quot;&quot;</span></div>
 </div>
-
 
 <div class="viewcode-block" id="categoricalColumn">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">categoricalColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Validator for limited-response categorical fields.</span>
+<span class="sd">    Validator for constrained categorical fields.</span>
 
-<span class="sd">    Responsibilities:</span>
-<span class="sd">    - Normalize raw text (case, whitespace, Excel error tokens)</span>
-<span class="sd">    - Map cleaned text to a canonical accepted value</span>
-<span class="sd">    - Optionally perform fuzzy matching for near-misses or typos</span>
-<span class="sd">    - Produce per-row error diagnostics</span>
+<span class="sd">    This column type normalizes free-text categorical responses into</span>
+<span class="sd">    canonical accepted values using exact and optional fuzzy matching.</span>
 
-<span class="sd">    Supports two accepted-response formats:</span>
-<span class="sd">        • list[str] — literal accepted values</span>
-<span class="sd">        • dict[str, list[str]] — canonical value → alternative spellings/variants</span>
+<span class="sd">    Accepted responses may be provided as:</span>
+<span class="sd">        • list[str]:</span>
+<span class="sd">            Literal accepted values.</span>
+<span class="sd">        • dict[str, list[str]]:</span>
+<span class="sd">            Canonical value mapped to alternative spellings or variants.</span>
+
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared base cleaning from `BaseColumn`</span>
+<span class="sd">        • Normalizes whitespace and casing</span>
+<span class="sd">        • Maps cleaned values to canonical accepted responses</span>
+<span class="sd">        • Optionally applies fuzzy matching for near matches</span>
+<span class="sd">        • Produces standardized row-level validation errors</span>
 
 <span class="sd">    Attributes:</span>
 <span class="sd">        required (bool):</span>
-<span class="sd">            Whether blank values should be treated as validation errors.</span>
+<span class="sd">            Whether missing values should be treated as validation errors.</span>
 <span class="sd">        fuzzy (bool):</span>
-<span class="sd">            Whether to fuzzy-match unmatched responses.</span>
+<span class="sd">            Whether fuzzy matching is enabled for unmatched values.</span>
 <span class="sd">        min_score (int):</span>
-<span class="sd">            Minimum fuzzy match ratio (0–100) required to accept a match.</span>
+<span class="sd">            Minimum fuzzy-match score required for acceptance.</span>
 <span class="sd">        accepted (dict[str, str]):</span>
-<span class="sd">            Lookup from normalized input → canonical value.</span>
+<span class="sd">            Mapping of cleaned input values to canonical labels.</span>
 <span class="sd">        row_numbers (pd.Series | None):</span>
-<span class="sd">            Sheet row numbers used to report error locations.</span>
+<span class="sd">            Row references used in validation error reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
 
 <div class="viewcode-block" id="categoricalColumn.__init__">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.__init__">[docs]</a>
@@ -484,6 +514,30 @@
 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_clean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply categorical-specific text normalization used for value matching.</span>
+
+<span class="sd">        This helper standardizes categorical values into a canonical comparison</span>
+<span class="sd">        form after shared preprocessing from `base_clean()`.</span>
+
+<span class="sd">        Cleaning behavior includes:</span>
+<span class="sd">            • stripping leading/trailing whitespace</span>
+<span class="sd">            • collapsing repeated internal whitespace</span>
+<span class="sd">            • converting numeric float strings such as &quot;1.0&quot; to &quot;1&quot;</span>
+<span class="sd">            • treating sequences of zeros as missing</span>
+<span class="sd">            • case-insensitive normalization via `casefold()`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            text:</span>
+<span class="sd">                Raw categorical value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str:</span>
+<span class="sd">                Canonical comparison value used for exact and fuzzy matching.</span>
+<span class="sd">                Missing values are returned as an empty string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="k">if</span> <span class="n">text</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
             <span class="k">return</span> <span class="s2">&quot;&quot;</span>
 
@@ -505,21 +559,22 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">        </span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Normalize a categorical column.</span>
+<span class="sd">        Normalize categorical values into canonical accepted responses.</span>
 
-<span class="sd">        Workflow:</span>
-<span class="sd">            1. Apply base cleaning (from BaseColumn)</span>
-<span class="sd">            2. Convert cleaned text into canonical category labels</span>
-<span class="sd">            3. For unmatched values, attempt fuzzy matching (if enabled)</span>
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Apply categorical-specific normalization via `_clean()`</span>
+<span class="sd">            3. Perform exact matching against accepted responses</span>
+<span class="sd">            4. Optionally apply fuzzy matching for unmatched values</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            s (pd.Series):</span>
-<span class="sd">                Raw column values.</span>
+<span class="sd">                Raw categorical values.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.Series:</span>
-<span class="sd">                Normalized categorical values (canonical form), or `pd.NA` where</span>
-<span class="sd">                no acceptable value can be determined.</span>
+<span class="sd">                Canonical categorical values or `pd.NA` for values that</span>
+<span class="sd">                cannot be matched or interpreted.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>     
@@ -554,6 +609,7 @@
 <div class="viewcode-block" id="categoricalColumn.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return canonical categorical values unchanged.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">s_norm</span></div>
 
 
@@ -564,12 +620,13 @@
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Construct a DataFrame describing validation errors for this categorical column.</span>
+<span class="sd">        Construct validation errors for categorical values.</span>
 
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            - &quot;Required but missing&quot;: value is missing but field is required</span>
-<span class="sd">            - &quot;Invalid Value, not in accepted responses&quot;: raw value was present</span>
-<span class="sd">                but could not be mapped (even via fuzzy matching)</span>
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, not in accepted responses&quot;</span>
+<span class="sd">                Value could not be mapped to an accepted categorical response.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            col (str):</span>
@@ -578,18 +635,16 @@
 <span class="sd">                Original unnormalized values.</span>
 <span class="sd">            s_norm (pd.Series):</span>
 <span class="sd">                Normalized categorical values.</span>
-<span class="sd">            file (str or None):</span>
-<span class="sd">                Optional file identifier used in reporting.</span>
-<span class="sd">            sheet (str or None):</span>
-<span class="sd">                Sheet name for context in error reporting.</span>
+<span class="sd">            file (str | None):</span>
+<span class="sd">                Optional source file identifier.</span>
+<span class="sd">            sheet (str | None):</span>
+<span class="sd">                Optional sheet or dataset section name.</span>
 <span class="sd">            row_offset (int):</span>
-<span class="sd">                Offset applied when raw indices do not match Excel row numbers.</span>
+<span class="sd">                Offset used when deriving row numbers from the index.</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            pd.DataFrame:</span>
-<span class="sd">                Structured error report with columns:</span>
-<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;,</span>
-<span class="sd">                 &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
+<span class="sd">                Structured categorical validation errors.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">masks</span> <span class="o">=</span> <span class="p">{</span>
@@ -630,64 +685,40 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">fileSpecificCategoricalColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for categorical fields whose valid responses depend on the</span>
-<span class="sd">    originating file (e.g., different CBOs use different program names).</span>
+<span class="sd">    Validator for categorical fields whose accepted responses vary by file</span>
+<span class="sd">    or source organization.</span>
 
-<span class="sd">    This validator selects the appropriate canonical-to-variant mapping based on</span>
-<span class="sd">    the provided `file` identifier, normalizes raw text values, and applies</span>
-<span class="sd">    both exact and optional fuzzy matching to produce consistent categorical</span>
-<span class="sd">    outputs.</span>
+<span class="sd">    This column type selects a file-specific accepted-response mapping and</span>
+<span class="sd">    normalizes raw categorical values into canonical labels using exact and</span>
+<span class="sd">    optional fuzzy matching.</span>
 
-<span class="sd">    Expected Structure of accepted_responses:</span>
+<span class="sd">    Expected accepted-response structure:</span>
 <span class="sd">        {</span>
-<span class="sd">            &quot;FILE_ID_A&quot;: {</span>
-<span class="sd">                &quot;Canonical Label 1&quot;: [&quot;variant1&quot;, &quot;v1&quot;, ...],</span>
-<span class="sd">                &quot;Canonical Label 2&quot;: [&quot;variant2&quot;, &quot;v2&quot;, ...],</span>
-<span class="sd">            },</span>
-<span class="sd">            &quot;FILE_ID_B&quot;: {</span>
-<span class="sd">                &quot;Canonical Label X&quot;: [...],</span>
-<span class="sd">                ...</span>
+<span class="sd">            &quot;FILE_A&quot;: {</span>
+<span class="sd">                &quot;Canonical Value&quot;: [&quot;variant1&quot;, &quot;variant2&quot;]</span>
 <span class="sd">            }</span>
 <span class="sd">        }</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        accepted_responses (dict):</span>
-<span class="sd">            Nested dictionary mapping file IDs to canonical labels and their</span>
-<span class="sd">            allowable variants.</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values are treated as validation errors.</span>
-<span class="sd">        fuzzy (bool, optional):</span>
-<span class="sd">            Whether to attempt fuzzy matching for values not in `accepted_responses`.</span>
-<span class="sd">        min_score (int, optional):</span>
-<span class="sd">            Minimum fuzzy-match score (0–100) required to accept a near match.</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Spreadsheet-aware row references used when constructing error logs.</span>
-<span class="sd">        file (str, optional):</span>
-<span class="sd">            File identifier (e.g., &quot;CWP&quot;, &quot;BRBC&quot;) selecting which accepted-response</span>
-<span class="sd">            mapping to use.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        This class does not return directly; its methods return normalized Series</span>
-<span class="sd">        or structured error DataFrames (see below).</span>
-
 <span class="sd">    Behavior:</span>
-<span class="sd">        • Builds a reverse mapping (variant → canonical) for the active file.</span>
-<span class="sd">        • Cleans raw values (casefold, whitespace collapsing, handling &quot;0&quot;/Excel tokens).</span>
-<span class="sd">        • Performs exact matches first, then fuzzy matching (if enabled).</span>
-<span class="sd">        • Returns canonical category labels or `pd.NA` for invalid/unmatched values.</span>
-<span class="sd">        • Generates structured error reports for:</span>
-<span class="sd">            - required but missing values</span>
-<span class="sd">            - invalid or file-incompatible categorical entries</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Applies categorical-specific normalization via `_clean()`</span>
+<span class="sd">        • Selects accepted responses using `self.file`</span>
+<span class="sd">        • Performs exact and optional fuzzy matching</span>
+<span class="sd">        • Produces standardized validation errors</span>
 
-<span class="sd">    Side Effects:</span>
-<span class="sd">        • May raise `ValueError` if `self.file` does not exist in accepted_responses.</span>
-<span class="sd">        • Uses `row_numbers` to produce precise Excel-style row metadata.</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • File-specific categorical validation is essential when partners use</span>
-<span class="sd">          distinct naming conventions or inconsistent capitalization/spelling.</span>
-<span class="sd">        • Fuzzy matching should be used cautiously for fields where misclassification</span>
-<span class="sd">          has high cost (e.g., credentials, program names).</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        accepted_responses (dict):</span>
+<span class="sd">            File-specific accepted categorical mappings.</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        fuzzy (bool):</span>
+<span class="sd">            Whether fuzzy matching is enabled.</span>
+<span class="sd">        min_score (int):</span>
+<span class="sd">            Minimum fuzzy-match score required for acceptance.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
+<span class="sd">        file (str | None):</span>
+<span class="sd">            File identifier used to select the accepted-response mapping.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">accepted_responses</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">fuzzy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">min_score</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">90</span><span class="p">,</span> <span class="n">row_numbers</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -700,7 +731,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="o">=</span> <span class="n">file</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_clean</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Normalize text for lookup.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize categorical values into a canonical comparison form.</span>
+
+<span class="sd">        Cleaning behavior includes whitespace normalization, case normalization,</span>
+<span class="sd">        and treatment of zero-only values as missing.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            text (str):</span>
+<span class="sd">                Raw categorical value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str:</span>
+<span class="sd">                Canonical comparison value used for matching.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">text</span><span class="p">):</span>
             <span class="k">return</span> <span class="s2">&quot;&quot;</span>
         <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;0+&quot;</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
@@ -711,8 +755,26 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Normalize categorical text values based on file-specific accepted responses.</span>
-<span class="sd">        file_id must match a key in accepted_responses.</span>
+<span class="sd">        Normalize categorical values using file-specific accepted responses.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Select the accepted-response mapping for `self.file`</span>
+<span class="sd">            2. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            3. Apply categorical-specific normalization via `_clean()`</span>
+<span class="sd">            4. Perform exact matching</span>
+<span class="sd">            5. Optionally apply fuzzy matching for unmatched values</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw categorical values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Canonical categorical values or `pd.NA` for unmatched values.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError:</span>
+<span class="sd">                If `self.file` does not exist in `accepted_responses`.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">accepted_responses</span><span class="p">:</span>
@@ -757,7 +819,19 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Report missing or invalid categorical entries.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for file-specific categorical values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, not in accepted responses&quot;</span>
+<span class="sd">                Value could not be matched to a valid file-specific response.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured categorical validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">masks</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;Required but missing&quot;</span><span class="p">:</span> <span class="p">(</span>
                 <span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">required</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">s_norm</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
@@ -929,8 +1003,31 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">booleanColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span> 
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for Yes/No fields. </span>
-<span class="sd">    Accepts common yes/no variants, noramlizes and casts to 1/0.</span>
+<span class="sd">    Validator for boolean-like categorical fields.</span>
+
+<span class="sd">    This column type normalizes common yes/no representations into canonical</span>
+<span class="sd">    boolean categories.</span>
+
+<span class="sd">    Accepted representations include:</span>
+<span class="sd">        • yes / no</span>
+<span class="sd">        • y / n</span>
+<span class="sd">        • true / false</span>
+<span class="sd">        • 1 / 0</span>
+<span class="sd">        • numeric float equivalents such as 1.0 / 0.0</span>
+
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Normalizes numeric-like values before string conversion</span>
+<span class="sd">        • Maps accepted variants to canonical &quot;Yes&quot; / &quot;No&quot; values</span>
+<span class="sd">        • Produces standardized validation errors for invalid entries</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        accepted (dict[str, str]):</span>
+<span class="sd">            Mapping of accepted boolean variants to canonical values.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;boolean&quot;</span>
@@ -948,6 +1045,25 @@
 <div class="viewcode-block" id="booleanColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize boolean-like values into canonical &quot;Yes&quot; / &quot;No&quot; labels.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Normalize numeric values such as `1.0` → `1`</span>
+<span class="sd">            3. Standardize casing and whitespace</span>
+<span class="sd">            4. Map accepted variants to canonical boolean labels</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw boolean-like values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Canonical &quot;Yes&quot; / &quot;No&quot; values or `pd.NA` for invalid</span>
+<span class="sd">                or unrecognized entries.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
 
@@ -972,6 +1088,24 @@
 <div class="viewcode-block" id="booleanColumn.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format canonical boolean values as nullable integer indicators.</span>
+
+<span class="sd">        Canonical values are converted as follows:</span>
+<span class="sd">            • &quot;Yes&quot; → 1</span>
+<span class="sd">            • &quot;No&quot;  → 0</span>
+
+<span class="sd">        Missing values are preserved using pandas nullable integer dtype</span>
+<span class="sd">        (`Int64`).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s_norm (pd.Series):</span>
+<span class="sd">                Normalized boolean values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Nullable integer representation of boolean values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span><span class="p">(</span>
             <span class="n">s_norm</span><span class="o">.</span><span class="n">map</span><span class="p">({</span><span class="s2">&quot;Yes&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;No&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;Int64&quot;</span><span class="p">)</span>
         <span class="p">)</span></div>
@@ -981,6 +1115,33 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for boolean-like values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, must be Yes/No&quot;</span>
+<span class="sd">                Value could not be interpreted as a recognized boolean variant.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            col (str):</span>
+<span class="sd">                Column name being validated.</span>
+<span class="sd">            raw (pd.Series):</span>
+<span class="sd">                Original unnormalized values.</span>
+<span class="sd">            s_norm (pd.Series):</span>
+<span class="sd">                Normalized boolean values.</span>
+<span class="sd">            file (str | None):</span>
+<span class="sd">                Optional source file identifier.</span>
+<span class="sd">            sheet (str | None):</span>
+<span class="sd">                Optional sheet or dataset section name.</span>
+<span class="sd">            row_offset (int):</span>
+<span class="sd">                Offset used when deriving row numbers from the index.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured boolean validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">masks</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;Required but missing&quot;</span><span class="p">:</span> <span class="p">(</span>
@@ -1021,83 +1182,37 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">dateTimeColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span> 
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for parsing, normalizing, and validating date values.</span>
+<span class="sd">    Validator for date and datetime fields.</span>
 
-<span class="sd">    This validator handles a wide variety of messy real-world date formats,</span>
-<span class="sd">    including embedded month names, Unicode separators, Excel-style shorthand,</span>
-<span class="sd">    and inconsistent spacing. It attempts to extract a canonical date in</span>
-<span class="sd">    ISO format (YYYY-MM-DD), enforcing optional minimum and maximum bounds.</span>
+<span class="sd">    This column type normalizes a wide variety of real-world date formats</span>
+<span class="sd">    into pandas datetime values and validates them against optional minimum</span>
+<span class="sd">    and maximum bounds.</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning to remove whitespace, Excel error tokens,</span>
-<span class="sd">          and placeholder junk.</span>
-<span class="sd">        • Normalizes text using `_clean_text`, which:</span>
-<span class="sd">            - Removes invisible unicode characters</span>
-<span class="sd">            - Converts non-ASCII dashes and separators to &quot;/&quot;</span>
-<span class="sd">            - Preserves month names (Jan, February, etc.)</span>
-<span class="sd">            - Extracts ISO (YYYY-MM-DD), US (MM/DD/YYYY), or fallback numeric patterns</span>
-<span class="sd">        • Converts cleaned strings into pandas datetime objects via</span>
-<span class="sd">          `pd.to_datetime(..., errors=&quot;coerce&quot;)`.</span>
-<span class="sd">        • Flags dates outside the configured allowable range.</span>
-<span class="sd">        • Supports explicit invalid tokens (&quot;n/a&quot;, &quot;null&quot;, &quot;NaT&quot;, etc.).</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • normalization of inconsistent separators and unicode characters</span>
+<span class="sd">        • handling of month names and mixed formatting styles</span>
+<span class="sd">        • recovery from partially malformed date strings</span>
+<span class="sd">        • coercion of invalid or placeholder values to missing values</span>
+<span class="sd">        • validation against configurable date ranges</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values after cleaning generate &quot;Required but missing&quot;</span>
-<span class="sd">            validation errors.</span>
-<span class="sd">        min_date (str or None, optional):</span>
-<span class="sd">            Earliest permissible date (inclusive). If None, no lower bound is applied.</span>
-<span class="sd">        max_date (str or None, optional):</span>
-<span class="sd">            Latest permissible date (inclusive). If None, no upper bound is applied.</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Excel-style row numbers used when creating error reports. If omitted,</span>
-<span class="sd">            DataFrame index + `row_offset` is used instead.</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Applies date-specific text normalization via `_clean_text()`</span>
+<span class="sd">        • Parses cleaned values using `pd.to_datetime()`</span>
+<span class="sd">        • Produces standardized validation errors for:</span>
+<span class="sd">            - missing required values</span>
+<span class="sd">            - invalid dates</span>
+<span class="sd">            - out-of-range dates</span>
 
-<span class="sd">    normalize(s):</span>
-<span class="sd">        • Input:</span>
-<span class="sd">            s (pd.Series): Raw date values (strings, numerics, mixed).</span>
-<span class="sd">        • Output:</span>
-<span class="sd">            pd.Series of pandas datetime64 values or `NaT` where coercion fails.</span>
-
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Base cleaning.</span>
-<span class="sd">            2. Replace common invalid tokens with NA.</span>
-<span class="sd">            3. Apply `_clean_text` to extract a date-like pattern.</span>
-<span class="sd">            4. Parse via `pd.to_datetime`.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        • Formats parsed datetime objects as ISO strings (&quot;YYYY-MM-DD&quot;).</span>
-<span class="sd">        • Missing values are emitted as empty strings.</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        • Constructs a structured DataFrame describing date validation errors.</span>
-<span class="sd">        • Error categories include:</span>
-<span class="sd">            - &quot;Required but missing&quot;</span>
-<span class="sd">            - &quot;Invalid Value, not a valid date&quot;</span>
-<span class="sd">            - &quot;Invalid Value, date before minimum allowed&quot;</span>
-<span class="sd">            - &quot;Invalid Value, date after maximum allowed&quot;</span>
-<span class="sd">        • Output columns:</span>
-<span class="sd">            [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;,</span>
-<span class="sd">             &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row numbers use:</span>
-<span class="sd">            • self.row_numbers (if provided), otherwise</span>
-<span class="sd">            • DataFrame index + `row_offset`.</span>
-
-<span class="sd">    Returns:</span>
-<span class="sd">        The class does not return values directly, but its methods produce:</span>
-<span class="sd">            • normalized datetime Series</span>
-<span class="sd">            • formatted ISO date strings</span>
-<span class="sd">            • structured validation error DataFrames</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • `_clean_text` attempts to recover dates from extremely irregular input.</span>
-<span class="sd">        • The validator avoids interpreting 2-digit years heuristically unless</span>
-<span class="sd">          clearly part of a recognizable MM/DD/YY pattern.</span>
-<span class="sd">        • Inputs like &quot;.&quot;, &quot;---&quot;, &quot;/&quot;, empty strings, or placeholder artifacts</span>
-<span class="sd">          are treated as missing.</span>
-<span class="sd">        • Date ranges allow you to prevent absurd historical values (e.g. 1/1/1895)</span>
-<span class="sd">          or future dates beyond expected operational windows.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        min_date (pd.Timestamp | None):</span>
+<span class="sd">            Minimum allowed date.</span>
+<span class="sd">        max_date (pd.Timestamp | None):</span>
+<span class="sd">            Maximum allowed date.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;date_time&quot;</span>
@@ -1123,6 +1238,28 @@
 
     
     <span class="k">def</span><span class="w"> </span><span class="nf">_clean_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize irregular date text into a parseable date representation.</span>
+
+<span class="sd">        Cleaning behavior includes:</span>
+<span class="sd">            • unicode normalization</span>
+<span class="sd">            • separator normalization</span>
+<span class="sd">            • removal of invisible/control characters</span>
+<span class="sd">            • preservation of recognized month names</span>
+<span class="sd">            • extraction of common ISO and U.S. date patterns</span>
+
+<span class="sd">        The method attempts to recover usable date strings from malformed</span>
+<span class="sd">        or inconsistently formatted inputs prior to datetime parsing.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            val (str):</span>
+<span class="sd">                Raw date value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str | pd.NA:</span>
+<span class="sd">                Cleaned date string suitable for parsing, or `pd.NA`</span>
+<span class="sd">                if no valid date structure can be identified.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span>
 
@@ -1194,6 +1331,24 @@
 <div class="viewcode-block" id="dateTimeColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize raw date values into pandas datetime objects.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Replace common invalid tokens with missing values</span>
+<span class="sd">            3. Apply date-specific normalization via `_clean_text()`</span>
+<span class="sd">            4. Parse cleaned values using `pd.to_datetime()`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw date values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Parsed datetime values or `NaT` where parsing fails.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
         
@@ -1216,6 +1371,19 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span> 
 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format datetime values as ISO date strings.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s_norm (pd.Series):</span>
+<span class="sd">                Normalized datetime values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                ISO-formatted date strings (`YYYY-MM-DD`). Missing</span>
+<span class="sd">                values are returned as empty strings.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">out</span> <span class="o">=</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span></div>
 
@@ -1226,6 +1394,23 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for date values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, not a valid date&quot;</span>
+<span class="sd">                Value could not be parsed as a valid date.</span>
+<span class="sd">            • &quot;Invalid Value, date before minimum allowed&quot;</span>
+<span class="sd">                Parsed date is earlier than the configured minimum.</span>
+<span class="sd">            • &quot;Invalid Value, date after maximum allowed&quot;</span>
+<span class="sd">                Parsed date is later than the configured maximum.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured date validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         
 
         <span class="n">raw</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">replace</span><span class="p">({</span><span class="s2">&quot;&lt;NA&gt;&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span><span class="p">,</span> <span class="s2">&quot;NaT&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span><span class="p">,</span> <span class="s2">&quot;nan&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span><span class="p">})</span>
@@ -1279,92 +1464,30 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">zipCodeColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for validating and normalizing U.S. ZIP codes.</span>
+<span class="sd">    Validator for U.S. ZIP code fields.</span>
 
-<span class="sd">    This validator supports the two most common ZIP formats used in workforce</span>
-<span class="sd">    datasets:</span>
-<span class="sd">        • Standard 5-digit ZIPs (e.g., &quot;06511&quot;)</span>
-<span class="sd">        • 4-digit values that should be left-padded to five digits (e.g., &quot;6877&quot; → &quot;06877&quot;)</span>
+<span class="sd">    This column type normalizes ZIP code values into canonical 5-digit</span>
+<span class="sd">    representations and validates basic ZIP formatting rules.</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning (removing whitespace, Excel error tokens, etc.).</span>
-<span class="sd">        • Optionally strips all non-digit characters (hyphens, spaces) before processing.</span>
-<span class="sd">        • Normalizes values to string digits or `pd.NA` if unusable.</span>
-<span class="sd">        • Formats values by:</span>
-<span class="sd">            - Padding 4-digit ZIPs to 5 digits.</span>
-<span class="sd">            - Correcting misplaced trailing zeros in some user-entered patterns.</span>
-<span class="sd">            - Ensuring only valid 5-digit ZIP codes remain in the output.</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • removal of formatting characters</span>
+<span class="sd">        • preservation of leading zeros</span>
+<span class="sd">        • normalization of 4-digit ZIPs via left-padding</span>
+<span class="sd">        • handling of malformed or placeholder values</span>
 
-<span class="sd">        • Provides structured validation errors for:</span>
-<span class="sd">            - Missing required values</span>
-<span class="sd">            - Non-numeric or improperly formatted ZIP entries</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Optionally strips non-digit formatting characters</span>
+<span class="sd">        • Normalizes ZIP values into canonical digit strings</span>
+<span class="sd">        • Produces standardized validation errors for invalid ZIP codes</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values (after cleaning) generate</span>
-<span class="sd">            &quot;Required but missing&quot; validation errors.</span>
-<span class="sd">        strip_formatting (bool, optional):</span>
-<span class="sd">            If True, remove non-digit characters prior to validation</span>
-<span class="sd">            (recommended for handling &quot;06-511&quot;, &quot;06511 &quot;, &quot;06511-1234&quot;, etc.).</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Excel row numbers to attach to error output. If omitted,</span>
-<span class="sd">            DataFrame index + `row_offset` is used.</span>
-
-<span class="sd">    normalize(s):</span>
-<span class="sd">        Normalize raw ZIP values.</span>
-
-<span class="sd">        Input:</span>
-<span class="sd">            s (pd.Series): Raw ZIP values.</span>
-
-<span class="sd">        Output:</span>
-<span class="sd">            pd.Series of cleaned string values (digits only), or `pd.NA` where</span>
-<span class="sd">            the value cannot be interpreted as a ZIP code.</span>
-
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Base cleaning</span>
-<span class="sd">            2. Strip formatting (if enabled)</span>
-<span class="sd">            3. Remove empty strings → set to NA</span>
-
-<span class="sd">    validate(s_norm):</span>
-<span class="sd">        Vectorized boolean test evaluating whether each normalized value is:</span>
-<span class="sd">            • 5 digits, or</span>
-<span class="sd">            • NA (if not required)</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series of bool values indicating validity.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        Convert normalized string digits into final 5-digit ZIPs.</span>
-
-<span class="sd">        Logic:</span>
-<span class="sd">            • 4-digit → left-pad with &quot;0&quot;</span>
-<span class="sd">            • Overlong patterns ending with unnecessary zeros → corrected</span>
-<span class="sd">            • Invalid patterns → replaced with `pd.NA`</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series containing canonical ZIP strings.</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        Produce a structured DataFrame describing ZIP-code validation errors.</span>
-
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            • &quot;Required but missing&quot;</span>
-<span class="sd">            • &quot;Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)&quot;</span>
-<span class="sd">              (raised for non-numeric, malformed, or incorrectly sized values)</span>
-
-<span class="sd">        Output columns:</span>
-<span class="sd">            [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;,</span>
-<span class="sd">             &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row numbers use:</span>
-<span class="sd">            • `self.row_numbers` if supplied, otherwise</span>
-<span class="sd">            • DataFrame index + `row_offset`</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • This validator does *not* process ZIP+4 formats (e.g., &quot;06511-1234&quot;),</span>
-<span class="sd">          but can strip them down if `strip_formatting=True`.</span>
-<span class="sd">        • ZIP codes beginning with &quot;0&quot; (common in New England) are preserved correctly.</span>
-<span class="sd">        • Ensures downstream systems receive clean, canonical 5-digit ZIP codes.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        strip_formatting (bool):</span>
+<span class="sd">            Whether non-digit formatting characters should be removed.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;zip_code&quot;</span>
@@ -1389,11 +1512,30 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.zipCodeColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize raw ZIP code values.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Normalize whitespace</span>
+<span class="sd">            3. Optionally remove non-digit formatting characters</span>
+<span class="sd">            4. Convert empty values to `pd.NA`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw ZIP code values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Cleaned ZIP code strings or `pd.NA`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
 
         <span class="n">s</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>
-            <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\s+&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># normalize whitespace</span>
+            <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\.0$&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\s+&quot;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
             <span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="p">)</span>
 
@@ -1421,6 +1563,22 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.zipCodeColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
                <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span> 
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert normalized ZIP values into canonical 5-digit ZIP codes.</span>
+
+<span class="sd">        Formatting behavior includes:</span>
+<span class="sd">            • left-padding 4-digit ZIP codes</span>
+<span class="sd">            • correcting certain misplaced trailing-zero patterns</span>
+<span class="sd">            • invalidating malformed ZIP values</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s_norm (pd.Series):</span>
+<span class="sd">                Normalized ZIP code values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Canonical 5-digit ZIP codes or `pd.NA` for invalid values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">out</span> <span class="o">=</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
@@ -1457,6 +1615,20 @@
                   <span class="n">file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
                   <span class="n">sheet</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> 
                   <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for ZIP code values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)&quot;</span>
+<span class="sd">                ZIP value could not be interpreted as a valid ZIP code.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured ZIP code validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">masks</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;Required but missing&quot;</span><span class="p">:</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">raw</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">required</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">index</span><span class="p">),</span>
@@ -1498,84 +1670,33 @@
 <span class="k">class</span><span class="w"> </span><span class="nc">stateID7Column</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for validating and normalizing 7-digit State ID numbers.</span>
+<span class="sd">    Validator for State ID identifier fields.</span>
 
-<span class="sd">    This validator enforces the Connecticut-style “State ID #” format used in</span>
-<span class="sd">    workforce and education datasets, where each identifier must be exactly</span>
-<span class="sd">    seven digits (e.g., ``&quot;0123456&quot;``). The column may contain formatting noise</span>
-<span class="sd">    such as whitespace, decimal artifacts (``&quot;0123456.0&quot;``), or hyphens, all of</span>
-<span class="sd">    which can be removed prior to validation.</span>
+<span class="sd">    This column type validates and normalizes numeric State ID values used</span>
+<span class="sd">    in workforce and education datasets.</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning (strip whitespace, remove Excel error tokens).</span>
-<span class="sd">        • Optionally removes all non-digit characters (``strip_formatting=True``).</span>
-<span class="sd">        • Converts values to canonical digit-only strings or `pd.NA`.</span>
-<span class="sd">        • Validates that final normalized values contain exactly 7 digits.</span>
-<span class="sd">        • Returns structured error metadata for missing/invalid identifiers.</span>
+<span class="sd">    Supported identifier formats include:</span>
+<span class="sd">        • legacy 6-digit identifiers</span>
+<span class="sd">        • modern 7-digit identifiers</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values (after cleaning and normalization)</span>
-<span class="sd">            generate a ``&quot;Required but missing&quot;`` error.</span>
-<span class="sd">        strip_formatting (bool, optional):</span>
-<span class="sd">            If True, remove non-digit characters such as hyphens, spaces,</span>
-<span class="sd">            and decimal suffixes (e.g., convert ``&quot;0123456.0&quot;`` → ``&quot;0123456&quot;``).</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Excel row numbers aligned with the Series index. Used to populate</span>
-<span class="sd">            the ``row_number`` field in error logs.</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • removal of formatting characters</span>
+<span class="sd">        • preservation of leading zeros</span>
+<span class="sd">        • removal of Excel float artifacts such as &quot;.0&quot;</span>
 
-<span class="sd">    normalize(s):</span>
-<span class="sd">        Normalize raw State ID values.</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Optionally strips non-digit formatting characters</span>
+<span class="sd">        • Normalizes identifiers into canonical digit strings</span>
+<span class="sd">        • Produces standardized validation errors for invalid identifiers</span>
 
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Apply BaseColumn cleaning.</span>
-<span class="sd">            2. Strip whitespace and optional formatting noise.</span>
-<span class="sd">            3. Remove non-digit characters.</span>
-<span class="sd">            4. Convert empty strings to `pd.NA`.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series of cleaned digit strings or `pd.NA`.</span>
-
-<span class="sd">    validate(s_norm):</span>
-<span class="sd">        Validate that each normalized value matches the required pattern.</span>
-
-<span class="sd">        Requirements:</span>
-<span class="sd">            • Exactly seven digits (``&quot;\\d{7}&quot;``)</span>
-<span class="sd">            • OR NA if not required</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series of boolean indicators.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        Return final formatted values.</span>
-
-<span class="sd">        Notes:</span>
-<span class="sd">            • No auto-padding is performed.</span>
-<span class="sd">            • Valid inputs must already be seven digits.</span>
-<span class="sd">            • Returned values are suitable for reporting and database storage.</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        Construct a structured DataFrame of validation errors.</span>
-
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            • ``&quot;Required but missing&quot;`` — value missing when `required=True`</span>
-<span class="sd">            • ``&quot;Invalid Value, State ID must be 7 Digits (e.g. &#39;0123456&#39;)&quot;`` —</span>
-<span class="sd">              triggered for:</span>
-<span class="sd">                • Non-empty raw inputs that do not normalize to 7 digits</span>
-<span class="sd">                • Values that normalize to NA but were present in raw form</span>
-
-<span class="sd">        Output columns:</span>
-<span class="sd">            [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;,</span>
-<span class="sd">             &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row number logic:</span>
-<span class="sd">            • Use `self.row_numbers` if supplied,</span>
-<span class="sd">            • Otherwise fall back to DataFrame index + ``row_offset``.</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • State IDs may begin with leading zeros, which are preserved.</span>
-<span class="sd">        • This validator does not support alphanumeric IDs.</span>
-<span class="sd">        • Downstream systems should rely on normalized output for uniqueness checks.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        strip_formatting (bool):</span>
+<span class="sd">            Whether formatting characters should be removed.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;state_id_7&quot;</span>
@@ -1589,7 +1710,6 @@
                  <span class="n">row_numbers</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
 
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        required = True -&gt; blank after cleaning counts as an error </span>
 <span class="sd">        strip_formatting -&gt; remove hyphens/spaces/etc. before validating</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
@@ -1603,6 +1723,24 @@
 <div class="viewcode-block" id="stateID7Column.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize raw State ID values.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Remove formatting artifacts and non-digit characters</span>
+<span class="sd">            3. Remove Excel float suffixes such as &quot;.0&quot;</span>
+<span class="sd">            4. Convert empty values to `pd.NA`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw State ID values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Normalized 6-digit or 7-digit State ID values, or `pd.NA`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
@@ -1620,7 +1758,7 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.validate">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
         <span class="c1">## confirm the pattern is 7 digits (or blank if not required)</span>
-        <span class="n">ok_pattern</span> <span class="o">=</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\d</span><span class="si">{7}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">ok_pattern</span> <span class="o">=</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\d{6,7}&quot;</span><span class="p">,</span> <span class="n">na</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="n">ok_required</span> <span class="o">=</span> <span class="n">ok_pattern</span> <span class="o">&amp;</span> <span class="p">(</span><span class="o">~</span><span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">required</span> <span class="k">else</span> <span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">ok_required</span></div>
 
@@ -1628,19 +1766,41 @@
 <div class="viewcode-block" id="stateID7Column.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
-        <span class="c1"># We don&#39;t auto-pad; must already be 7 digits to be considered valid. </span>
-        <span class="c1"># Return the normalized value as the final, canonical display. </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return canonical State ID values unchanged.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">s_norm</span></div>
 
     
 <div class="viewcode-block" id="stateID7Column.errors_df">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">file</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">   </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for State ID values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, State ID must be 6 or 7 digits&quot;</span>
+<span class="sd">                Value could not be interpreted as a valid State ID.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured State ID validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">invalid_mask</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">s_norm</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">s_norm</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\d{6,7}&quot;</span><span class="p">))</span> <span class="o">|</span>
+            <span class="p">(</span><span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">raw</span><span class="o">.</span><span class="n">notna</span><span class="p">())</span>
+        <span class="p">)</span>
 
         <span class="n">masks</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;Required but missing&quot;</span><span class="p">:</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">raw</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">required</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">index</span><span class="p">),</span>
-            <span class="s2">&quot;Invalid Value, State ID must be 7 Digits (e.g. &#39;0123456&#39;)&quot;</span><span class="p">:</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">s_norm</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\d</span><span class="si">{7}</span><span class="s2">&quot;</span><span class="p">),</span>
-            <span class="s2">&quot;Invalid Value, State ID must be 7 Digits (e.g. &#39;0123456&#39;)&quot;</span><span class="p">:</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">raw</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span>
+            <span class="s2">&quot;Required but missing&quot;</span><span class="p">:</span> <span class="p">(</span>
+                <span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">raw</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">required</span>
+                <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">s_norm</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;Invalid Value, State ID must be 6 or 7 digits (e.g. &#39;123456&#39; or &#39;0123456&#39;)&quot;</span><span class="p">:</span>
+                <span class="n">invalid_mask</span>
         <span class="p">}</span>
 
         <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1890,92 +2050,32 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CIPCodeColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for CIP (Classification of Instructional Programs) codes.</span>
+<span class="sd">    Validator for O*NET-SOC occupation code fields.</span>
 
-<span class="sd">    This validator normalizes and validates CIP codes to one of the three</span>
-<span class="sd">    canonical forms defined by NCES:</span>
+<span class="sd">    This column type normalizes and validates O*NET occupation codes into</span>
+<span class="sd">    canonical `DD-DDDD.DD` format.</span>
 
-<span class="sd">        • ``DD``           — 2-digit “CIP Series”</span>
-<span class="sd">        • ``DD.DD``        — 4-digit “CIP Subseries”</span>
-<span class="sd">        • ``DD.DDDD``      — 6-digit “CIP Program”</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • normalization of common malformed O*NET formats</span>
+<span class="sd">        • handling of multi-code cells</span>
+<span class="sd">        • removal of formatting noise and invalid characters</span>
+<span class="sd">        • canonicalization of codes into semicolon-delimited output</span>
 
-<span class="sd">    It also supports multi-valued cells (e.g., several CIP codes separated by</span>
-<span class="sd">    commas, semicolons, or whitespace) and outputs them as a semicolon-delimited</span>
-<span class="sd">    string in normalized form.</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Normalizes codes into canonical O*NET format</span>
+<span class="sd">        • Supports multiple codes per cell</span>
+<span class="sd">        • Produces standardized validation errors for invalid codes</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning (strip whitespace, replace Excel errors).</span>
-<span class="sd">        • Splits multi-code entries on common separators.</span>
-<span class="sd">        • Removes all characters except digits and periods.</span>
-<span class="sd">        • Automatically converts common malformed forms into canonical patterns:</span>
-
-<span class="sd">              - ``&quot;151201&quot;``     → ``&quot;15.1201&quot;``</span>
-<span class="sd">              - ``&quot;1512&quot;``       → ``&quot;15.12&quot;``</span>
-<span class="sd">              - ``&quot;15.120100&quot;``  → ``&quot;15.1201&quot;``</span>
-<span class="sd">              - ``&quot;15 12&quot;``      → ``&quot;15.12&quot;``</span>
-
-<span class="sd">        • Drops unparseable junk codes.</span>
-<span class="sd">        • Produces ``pd.NA`` if no valid CIP codes remain.</span>
-
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values after normalization generate a</span>
-<span class="sd">            ``&quot;Required but missing&quot;`` validation error.</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Excel row numbers aligned to Series indices. Used to populate the</span>
-<span class="sd">            ``row_number`` field in error logs.</span>
-
-<span class="sd">    normalize(s):</span>
-<span class="sd">        Normalize raw CIP code strings.</span>
-
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Apply BaseColumn cleaning and strip floating-point suffixes.</span>
-<span class="sd">            2. Split each entry into candidate codes.</span>
-<span class="sd">            3. Sanitize by removing non-digit/non-dot characters.</span>
-<span class="sd">            4. Attempt to coerce each candidate into a canonical CIP format.</span>
-<span class="sd">            5. Recombine valid codes as a semicolon-delimited string.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series:</span>
-<span class="sd">                Normalized CIP code strings, or ``pd.NA`` if no valid codes</span>
-<span class="sd">                could be derived.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        Formatting step; returns normalized CIP strings unchanged.</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        Construct a structured DataFrame of validation errors.</span>
-
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            • ``&quot;Required but missing&quot;`` —</span>
-<span class="sd">                Value is empty after cleaning but column is marked required.</span>
-<span class="sd">            • ``&quot;Invalid Value, must match CIP format (e.g. &#39;15&#39;, &#39;15.12&#39;, &#39;15.1201&#39;)&quot;`` —</span>
-<span class="sd">                Triggered when:</span>
-<span class="sd">                    – raw data is present but normalization fails, or</span>
-<span class="sd">                    – one or more CIP codes in a multi-code cell do not</span>
-<span class="sd">                      conform to allowed patterns.</span>
-
-<span class="sd">        Validation rule:</span>
-<span class="sd">            All CIP codes within a cell must match one of the canonical patterns</span>
-<span class="sd">            (2-digit, 4-digit with dot, or 6-digit with dot). If any code is invalid,</span>
-<span class="sd">            the entire cell is flagged.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.DataFrame with columns:</span>
-<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;, &quot;column&quot;,</span>
-<span class="sd">                 &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row number logic:</span>
-<span class="sd">            • If ``row_numbers`` was supplied, values are pulled from it.</span>
-<span class="sd">            • Otherwise, row numbers default to ``index + row_offset``.</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • This validator checks *format only* — it does not confirm that a CIP</span>
-<span class="sd">          code exists in the official NCES taxonomy.</span>
-<span class="sd">        • Empty or malformed codes are silently skipped during normalization.</span>
-<span class="sd">        • Use semicolon-delimited output for downstream exploding or mapping.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        pattern (Pattern):</span>
+<span class="sd">            Regular expression defining canonical O*NET format.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
+     
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;cip_code&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">row_numbers</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -1992,6 +2092,24 @@
 <div class="viewcode-block" id="CIPCodeColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize raw O*NET code values.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Remove Excel float artifacts such as &quot;.0&quot;</span>
+<span class="sd">            3. Apply O*NET-specific canonicalization logic</span>
+<span class="sd">            4. Return canonical semicolon-delimited code strings</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw O*NET code values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Canonical O*NET code values or `pd.NA`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
@@ -2053,6 +2171,7 @@
 <div class="viewcode-block" id="CIPCodeColumn.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return canonical O*NET codes unchanged.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">s_norm</span></div>
 
 
@@ -2061,6 +2180,23 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for O*NET code values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, must match ONET format (e.g. &#39;15-2051.00&#39;)&quot;</span>
+<span class="sd">                Value could not be interpreted as a valid O*NET code.</span>
+
+<span class="sd">        Multi-code cells are considered invalid if any contained code</span>
+<span class="sd">        fails validation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured O*NET validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">all_valid_codes</span><span class="p">(</span><span class="n">val</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="ow">or</span> <span class="n">val</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
@@ -2076,8 +2212,7 @@
             <span class="p">),</span>
             <span class="s2">&quot;Invalid Value, must match CIP format (e.g. &#39;15&#39;, &#39;15.12&#39;, &#39;15.1201&#39;)&quot;</span><span class="p">:</span> <span class="p">(</span>
                 <span class="n">s_norm</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">raw</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span>
-            <span class="p">),</span>
-            <span class="s2">&quot;Invalid Value, must match CIP format (e.g. &#39;15&#39;, &#39;15.12&#39;, &#39;15.1201&#39;)&quot;</span><span class="p">:</span> <span class="p">(</span>
+            <span class="p">)</span> <span class="o">|</span> <span class="p">(</span>
                 <span class="n">s_norm</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">mask_valid</span>
             <span class="p">),</span>
         <span class="p">}</span>
@@ -2110,96 +2245,36 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">hourlyWageColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for hourly wage fields.</span>
+<span class="sd">    Validator for hourly wage fields.</span>
 
-<span class="sd">    This validator extracts and validates hourly wage values expressed as</span>
-<span class="sd">    free-text, stripping currency symbols and extraneous wording while enforcing</span>
-<span class="sd">    configurable minimum and maximum wage thresholds.</span>
+<span class="sd">    This column type extracts and validates hourly wage values from</span>
+<span class="sd">    free-text input and normalizes them into numeric wage values.</span>
 
-<span class="sd">    Unlike typical numeric validators, this class *explicitly detects wage ranges*</span>
-<span class="sd">    (e.g., ``&quot;15-20&quot;``, ``&quot;12/15&quot;``, ``&quot;10 to 12&quot;``). Ranges are not coerced and are</span>
-<span class="sd">    instead surfaced as validation errors because they represent ambiguous or</span>
-<span class="sd">    non-atomic wage entries.</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • removal of currency symbols and wage-related text</span>
+<span class="sd">        • parsing of numeric wage values from free text</span>
+<span class="sd">        • detection of ambiguous wage ranges</span>
+<span class="sd">        • configurable minimum and maximum wage thresholds</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning (remove Excel error tokens, strip whitespace).</span>
-<span class="sd">        • Detects and flags wage *ranges* via regular expressions.</span>
-<span class="sd">        • Removes currency symbols and common unit labels (e.g. ``&quot;per hr&quot;``).</span>
-<span class="sd">        • Strips all non-numeric characters except the decimal point.</span>
-<span class="sd">        • Parses remaining text into a float (e.g., ``&quot;$17&quot; → 17.0``).</span>
-<span class="sd">        • Values of ``0`` are treated as missing (commonly an encoding issue).</span>
-<span class="sd">        • Formatting step outputs wages as ``&quot;$17.00&quot;``.</span>
+<span class="sd">    Wage ranges (e.g. &quot;15-20&quot;, &quot;10 to 12&quot;) are intentionally treated</span>
+<span class="sd">    as invalid because they represent non-atomic wage entries.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values after cleaning generate a</span>
-<span class="sd">            ``&quot;Required but missing&quot;`` validation error.</span>
-<span class="sd">        min_wage (float, optional):</span>
-<span class="sd">            Lower bound for valid wages. Values below this threshold raise the</span>
-<span class="sd">            error ``&quot;Invalid Value, must be &gt;= $X.XX&quot;``.</span>
-<span class="sd">        max_wage (float, optional):</span>
-<span class="sd">            Upper bound for reasonable wages. Values above this threshold trigger</span>
-<span class="sd">            a *confirmation* warning rather than a hard failure.</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Excel row numbers used for reporting. If None, row numbers default to</span>
-<span class="sd">            ``index + row_offset``.</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Detects wage ranges before numeric parsing</span>
+<span class="sd">        • Removes formatting and currency artifacts</span>
+<span class="sd">        • Converts valid values into numeric hourly wages</span>
+<span class="sd">        • Produces standardized validation errors and confirmation warnings</span>
 
-<span class="sd">    normalize(s):</span>
-<span class="sd">        Normalize free-text wage values into numeric floats.</span>
-
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Lowercase and trim text.</span>
-<span class="sd">            2. Detect ranges using ``self._range_pattern`` and preserve the raw</span>
-<span class="sd">               value for error classification.</span>
-<span class="sd">            3. Remove currency symbols, “hr”/“hourly”/“per hr”, etc.</span>
-<span class="sd">            4. Strip all non-digit / non-decimal characters.</span>
-<span class="sd">            5. Convert to float; invalid or zero values → ``pd.NA``.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series:</span>
-<span class="sd">                Floats representing hourly wages, or ``pd.NA`` where the value is</span>
-<span class="sd">                missing, invalid, or a detected range.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        Convert normalized floats into ``&quot;$XX.XX&quot;`` formatted strings.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series of strings or ``pd.NA`` for missing values.</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        Construct a structured DataFrame of validation errors.</span>
-
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            • ``&quot;Required but missing&quot;`` —</span>
-<span class="sd">                  Value is empty after normalization and column is required.</span>
-<span class="sd">            • ``&quot;Invalid Value, must be &gt;= $min_wage&quot;`` —</span>
-<span class="sd">                  Wage is below the configured lower bound.</span>
-<span class="sd">            • ``&quot;Confirmation required, unusually high (&gt; $max_wage)&quot;`` —</span>
-<span class="sd">                  Wage exceeds typical labor-market ranges; not technically invalid</span>
-<span class="sd">                  but requires human review.</span>
-<span class="sd">            • ``&quot;Invalid Value, must be a number indicating hourly wage&quot;`` —</span>
-<span class="sd">                  Raw value exists but cannot be parsed (including detected ranges).</span>
-
-<span class="sd">        Range handling:</span>
-<span class="sd">            • Any raw entry matching the range pattern (e.g. ``&quot;15-20&quot;``, ``&quot;14/16&quot;``,</span>
-<span class="sd">              ``&quot;10 to 12&quot;``) is automatically flagged in the last category.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.DataFrame:</span>
-<span class="sd">                A structured table with columns:</span>
-<span class="sd">                    [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;,</span>
-<span class="sd">                     &quot;column&quot;, &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row number logic:</span>
-<span class="sd">            • Uses ``row_numbers`` when provided.</span>
-<span class="sd">            • Otherwise computes ``index + row_offset``.</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • This validator enforces *atomic* wage entries — ranges must be corrected</span>
-<span class="sd">          manually before analysis.</span>
-<span class="sd">        • Currency formatting is normalized consistently in `format()`.</span>
-<span class="sd">        • ``0`` is treated as missing because spreadsheets sometimes export empty</span>
-<span class="sd">          wage cells as ``0`` when coerced to numeric types.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        min_wage (float):</span>
+<span class="sd">            Minimum allowed hourly wage.</span>
+<span class="sd">        max_wage (float):</span>
+<span class="sd">            Threshold above which confirmation warnings are generated.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hourly_wage&quot;</span>
@@ -2216,6 +2291,28 @@
 <div class="viewcode-block" id="hourlyWageColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize free-text wage values into numeric hourly wages.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Normalize casing and whitespace</span>
+<span class="sd">            2. Detect wage ranges</span>
+<span class="sd">            3. Remove currency and unit formatting</span>
+<span class="sd">            4. Strip non-numeric characters</span>
+<span class="sd">            5. Parse numeric wage values</span>
+
+<span class="sd">        Values equal to zero are treated as missing values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw wage values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Numeric hourly wage values or `pd.NA`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
@@ -2240,6 +2337,17 @@
 <div class="viewcode-block" id="hourlyWageColumn.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format numeric wage values as currency strings.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s_norm (pd.Series):</span>
+<span class="sd">                Normalized hourly wage values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Currency-formatted wage strings (e.g. &quot;$17.00&quot;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;$</span><span class="si">{</span><span class="n">x</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span> <span class="k">else</span> <span class="n">pd</span><span class="o">.</span><span class="n">NA</span><span class="p">)</span></div>
 
 
@@ -2248,6 +2356,25 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for hourly wage values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, must be &gt;= $X.XX&quot;</span>
+<span class="sd">                Wage falls below the configured minimum threshold.</span>
+<span class="sd">            • &quot;Confirmation required, unusually high (&gt; $X.XX)&quot;</span>
+<span class="sd">                Wage exceeds the configured confirmation threshold.</span>
+<span class="sd">            • &quot;Invalid Value, must be a number indicating hourly wage&quot;</span>
+<span class="sd">                Value could not be interpreted as a valid atomic wage.</span>
+
+<span class="sd">        Wage ranges are treated as invalid values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured hourly wage validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="c1"># Identify ranges directly from raw values</span>
         <span class="n">range_mask</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_range_pattern</span><span class="p">)</span>
@@ -2296,92 +2423,34 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">hoursWorkedColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for hours-worked fields.</span>
+<span class="sd">    Validator for hours-worked fields.</span>
 
-<span class="sd">    This validator parses typical weekly or program hours from free-text inputs,</span>
-<span class="sd">    enforcing numeric constraints and reasonable upper bounds (e.g., ``&lt;= 80``).</span>
-<span class="sd">    All values are cleaned, coerced to floats when possible, and validated</span>
-<span class="sd">    against minimum/maximum thresholds.</span>
+<span class="sd">    This column type normalizes and validates numeric hour values from</span>
+<span class="sd">    free-text input.</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning (strip whitespace, remove Excel error tokens).</span>
-<span class="sd">        • Converts valid numeric strings into floats.</span>
-<span class="sd">        • Treats empty strings, whitespace-only values, and failed parses as ``pd.NA``.</span>
-<span class="sd">        • Enforces non-negative hours.</span>
-<span class="sd">        • Enforces a configurable maximum (default: 80 hours).</span>
-<span class="sd">        • Formatting step converts whole-number floats to integers for cleaner output.</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • parsing numeric hour values from text</span>
+<span class="sd">        • coercion of invalid or blank values to missing values</span>
+<span class="sd">        • validation against configurable minimum and maximum thresholds</span>
+<span class="sd">        • normalization of whole-number floats for cleaner output</span>
 
-<span class="sd">    Examples of accepted inputs:</span>
-<span class="sd">        ┌──────────────┬────────────────────────────┐</span>
-<span class="sd">        │ Raw Input     │ Normalized Representation  │</span>
-<span class="sd">        ├──────────────┼────────────────────────────┤</span>
-<span class="sd">        │ &quot;40&quot;          │ 40                         │</span>
-<span class="sd">        │ &quot;37.5&quot;        │ 37.5                       │</span>
-<span class="sd">        │ &quot;  15  &quot;      │ 15                         │</span>
-<span class="sd">        │ &quot;&quot; / &quot; &quot;      │ NA                         │</span>
-<span class="sd">        │ &quot;abc&quot;         │ NA (with validation error) │</span>
-<span class="sd">        └──────────────┴────────────────────────────┘</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Converts valid numeric values into floats</span>
+<span class="sd">        • Produces standardized validation errors for:</span>
+<span class="sd">            - missing required values</span>
+<span class="sd">            - negative hour values</span>
+<span class="sd">            - excessively large hour values</span>
+<span class="sd">            - non-numeric inputs</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values after cleaning generate a</span>
-<span class="sd">            ``&quot;Required but missing&quot;`` validation error.</span>
-<span class="sd">        max_hours (int, optional):</span>
-<span class="sd">            Upper bound for reasonable reported weekly hours.</span>
-<span class="sd">            Values exceeding this threshold are considered invalid.</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Excel row numbers for accurate error reporting.</span>
-<span class="sd">            If None, row numbers default to ``index + row_offset``.</span>
-
-<span class="sd">    normalize(s):</span>
-<span class="sd">        Normalize free-text hour values to numeric form.</span>
-
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Clean via `BaseColumn.base_clean()`.</span>
-<span class="sd">            2. Strip whitespace and coerce to float using a safe converter.</span>
-<span class="sd">            3. Invalid numbers or blank values → ``pd.NA``.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series of floats or ``pd.NA`` values.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        Format normalized numeric values.</span>
-
-<span class="sd">        • Whole-number floats are converted to integers (e.g., ``40.0 → 40``).</span>
-<span class="sd">        • Fractional hours remain floats (e.g., ``37.5``).</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series with cleaned numeric values.</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        Produce a structured error report for invalid hour entries.</span>
-
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            • ``&quot;Required but missing&quot;`` —</span>
-<span class="sd">                  No usable value and field is required.</span>
-<span class="sd">            • ``&quot;Invalid Value, must be non-negative&quot;`` —</span>
-<span class="sd">                  Negative hours such as ``-5``.</span>
-<span class="sd">            • ``&quot;Invalid Value, cannot exceed X hours&quot;`` —</span>
-<span class="sd">                  Hours greater than ``max_hours`` (e.g., &gt; 80).</span>
-<span class="sd">            • ``&quot;Invalid Value, must be a number indicating typical weekly hours&quot;`` —</span>
-<span class="sd">                  Raw input exists but could not be parsed to a number.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.DataFrame with columns:</span>
-<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;,</span>
-<span class="sd">                 &quot;column&quot;, &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row number handling:</span>
-<span class="sd">            • Uses `row_numbers` when supplied.</span>
-<span class="sd">            • Otherwise computes row numbers from index + `row_offset`.</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • This validator treats ambiguous or text-based entries (e.g. &quot;a lot&quot;)</span>
-<span class="sd">          as invalid unless manually corrected by the user.</span>
-<span class="sd">        • Hours are assumed to refer to *weekly* or *program* hours and therefore</span>
-<span class="sd">          constrained to realistic ranges.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        max_hours (int | float):</span>
+<span class="sd">            Maximum allowed hour value.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hours_worked&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">max_hours</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">80</span><span class="p">,</span> <span class="n">row_numbers</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
@@ -2393,6 +2462,22 @@
 <div class="viewcode-block" id="hoursWorkedColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize raw hour values into numeric hour values.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Strip whitespace and coerce values to numeric form</span>
+<span class="sd">            3. Convert invalid values to `pd.NA`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw hour values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Numeric hour values or `pd.NA`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>   
 
@@ -2411,6 +2496,20 @@
 <div class="viewcode-block" id="hoursWorkedColumn.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format normalized hour values for output.</span>
+
+<span class="sd">        Whole-number floats are converted to integers while fractional</span>
+<span class="sd">        values are preserved.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s_norm (pd.Series):</span>
+<span class="sd">                Normalized hour values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Cleaned numeric hour values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">s_norm</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">notna</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">is_integer</span><span class="p">()</span> <span class="k">else</span> <span class="n">x</span><span class="p">)</span></div>
 
 
@@ -2419,6 +2518,23 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for hour values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, must be non-negative&quot;</span>
+<span class="sd">                Hour value is negative.</span>
+<span class="sd">            • &quot;Invalid Value, cannot exceed X hours&quot;</span>
+<span class="sd">                Hour value exceeds the configured maximum.</span>
+<span class="sd">            • &quot;Invalid Value, must be a number indicating typical weekly hours&quot;</span>
+<span class="sd">                Value could not be interpreted as a numeric hour value.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured hour validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">masks</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;Required but missing&quot;</span><span class="p">:</span> <span class="p">(</span>
@@ -2464,79 +2580,31 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">NAICSCodeColumn</span><span class="p">(</span><span class="n">BaseColumn</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Column type for NAICS (North American Industry Classification System) codes.</span>
+<span class="sd">    Validator for NAICS (North American Industry Classification System)</span>
+<span class="sd">    code fields.</span>
 
-<span class="sd">    This validator parses and normalizes NAICS industry codes as 2–6 digit</span>
-<span class="sd">    numeric identifiers, supporting a wide range of common input formats</span>
-<span class="sd">    (e.g., &quot;31&quot;, &quot;31151&quot;, &quot;311513&quot;, &quot;311513.0&quot;, &quot;311/3115&quot;, &quot;31; 311; 31151&quot; ).</span>
+<span class="sd">    This column type normalizes and validates NAICS codes represented as</span>
+<span class="sd">    2–6 digit numeric identifiers.</span>
 
-<span class="sd">    Behavior Overview:</span>
-<span class="sd">        • Applies BaseColumn cleaning (strip whitespace, remove Excel errors).</span>
-<span class="sd">        • Strips non-numeric characters, removes decimal suffixes, and splits</span>
-<span class="sd">          multi-code entries on common delimiters (comma, semicolon, slash, spaces).</span>
-<span class="sd">        • Accepts any valid NAICS code length (2, 3, 4, 5, or 6 digits).</span>
-<span class="sd">        • Filters out malformed or ambiguous codes.</span>
-<span class="sd">        • Produces a semicolon-delimited list for rows containing multiple codes.</span>
+<span class="sd">    Supported behaviors include:</span>
+<span class="sd">        • normalization of malformed numeric formats</span>
+<span class="sd">        • removal of formatting artifacts and decimal suffixes</span>
+<span class="sd">        • handling of multi-code cells</span>
+<span class="sd">        • canonicalization of semicolon-delimited code lists</span>
 
-<span class="sd">    Examples of valid normalized outputs:</span>
-<span class="sd">        ┌───────────────────────┬────────────────────────────┐</span>
-<span class="sd">        │ Raw Input             │ Normalized Output          │</span>
-<span class="sd">        ├───────────────────────┼────────────────────────────┤</span>
-<span class="sd">        │ &quot;31151&quot;               │ &quot;31151&quot;                    │</span>
-<span class="sd">        │ &quot;311513.0&quot;            │ &quot;311513&quot;                   │</span>
-<span class="sd">        │ &quot;31/311/3115&quot;         │ &quot;31;311;3115&quot;              │</span>
-<span class="sd">        │ &quot;31151300&quot;            │ &quot;311513&quot; (trailing zeros)  │</span>
-<span class="sd">        │ &quot;&quot; / &quot; &quot; / None       │ NA                         │</span>
-<span class="sd">        └───────────────────────┴────────────────────────────┘</span>
+<span class="sd">    Behavior:</span>
+<span class="sd">        • Applies shared preprocessing via `base_clean()`</span>
+<span class="sd">        • Extracts valid 2–6 digit NAICS codes</span>
+<span class="sd">        • Supports multiple codes per cell</span>
+<span class="sd">        • Produces standardized validation errors for invalid codes</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        required (bool, optional):</span>
-<span class="sd">            If True, missing values after normalization generate a</span>
-<span class="sd">            ``&quot;Required but missing&quot;`` validation error.</span>
-<span class="sd">        row_numbers (pd.Series, optional):</span>
-<span class="sd">            Spreadsheet row numbers for accurate error reporting. If not</span>
-<span class="sd">            provided, error logs compute row numbers from index + ``row_offset``.</span>
-
-<span class="sd">    normalize(s):</span>
-<span class="sd">        Normalize raw NAICS entries to 2–6 digit codes.</span>
-
-<span class="sd">        Steps:</span>
-<span class="sd">            1. Apply BaseColumn cleaning.</span>
-<span class="sd">            2. Remove junk characters &amp; decimal portions.</span>
-<span class="sd">            3. Split multi-code entries on common delimiters.</span>
-<span class="sd">            4. Keep only numeric strings of length 2–6.</span>
-<span class="sd">            5. Collapse malformed entries to ``pd.NA``.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.Series of semicolon-delimited valid NAICS codes,</span>
-<span class="sd">            or ``pd.NA`` where no valid codes are detected.</span>
-
-<span class="sd">    format(s_norm):</span>
-<span class="sd">        Return normalized NAICS codes unchanged (no further formatting applied).</span>
-
-<span class="sd">    errors_df(col, raw, s_norm, file, sheet, row_offset):</span>
-<span class="sd">        Construct a structured error report describing invalid NAICS codes.</span>
-
-<span class="sd">        Error types recorded:</span>
-<span class="sd">            • ``&quot;Required but missing&quot;`` —</span>
-<span class="sd">                  Field is required but no usable value exists.</span>
-<span class="sd">            • ``&quot;Invalid Value, must match NAICS format (e.g. &#39;31&#39;, &#39;31151&#39;, &#39;311513&#39;)&quot;`` —</span>
-<span class="sd">                  Raw values present but not convertible into any valid NAICS code, or</span>
-<span class="sd">                  normalized values that fail the 2–6 digit rule.</span>
-
-<span class="sd">        Returns:</span>
-<span class="sd">            pd.DataFrame with columns:</span>
-<span class="sd">                [&quot;file&quot;, &quot;sheet&quot;, &quot;row_number&quot;,</span>
-<span class="sd">                 &quot;column&quot;, &quot;rule&quot;, &quot;raw_value&quot;, &quot;normalized&quot;]</span>
-
-<span class="sd">        Row-number logic:</span>
-<span class="sd">            • Uses provided ``row_numbers`` when available.</span>
-<span class="sd">            • Falls back to index + ``row_offset`` for consistent reporting.</span>
-
-<span class="sd">    Notes:</span>
-<span class="sd">        • NAICS codes represent hierarchical sectors (2 digits → broad, 6 digits → detailed).</span>
-<span class="sd">        • This validator tolerates multi-code entries but does not attempt semantic</span>
-<span class="sd">          validation beyond confirming valid digit lengths.</span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        required (bool):</span>
+<span class="sd">            Whether missing values should generate validation errors.</span>
+<span class="sd">        patterns (list[Pattern]):</span>
+<span class="sd">            Regular expressions defining valid NAICS code lengths.</span>
+<span class="sd">        row_numbers (pd.Series | None):</span>
+<span class="sd">            Row references used in validation reporting.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;naics_code&quot;</span>
 
@@ -2557,6 +2625,24 @@
 <div class="viewcode-block" id="NAICSCodeColumn.normalize">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn.normalize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">normalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Normalize raw NAICS values into canonical code strings.</span>
+
+<span class="sd">        Processing steps:</span>
+<span class="sd">            1. Apply shared preprocessing via `base_clean()`</span>
+<span class="sd">            2. Remove Excel float artifacts such as &quot;.0&quot;</span>
+<span class="sd">            3. Split multi-code entries on common delimiters</span>
+<span class="sd">            4. Remove invalid formatting characters</span>
+<span class="sd">            5. Extract valid 2–6 digit NAICS codes</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            s (pd.Series):</span>
+<span class="sd">                Raw NAICS values.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.Series:</span>
+<span class="sd">                Semicolon-delimited NAICS code strings or `pd.NA`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
         <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_clean</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\.0$&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -2604,6 +2690,7 @@
 <div class="viewcode-block" id="NAICSCodeColumn.format">
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn.format">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return canonical NAICS codes unchanged.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">s_norm</span></div>
 
 
@@ -2612,6 +2699,22 @@
 <a class="viewcode-back" href="../../validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn.errors_df">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">errors_df</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span> <span class="n">s_norm</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">,</span>
                   <span class="n">file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sheet</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">row_offset</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Construct validation errors for NAICS code values.</span>
+
+<span class="sd">        Error rules:</span>
+<span class="sd">            • &quot;Required but missing&quot;</span>
+<span class="sd">                Missing value in a required field.</span>
+<span class="sd">            • &quot;Invalid Value, must match NAICS format&quot;</span>
+<span class="sd">                Value could not be interpreted as a valid NAICS code.</span>
+
+<span class="sd">        Multi-code cells are considered invalid if any contained code</span>
+<span class="sd">        fails validation.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            pd.DataFrame:</span>
+<span class="sd">                Structured NAICS validation errors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="k">def</span><span class="w"> </span><span class="nf">all_valid_codes</span><span class="p">(</span><span class="n">val</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="ow">or</span> <span class="n">val</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>

@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Database Initialization" href="../database/init_sqlite_db.html"><link rel="prev" title="Helper Functions" href="helpers.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>Standard Normalizations - OWS Validation Documentation</title>
@@ -205,17 +205,15 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="db_logger.html">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="helpers.html">Helper Functions</a></li>
-<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -257,7 +255,33 @@
           <section id="standard-normalizations">
 <h1>Standard Normalizations<a class="headerlink" href="#standard-normalizations" title="Link to this heading">¶</a></h1>
 <p>A set of standard normalizations created for key creator, potentially useful in other contexts as well.</p>
-<dl class="py function" id="module-validation_engine.standard_normalizations">
+<p id="module-validation_engine.standard_normalizations">Lightweight normalization helpers for strict identity-style matching.</p>
+<p>This module provides highly conservative normalization utilities used in
+contexts where approximate or permissive matching is undesirable. The
+functions are primarily intended for deterministic identity resolution,
+record linkage, and participant-key generation workflows.</p>
+<dl class="simple">
+<dt>Normalization behavior prioritizes:</dt><dd><ul class="simple">
+<li><p>removal of spreadsheet/export artifacts</p></li>
+<li><p>rejection of placeholder or junk values</p></li>
+<li><p>canonical lowercase representations</p></li>
+<li><p>stable comparison-friendly outputs</p></li>
+</ul>
+</dd>
+</dl>
+<p>The helpers intentionally return <cite>None</cite> for ambiguous, malformed, or
+insufficiently informative values rather than attempting aggressive
+recovery or fuzzy interpretation.</p>
+<dl class="simple">
+<dt>Functions:</dt><dd><dl class="simple">
+<dt>strict_alphabetic_normalize:</dt><dd><p>Normalize alphabetic identity-style fields such as names.</p>
+</dd>
+<dt>strict_date_normalize:</dt><dd><p>Normalize date-like values into ISO date strings (<cite>YYYY-MM-DD</cite>).</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="py function">
 <dt class="sig sig-object py" id="validation_engine.standard_normalizations.strict_alphabetic_normalize">
 <span class="sig-prename descclassname"><span class="pre">validation_engine.standard_normalizations.</span></span><span class="sig-name descname"><span class="pre">strict_alphabetic_normalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/standard_normalizations.html#strict_alphabetic_normalize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.standard_normalizations.strict_alphabetic_normalize" title="Link to this definition">¶</a></dt>
 <dd><p>Normalize a value to strictly alphabetic lowercase text.
@@ -278,26 +302,8 @@ Returns None if the value is invalid or cannot be parsed as a date.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="../database/init_sqlite_db.html">
-              <div class="page-info">
-                <div class="context">
-                  <span>Next</span>
-                </div>
-                <div class="title">Database Initialization</div>
-              </div>
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-            </a>
-          <a class="prev-page" href="helpers.html">
-              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
-              <div class="page-info">
-                <div class="context">
-                  <span>Previous</span>
-                </div>
-                
-                <div class="title">Helper Functions</div>
-                
-              </div>
-            </a>
+          
+          
         </div>
         <div class="bottom-of-page">
           <div class="left-details">

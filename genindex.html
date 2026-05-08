@@ -203,17 +203,15 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="database/init_sqlite_db.html">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="validation_engine/key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="validation_engine/db_logger.html">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="database/init_sqlite_db.html">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -277,14 +275,39 @@
   <h2>A</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.accepted">accepted (validation_engine.validation_column_types.categoricalColumn attribute)</a>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn.accepted">accepted (validation_engine.validation_column_types.booleanColumn attribute)</a>
+
+        <ul>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.accepted">(validation_engine.validation_column_types.categoricalColumn attribute)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
+        </ul></li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.accepted_responses">accepted_responses (validation_engine.validation_column_types.fileSpecificCategoricalColumn attribute)</a>
+</li>
         <li><a href="validation_engine/key_creator.html#validation_engine.key_creator.KeyCreator.add_key_column">add_key_column() (validation_engine.key_creator.KeyCreator method)</a>
 </li>
-        <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.attach_identity_key">attach_identity_key() (validation_engine.validation_engine.ValidationEngine method)</a>
+        <li>
+    applications.career_connect_grantee_sheets.file_directory
+
+        <ul>
+          <li><a href="applications/file_directory.html#module-applications.career_connect_grantee_sheets.file_directory">module</a>
 </li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    applications.career_connect_grantee_sheets.validation_main
+
+        <ul>
+          <li><a href="applications/validation_main.html#module-applications.career_connect_grantee_sheets.validation_main">module</a>
+</li>
+        </ul></li>
+        <li>
+    applications.career_connect_grantee_sheets.workbook_definitions
+
+        <ul>
+          <li><a href="applications/workbook_definitions.html#module-applications.career_connect_grantee_sheets.workbook_definitions">module</a>
+</li>
+        </ul></li>
     </ul></td>
   </tr></table>
 </section>
@@ -302,8 +325,6 @@
         <li><a href="validation_engine/cross_rule_classes.html#validation_engine.cross_rule_classes.BaseVariable">BaseVariable (class in validation_engine.cross_rule_classes)</a>
 </li>
         <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn">booleanColumn (class in validation_engine.validation_column_types)</a>
-</li>
-        <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.build_id_key">build_id_key() (validation_engine.validation_engine.ValidationEngine method)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -330,8 +351,6 @@
         <li><a href="validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.complete_run">complete_run() (validation_engine.db_logger.ValidationDBLogger method)</a>
 </li>
         <li><a href="validation_engine/key_creator.html#validation_engine.key_creator.KeyCreator.create_key_from_row">create_key_from_row() (validation_engine.key_creator.KeyCreator method)</a>
-</li>
-        <li><a href="validation_engine/helpers.html#validation_engine.helpers.cross_errors_df">cross_errors_df() (in module validation_engine.helpers)</a>
 </li>
         <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.cross_rules">cross_rules (validation_engine.validation_engine.ValidationEngine attribute)</a>
 </li>
@@ -372,8 +391,6 @@
   <h2>E</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.ensure_normalized_data">ensure_normalized_data() (validation_engine.validation_engine.ValidationEngine method)</a>
-</li>
         <li><a href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.ensure_unprotected_visible">ensure_unprotected_visible() (in module validation_engine.workbook_loader)</a>
 </li>
         <li><a href="validation_engine/cross_rule_classes.html#validation_engine.cross_rule_classes.BaseVariable.equals">equals() (validation_engine.cross_rule_classes.BaseVariable method)</a>
@@ -438,8 +455,12 @@
   <h2>F</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.file">file (validation_engine.validation_engine.ValidationEngine attribute)</a>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.file">file (validation_engine.validation_column_types.fileSpecificCategoricalColumn attribute)</a>
+
+        <ul>
+          <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.file">(validation_engine.validation_engine.ValidationEngine attribute)</a>
 </li>
+        </ul></li>
         <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn">fileSpecificCategoricalColumn (class in validation_engine.validation_column_types)</a>
 </li>
         <li><a href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.find_sheet_by_headers">find_sheet_by_headers() (in module validation_engine.workbook_loader)</a>
@@ -485,7 +506,11 @@
         <li><a href="validation_engine/cross_rule_descriptions.html#validation_engine.cross_rule_descriptions.format_reference">format_reference() (in module validation_engine.cross_rule_descriptions)</a>
 </li>
         <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.fuzzy">fuzzy (validation_engine.validation_column_types.categoricalColumn attribute)</a>
+
+        <ul>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.fuzzy">(validation_engine.validation_column_types.fileSpecificCategoricalColumn attribute)</a>
 </li>
+        </ul></li>
     </ul></td>
   </tr></table>
 </section>
@@ -586,14 +611,36 @@
   <h2>M</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="applications/validation_main.html#applications.career_connect_grantee_sheets.validation_main.main">main() (in module applications.career_connect_grantee_sheets.validation_main)</a>
+</li>
         <li><a href="validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.mark_presence_participant">mark_presence_participant() (validation_engine.db_logger.ValidationDBLogger method)</a>
 </li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.max_date">max_date (validation_engine.validation_column_types.dateTimeColumn attribute)</a>
+</li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn.max_hours">max_hours (validation_engine.validation_column_types.hoursWorkedColumn attribute)</a>
+</li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.max_wage">max_wage (validation_engine.validation_column_types.hourlyWageColumn attribute)</a>
+</li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.min_date">min_date (validation_engine.validation_column_types.dateTimeColumn attribute)</a>
+</li>
         <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.min_score">min_score (validation_engine.validation_column_types.categoricalColumn attribute)</a>
+
+        <ul>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.min_score">(validation_engine.validation_column_types.fileSpecificCategoricalColumn attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.min_wage">min_wage (validation_engine.validation_column_types.hourlyWageColumn attribute)</a>
 </li>
         <li>
     module
 
         <ul>
+          <li><a href="applications/file_directory.html#module-applications.career_connect_grantee_sheets.file_directory">applications.career_connect_grantee_sheets.file_directory</a>
+</li>
+          <li><a href="applications/validation_main.html#module-applications.career_connect_grantee_sheets.validation_main">applications.career_connect_grantee_sheets.validation_main</a>
+</li>
+          <li><a href="applications/workbook_definitions.html#module-applications.career_connect_grantee_sheets.workbook_definitions">applications.career_connect_grantee_sheets.workbook_definitions</a>
+</li>
           <li><a href="database/init_sqlite_db.html#module-database.init_sqlite_db">database.init_sqlite_db</a>
 </li>
           <li><a href="validation_engine/cross_rule_classes.html#module-validation_engine.cross_rule_classes">validation_engine.cross_rule_classes</a>
@@ -603,8 +650,6 @@
           <li><a href="validation_engine/cross_rule_engine.html#module-validation_engine.cross_rule_engine">validation_engine.cross_rule_engine</a>
 </li>
           <li><a href="validation_engine/db_logger.html#module-validation_engine.db_logger">validation_engine.db_logger</a>
-</li>
-          <li><a href="validation_engine/helpers.html#module-validation_engine.helpers">validation_engine.helpers</a>
 </li>
           <li><a href="validation_engine/key_creator.html#module-validation_engine.key_creator">validation_engine.key_creator</a>
 </li>
@@ -683,8 +728,6 @@
         </ul></li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.normalize_data">normalize_data() (validation_engine.validation_engine.ValidationEngine method)</a>
-</li>
         <li><a href="validation_engine/cross_rule_engine.html#validation_engine.cross_rule_engine.CrossRuleEngine.normalize_logic">normalize_logic() (validation_engine.cross_rule_engine.CrossRuleEngine method)</a>
 </li>
         <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.normalized_data">normalized_data (validation_engine.validation_engine.ValidationEngine attribute)</a>
@@ -711,10 +754,14 @@
   <h2>P</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all">preprocess_all() (validation_engine.workbook_loader.MultiWorkbookLoader method)</a>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn.pattern">pattern (validation_engine.validation_column_types.CIPCodeColumn attribute)</a>
+</li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn.patterns">patterns (validation_engine.validation_column_types.NAICSCodeColumn attribute)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.MultiWorkbookLoader.preprocess_all">preprocess_all() (validation_engine.workbook_loader.MultiWorkbookLoader method)</a>
+</li>
         <li><a href="validation_engine/workbook_loader.html#validation_engine.workbook_loader.WorkbookLoader.preprocess_excel">preprocess_excel() (validation_engine.workbook_loader.WorkbookLoader method)</a>
 </li>
     </ul></td>
@@ -725,19 +772,57 @@
   <h2>R</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.required">required (validation_engine.validation_column_types.categoricalColumn attribute)</a>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn.required">required (validation_engine.validation_column_types.booleanColumn attribute)</a>
+
+        <ul>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.required">(validation_engine.validation_column_types.categoricalColumn attribute)</a>
 </li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn.required">(validation_engine.validation_column_types.CIPCodeColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.required">(validation_engine.validation_column_types.dateTimeColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.required">(validation_engine.validation_column_types.fileSpecificCategoricalColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.required">(validation_engine.validation_column_types.hourlyWageColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn.required">(validation_engine.validation_column_types.hoursWorkedColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn.required">(validation_engine.validation_column_types.NAICSCodeColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.required">(validation_engine.validation_column_types.stateID7Column attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.zipCodeColumn.required">(validation_engine.validation_column_types.zipCodeColumn attribute)</a>
+</li>
+        </ul></li>
         <li><a href="validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.resolve_person">resolve_person() (validation_engine.db_logger.ValidationDBLogger method)</a>
 </li>
     </ul></td>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.row_numbers">row_numbers (validation_engine.validation_column_types.categoricalColumn attribute)</a>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.booleanColumn.row_numbers">row_numbers (validation_engine.validation_column_types.booleanColumn attribute)</a>
 
         <ul>
-          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.zipCodeColumn.row_numbers">(validation_engine.validation_column_types.zipCodeColumn attribute)</a>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.categoricalColumn.row_numbers">(validation_engine.validation_column_types.categoricalColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.CIPCodeColumn.row_numbers">(validation_engine.validation_column_types.CIPCodeColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.dateTimeColumn.row_numbers">(validation_engine.validation_column_types.dateTimeColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.fileSpecificCategoricalColumn.row_numbers">(validation_engine.validation_column_types.fileSpecificCategoricalColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hourlyWageColumn.row_numbers">(validation_engine.validation_column_types.hourlyWageColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.hoursWorkedColumn.row_numbers">(validation_engine.validation_column_types.hoursWorkedColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.NAICSCodeColumn.row_numbers">(validation_engine.validation_column_types.NAICSCodeColumn attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.row_numbers">(validation_engine.validation_column_types.stateID7Column attribute)</a>
+</li>
+          <li><a href="validation_engine/column_types.html#id1">(validation_engine.validation_column_types.zipCodeColumn attribute)</a>, <a href="validation_engine/column_types.html#validation_engine.validation_column_types.zipCodeColumn.row_numbers">[1]</a>
 </li>
         </ul></li>
         <li><a href="validation_engine/cross_rule_engine.html#validation_engine.cross_rule_engine.CrossRuleEngine.run_all_rules">run_all_rules() (validation_engine.cross_rule_engine.CrossRuleEngine method)</a>
+</li>
+        <li><a href="applications/validation_main.html#applications.career_connect_grantee_sheets.validation_main.run_validation">run_validation() (in module applications.career_connect_grantee_sheets.validation_main)</a>
 </li>
     </ul></td>
   </tr></table>
@@ -747,18 +832,22 @@
   <h2>S</h2>
   <table style="width: 100%" class="indextable genindextable"><tr>
     <td style="width: 33%; vertical-align: top;"><ul>
-        <li><a href="validation_engine/validation_engine.html#validation_engine.validation_engine.ValidationEngine.set_file">set_file() (validation_engine.validation_engine.ValidationEngine method)</a>
-</li>
         <li><a href="validation_engine/db_logger.html#validation_engine.db_logger.ValidationDBLogger.start_run">start_run() (validation_engine.db_logger.ValidationDBLogger method)</a>
 </li>
-    </ul></td>
-    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column">stateID7Column (class in validation_engine.validation_column_types)</a>
 </li>
         <li><a href="validation_engine/standard_normalizations.html#validation_engine.standard_normalizations.strict_alphabetic_normalize">strict_alphabetic_normalize() (in module validation_engine.standard_normalizations)</a>
 </li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
         <li><a href="validation_engine/standard_normalizations.html#validation_engine.standard_normalizations.strict_date_normalize">strict_date_normalize() (in module validation_engine.standard_normalizations)</a>
 </li>
+        <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.stateID7Column.strip_formatting">strip_formatting (validation_engine.validation_column_types.stateID7Column attribute)</a>
+
+        <ul>
+          <li><a href="validation_engine/column_types.html#validation_engine.validation_column_types.zipCodeColumn.strip_formatting">(validation_engine.validation_column_types.zipCodeColumn attribute)</a>
+</li>
+        </ul></li>
     </ul></td>
   </tr></table>
 </section>
@@ -801,13 +890,6 @@
 
         <ul>
           <li><a href="validation_engine/db_logger.html#module-validation_engine.db_logger">module</a>
-</li>
-        </ul></li>
-        <li>
-    validation_engine.helpers
-
-        <ul>
-          <li><a href="validation_engine/helpers.html#module-validation_engine.helpers">module</a>
 </li>
         </ul></li>
     </ul></td>

@@ -202,20 +202,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_classes.html">Validation Crossrule Classes</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../validation_engine/cross_rule_descriptions.html">Validation Crossrule Descriptions</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/key_creator.html">Validation Key Creator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/db_logger.html">SQL Logger</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../validation_engine/standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../database/init_sqlite_db.html">Database Initialization</a></li>
-</ul>
 
 </div>
 </div>
@@ -259,23 +245,89 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Construct a natural-language description for a compound logical clause.</span>
 
-<span class="sd">    This function receives the operator (e.g., AND, OR, NOT, IF_THEN)</span>
-<span class="sd">    and pre-rendered descriptions of its subclauses, then produces a</span>
-<span class="sd">    readable English explanation matching the semantics of the rule.</span>
+<span class="sd">    This function combines already-rendered subclause descriptions into a</span>
+<span class="sd">    single human-readable logical expression.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        op (str):</span>
-<span class="sd">            Logical operator name. Supports:</span>
-<span class="sd">            AND, OR, NOT, IF_THEN, IF_THEN_ELSE,</span>
-<span class="sd">            EQUIVALENT/IFF, XOR, ONE_OF, AT_LEAST.</span>
-<span class="sd">        subdescs (list[str]):</span>
-<span class="sd">            Human-readable descriptions of each sub-clause.</span>
-<span class="sd">        extra (int | None):</span>
-<span class="sd">            Optional numeric argument used by operators such as AT_LEAST.</span>
+<span class="sd">    Unlike ``describe_logic()``, this function does not recurse through</span>
+<span class="sd">    clause trees directly. Instead, it operates on pre-rendered textual</span>
+<span class="sd">    fragments representing descendant clauses.</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        str:</span>
-<span class="sd">            A natural-language description of the combined logic.</span>
+<span class="sd">    Supported operators include:</span>
+
+<span class="sd">        - AND</span>
+<span class="sd">        - OR</span>
+<span class="sd">        - NOT</span>
+<span class="sd">        - IF_THEN</span>
+<span class="sd">        - IF_THEN_ELSE</span>
+<span class="sd">        - EQUIVALENT / IFF</span>
+<span class="sd">        - XOR</span>
+<span class="sd">        - ONE_OF</span>
+<span class="sd">        - AT_LEAST</span>
+
+<span class="sd">    Overview</span>
+<span class="sd">    --------</span>
+<span class="sd">    Compound logical operators combine multiple subclauses into larger</span>
+<span class="sd">    logical expressions.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">    &gt;&gt;&gt; describe_compound(</span>
+<span class="sd">    ...     &quot;AND&quot;,</span>
+<span class="sd">    ...     [</span>
+<span class="sd">    ...         &quot;&#39;Completed Date&#39; must be filled&quot;,</span>
+<span class="sd">    ...         &quot;&#39;Employment Status&#39; must be filled&quot;</span>
+<span class="sd">    ...     ]</span>
+<span class="sd">    ... )</span>
+
+<span class="sd">    Produces:</span>
+
+<span class="sd">        &quot;(&#39;Completed Date&#39; must be filled) and</span>
+<span class="sd">        (&#39;Employment Status&#39; must be filled)&quot;</span>
+
+<span class="sd">    Conditional Tone Rewriting</span>
+<span class="sd">    --------------------------</span>
+<span class="sd">    Conditional operators such as ``IF_THEN`` and ``IF_THEN_ELSE`` soften</span>
+<span class="sd">    the antecedent phrasing by rewriting:</span>
+
+<span class="sd">        &quot;must&quot;</span>
+
+<span class="sd">    to:</span>
+
+<span class="sd">        &quot;is&quot;</span>
+
+<span class="sd">    This produces more natural conditional language.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        &quot;If &#39;Completed Date&#39; is filled, then</span>
+<span class="sd">        &#39;Employment Status&#39; must be filled&quot;</span>
+
+<span class="sd">    rather than:</span>
+
+<span class="sd">        &quot;If &#39;Completed Date&#39; must be filled...&quot;</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    op : str</span>
+<span class="sd">        Compound logical operator name.</span>
+
+<span class="sd">    subdescs : list[str]</span>
+<span class="sd">        Pre-rendered natural-language descriptions of subclauses.</span>
+
+<span class="sd">    extra : int | None, optional</span>
+<span class="sd">        Additional operator metadata used by certain operators such as</span>
+<span class="sd">        ``AT_LEAST``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Human-readable logical description.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Unknown operators fall back to a defensive generic rendering rather</span>
+<span class="sd">    than raising exceptions. This behavior helps preserve debuggability</span>
+<span class="sd">    during rule-authoring or grammar-extension workflows.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="n">op</span> <span class="o">==</span> <span class="s2">&quot;AND&quot;</span><span class="p">:</span>

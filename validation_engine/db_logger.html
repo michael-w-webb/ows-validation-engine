@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Helper Functions" href="helpers.html"><link rel="prev" title="Validation Key Creator" href="key_creator.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Workbook Definitions" href="../applications/workbook_definitions.html"><link rel="prev" title="Validation Key Creator" href="key_creator.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>SQL Logger - OWS Validation Documentation</title>
@@ -205,17 +205,15 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -280,6 +278,19 @@ tracking of participants and datasets across repeated validation runs.</p>
 <p>SQLite is configured for concurrent-safe access using WAL mode and
 foreign key enforcement. All timestamps are generated at write time
 using the database clock.</p>
+<section id="persistence-model">
+<h2>Persistence Model<a class="headerlink" href="#persistence-model" title="Link to this heading">¶</a></h2>
+<p>Some logging operations are buffered in memory and persisted in batches
+for performance reasons. Methods such as:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mark_presence_participant</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">log_violation</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">resolve_person</span></code> (new people)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_or_create_participant</span></code> (new participants)</p></li>
+</ul>
+<p>defer database writes until their corresponding <code class="docutils literal notranslate"><span class="pre">flush_*</span></code> methods are
+called.</p>
+<p>This design reduces transaction overhead during large validation runs.</p>
 <p class="rubric">Notes</p>
 <ul class="simple">
 <li><p>This logger assumes the database schema already exists.</p></li>
@@ -288,6 +299,7 @@ weak-name-only matching is intentionally disabled to avoid
 accidental merges.</p></li>
 <li><p>All Pandas NA / NaN values are coerced to <code class="docutils literal notranslate"><span class="pre">NULL</span></code> prior to insertion.</p></li>
 </ul>
+</section>
 <section id="typical-usage">
 <h2>Typical usage<a class="headerlink" href="#typical-usage" title="Link to this heading">¶</a></h2>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">logger</span> <span class="o">=</span> <span class="n">ValidationDBLogger</span><span class="p">()</span>
@@ -323,26 +335,47 @@ This constructor does not create or migrate tables.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.load_participant_map">
 <span class="sig-name descname"><span class="pre">load_participant_map</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">org</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.load_participant_map"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.load_participant_map" title="Link to this definition">¶</a></dt>
-<dd><p>Preload participant identifiers into an in-memory map for fast lookup.</p>
-<dl class="simple">
-<dt>Populates self._participant_map with keys of the form:</dt><dd><p>(person_id, dataset_name, org) -&gt; participant_id</p>
-</dd>
-</dl>
-<p>This should be called once per run, before validation begins.</p>
+<dd><p>Preload participant identifiers into an in-memory lookup map.</p>
+<p>Loads existing participant records from the database into
+<code class="docutils literal notranslate"><span class="pre">self._participant_map</span></code> for O(1) participant resolution during
+validation.</p>
+<p>Keys are stored as:</p>
+<blockquote>
+<div><p>(person_id, dataset_name, org) -&gt; participant_id</p>
+</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dataset_name</strong> (<em>str</em>)</p></li>
-<li><p><strong>org</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Dataset scope to preload.</p></li>
+<li><p><strong>org</strong> (<em>str</em><em>, </em><em>optional</em>) – If provided, restricts loading to a single organization.
+Otherwise all organizations for the dataset are loaded.</p></li>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>This method clears any previously loaded participant map state before
+loading new records.</p>
+<p>Typically called once at the beginning of a validation run to avoid
+repeated database lookups during participant resolution.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.load_person_maps">
 <span class="sig-name descname"><span class="pre">load_person_maps</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.load_person_maps"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.load_person_maps" title="Link to this definition">¶</a></dt>
-<dd><p>Preload person identity key maps into memory.</p>
+<dd><p>Preload deterministic identity-key maps into memory.</p>
+<p>Loads strict and medium-strength identity hashes from the <code class="docutils literal notranslate"><span class="pre">person</span></code>
+table into in-memory dictionaries used during participant resolution.</p>
+<p>Loaded maps include:</p>
+<ul class="simple">
+<li><p>strict: name + DOB + ZIP</p></li>
+<li><p>medium: name + DOB</p></li>
+<li><p>medium: name + ZIP</p></li>
+</ul>
+<p>Weak-name-only matching is intentionally excluded to reduce the risk
+of false-positive merges.</p>
+<p class="rubric">Notes</p>
+<p>This method should typically be called once before processing rows in
+a validation run.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -457,20 +490,43 @@ keys. Missing values are safely coerced to <code class="docutils literal notrans
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.resolve_person">
 <span class="sig-name descname"><span class="pre">resolve_person</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">row</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.resolve_person"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.resolve_person" title="Link to this definition">¶</a></dt>
-<dd><p>Resolve a person using in-memory identity key maps.
-Creates a new person <em>logically</em> if no match is found,
-deferring persistence until later.</p>
+<dd><p>Resolve or logically create a person identifier using deterministic
+identity keys.</p>
+<p>Matching priority:
+1. strict key (name + DOB + ZIP)
+2. medium key (name + DOB)
+3. medium key (name + ZIP)</p>
+<p>If no match is found, a new <code class="docutils literal notranslate"><span class="pre">person_id</span></code> is generated and staged in
+<code class="docutils literal notranslate"><span class="pre">self._new_people_buffer</span></code> for later persistence.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>row</strong> (<em>pandas.Series</em><em> or </em><em>dict-like</em>) – Row containing identity-key fields and participant attributes.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Resolved or newly generated <code class="docutils literal notranslate"><span class="pre">person_id</span></code>.</p>
+</dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>New people are not immediately written to the database. Persistence
+occurs when <code class="docutils literal notranslate"><span class="pre">flush_new_people_buffer</span></code> is called.</p>
+<p>Weak-name-only matching is intentionally disabled to reduce false
+positive merges.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_new_people_buffer">
 <span class="sig-name descname"><span class="pre">flush_new_people_buffer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_new_people_buffer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_new_people_buffer" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Persist buffered person records to the database.</p>
+<p>Writes all pending entries from <code class="docutils literal notranslate"><span class="pre">self._new_people_buffer</span></code> into the
+<code class="docutils literal notranslate"><span class="pre">person</span></code> table using a batched insert operation.</p>
+<p class="rubric">Notes</p>
+<p>This method is typically called once near the end of a validation run
+after all rows have been processed.</p>
+<p>The in-memory buffer is cleared after a successful commit.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.get_or_create_participant">
@@ -524,12 +580,110 @@ updated idempotently.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_participant_presence">
 <span class="sig-name descname"><span class="pre">flush_participant_presence</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_participant_presence"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_participant_presence" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Persist buffered participant presence records.</p>
+<p>Writes all queued presence records to
+<code class="docutils literal notranslate"><span class="pre">participant_presence_log</span></code> using a batched transaction.</p>
+<p class="rubric">Notes</p>
+<p>Insertion uses <code class="docutils literal notranslate"><span class="pre">INSERT</span> <span class="pre">OR</span> <span class="pre">REPLACE</span></code> semantics so repeated writes for
+the same <code class="docutils literal notranslate"><span class="pre">(run_id,</span> <span class="pre">participant_id)</span></code> pair overwrite prior state.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.log_all_normalized_cell_values">
 <span class="sig-name descname"><span class="pre">log_all_normalized_cell_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.log_all_normalized_cell_values"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.log_all_normalized_cell_values" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Persist normalized and raw cell values in long-form history tables.</p>
+<p>Transforms a validation dataframe from wide format into a normalized
+long-form structure suitable for longitudinal storage in the
+<code class="docutils literal notranslate"><span class="pre">cell_value_history</span></code> table. Both raw and normalized representations
+of each tracked value are preserved.</p>
+<dl class="simple">
+<dt>This method is designed to support:</dt><dd><ul class="simple">
+<li><p>historical auditing of participant data</p></li>
+<li><p>value change detection across runs</p></li>
+<li><p>cross-sheet normalization analysis</p></li>
+<li><p>downstream rule evaluation and diagnostics</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>run_id</strong> (<em>str</em>) – Validation run identifier associated with the logged values.</p></li>
+<li><p><strong>dataset_name</strong> (<em>str</em>) – Dataset name used for column metadata normalization and lookup.</p></li>
+<li><p><strong>df</strong> (<em>pandas.DataFrame</em>) – <p>Combined validation dataframe containing:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">person_id</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">participant_id</span></code></p></li>
+<li><p>normalized columns</p></li>
+<li><p>corresponding raw columns</p></li>
+</ul>
+<p>Normalized columns are expected to follow the convention:</p>
+<blockquote>
+<div><p>&lt;column_name&gt;_normalized_|_|_&lt;sheet_name&gt;</p>
+</div></blockquote>
+<p>Raw columns are expected to share the same base structure
+without the <code class="docutils literal notranslate"><span class="pre">_normalized</span></code> marker.</p>
+</p></li>
+<li><p><strong>Structure</strong> (<em>Expected DataFrame</em>)</p></li>
+<li><p><strong>----------------------------</strong></p></li>
+<li><p><strong>generated</strong> (<em>The dataframe should contain paired raw/normalized columns</em>)</p></li>
+<li><p><strong>example</strong> (<em>during workbook normalization. For</em>) – First Name_|_|_Training
+First Name_normalized_|_|_Training</p></li>
+<li><p><strong>while</strong> (<em>The delimiter _</em><em>|</em><em>_</em><em>|</em><em>_ is used to preserve sheet provenance</em>)</p></li>
+<li><p><strong>dataframe.</strong> (<em>allowing multiple sheets to be merged into a single</em>)</p></li>
+<li><p><strong>name</strong> (<em>Columns without sheet delimiters are assigned the fallback sheet</em>)</p></li>
+<li><p><strong>&quot;combined&quot;.</strong></p></li>
+<li><p><strong>Process</strong> (<em>Transformation</em>)</p></li>
+<li><p><strong>----------------------</strong></p></li>
+<li><p><strong>operations</strong> (<em>The method performs the following</em>)</p></li>
+<li><p><strong>columns</strong> (<em>4. Parses logical column names and sheet names from suffixed</em>)</p></li>
+<li><p><strong>names</strong> (<em>2. Derives corresponding raw column</em>)</p></li>
+<li><p><strong>using</strong> (<em>3. Converts both normalized and raw values into long format</em>)</p></li>
+<li><p><strong>pandas.melt</strong></p></li>
+<li><p><strong>columns</strong></p></li>
+<li><p><strong>representations</strong> (<em>5. Verifies alignment between raw and normalized</em>)</p></li>
+<li><p><strong>values</strong> (<em>Logical columns are normalized into persistent column_id</em>)</p></li>
+<li><p><strong>cell_value_history</strong> (<em>7. Inserts records into</em>)</p></li>
+<li><p><strong>Validation</strong> (<em>Alignment</em>)</p></li>
+<li><p><strong>--------------------</strong></p></li>
+<li><p><strong>and</strong> (<em>Several assertions are intentionally enforced before merging raw</em>)</p></li>
+<li><p><strong>values</strong> – <ul>
+<li><p>equal row counts</p></li>
+<li><p>matching participant ordering</p></li>
+<li><p>matching logical column names</p></li>
+<li><p>matching sheet names</p></li>
+</ul>
+</p></li>
+<li><p><strong>between</strong> (<em>Failure</em><em> of </em><em>these assertions indicates a structural mismatch</em>)</p></li>
+<li><p><strong>as</strong> (<em>raw and normalized dataframe representations and should be treated</em>)</p></li>
+<li><p><strong>error.</strong> (<em>a critical pipeline</em>)</p></li>
+<li><p><strong>Normalization</strong> (<em>Column</em>)</p></li>
+<li><p><strong>--------------------</strong></p></li>
+<li><p><strong>values</strong></p></li>
+<li><p><strong>allows</strong> (<em>using get_or_create_column. This</em>) – <ul>
+<li><p>stable column tracking across runs</p></li>
+<li><p>cross-sheet comparisons</p></li>
+<li><p>schema evolution analysis</p></li>
+<li><p>reduced storage duplication</p></li>
+</ul>
+</p></li>
+<li><p><strong>Behavior</strong> (<em>Persistence</em>)</p></li>
+<li><p><strong>--------------------</strong></p></li>
+<li><p><strong>SQLite</strong> (<em>Records are inserted in batches using executemany to reduce</em>)</p></li>
+<li><p><strong>runs.</strong> (<em>transaction overhead during large validation</em>)</p></li>
+<li><p><strong>that</strong> (<em>Values are cleaned using _clean_sql_value before insertion so</em>) – <ul>
+<li><p>Pandas missing values become <code class="docutils literal notranslate"><span class="pre">NULL</span></code></p></li>
+<li><p>datetime objects become ISO-8601 strings</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>Only rows with non-null <code class="docutils literal notranslate"><span class="pre">participant_id</span></code> values are logged.</p>
+<p>This method assumes that normalized and raw columns were generated
+through the standard validation-engine normalization pipeline.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.log_violation">
@@ -555,7 +709,26 @@ affected participant, column, and observed values.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.flush_violations">
 <span class="sig-name descname"><span class="pre">flush_violations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/db_logger.html#ValidationDBLogger.flush_violations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.db_logger.ValidationDBLogger.flush_violations" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Persist buffered validation violations to the database.</p>
+<p>Writes all queued entries from <code class="docutils literal notranslate"><span class="pre">self._violation_buffer</span></code> into the
+<code class="docutils literal notranslate"><span class="pre">validation_violation</span></code> table using a batched transaction.</p>
+<p>Violations are accumulated during validation through
+<code class="docutils literal notranslate"><span class="pre">log_violation</span></code> and deferred until this method is called in order
+to reduce transaction overhead during large validation runs.</p>
+<p>Persistence is performed using <code class="docutils literal notranslate"><span class="pre">executemany</span></code> within an explicit
+transaction boundary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>Exception</strong> – Re-raises any database exception encountered during insertion
+    after rolling back the transaction.</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The in-memory violation buffer is cleared after successful insertion
+or rollback.</p>
+<p>This method is typically called near the end of a validation run
+after all rule evaluation has completed.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.db_logger.ValidationDBLogger.log_key_mismatches">
@@ -582,12 +755,12 @@ org, period, sheet, id_key, issue</p></li>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="helpers.html">
+          <a class="next-page" href="../applications/workbook_definitions.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Helper Functions</div>
+                <div class="title">Workbook Definitions</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>

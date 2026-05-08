@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Workbook Loader" href="workbook_loader.html"><link rel="prev" title="OWS Validation Documentation" href="../index.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Workbook Loader" href="workbook_loader.html"><link rel="prev" title="OWS Validation Engine" href="../index.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
         <title>Validation Engine - OWS Validation Documentation</title>
@@ -205,17 +205,15 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">SQL Logging</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="key_creator.html">Validation Key Creator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="db_logger.html">SQL Logger</a></li>
 </ul>
-<p class="caption" role="heading"><span class="caption-text">Helpers and Normalizations</span></p>
+<p class="caption" role="heading"><span class="caption-text">Application Configuration</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="helpers.html">Helper Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="standard_normalizations.html">Standard Normalizations</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Database Initialization</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../database/init_sqlite_db.html">Database Initialization</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/workbook_definitions.html">Workbook Definitions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/file_directory.html">File Directory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../applications/validation_main.html">Validation Main</a></li>
 </ul>
 
 </div>
@@ -257,34 +255,68 @@
           <section id="validation-engine">
 <h1>Validation Engine<a class="headerlink" href="#validation-engine" title="Link to this heading">¶</a></h1>
 <p>Core validation and normalization logic for Office of Workforce Strategy workbooks. Coordinates normalization, cross-error resolution, and logging.</p>
-<section id="cc-validation-engine-py">
-<span id="module-validation_engine.validation_engine"></span><h2>cc_validation_engine.py<a class="headerlink" href="#cc-validation-engine-py" title="Link to this heading">¶</a></h2>
+<section id="validation-engine-py">
+<span id="module-validation_engine.validation_engine"></span><h2>validation_engine.py<a class="headerlink" href="#validation-engine-py" title="Link to this heading">¶</a></h2>
 <p>Core validation engine for schema-based normalization, cross-sheet rule
-evaluation, and optional SQL-backed audit logging. This module defines the
-<cite>ValidationEngine</cite> class, which orchestrates end-to-end validation of
-workbooks submitted by external organizations (e.g., CareerConneCT,
-Good Jobs Challenge).</p>
+evaluation, dataset reconciliation, and optional SQL-backed audit logging.</p>
+<p>This module defines the <cite>ValidationEngine</cite> class, which orchestrates
+end-to-end validation of multi-sheet workbooks submitted by external
+organizations (e.g., CareerConneCT, Good Jobs Challenge).</p>
 <section id="overview">
 <h3>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h3>
 <p>The engine performs the following high-level steps:</p>
-<ol class="arabic simple">
-<li><p><strong>Sheet-by-sheet column-type normalization</strong>
-Uses column-type classes (e.g., <cite>categoricalColumn</cite>, <cite>dateTimeColumn</cite>,
-<cite>identifierColumn</cite>) to coerce raw spreadsheet values into a consistent,
-validated format. Column-type classes also generate column-level errors.</p></li>
-<li><p><strong>Identity resolution and participant tracking (optional)</strong>
-When <cite>logging=True</cite>, the engine:
-- creates multiple spreadsheet-specific key variants via <cite>KeyCreator</cite>,
-- resolves or creates global <cite>person_id</cite> values based on keys,
-- assigns <cite>participant_id</cite> values for each dataset instance, and
-- logs normalized cell values and participant presence to the database.</p></li>
+<ol class="arabic">
+<li><p><strong>Sheet-level normalization</strong>
+• Applies column-type validator classes (e.g., <cite>categoricalColumn</cite>,</p>
+<blockquote>
+<div><p><cite>dateTimeColumn</cite>, <cite>identifierColumn</cite>) to coerce raw spreadsheet values
+into consistent formats.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Produces both raw and normalized versions of each column.</p></li>
+<li><p>Generates column-level validation errors.</p></li>
+</ul>
+</li>
+<li><p><strong>Identity construction</strong>
+• Establishes an <cite>id_key</cite> per record:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>simple format: constructed from name fields</p></li>
+<li><p>multi-sheet format: expected from identity sheet</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><p>Used as the primary key for cross-sheet alignment.</p></li>
+</ul>
+</li>
+<li><p><strong>Duplicate and mismatch handling</strong>
+• Detects duplicate <cite>id_key</cite> values within sheets.
+• Removes duplicated keys globally prior to merging.
+• Identifies cross-sheet inconsistencies:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>missing_in_sheet</p></li>
+<li><p>extra_in_sheet</p></li>
+<li><p>duplicate_in_sheet</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p><strong>Cross-sheet merging</strong>
+• Inner-joins all sheets on <cite>id_key</cite>.
+• Retains only participants present in all sheets.
+• Encodes sheet provenance in column names using the delimiter <cite>_|_|_</cite>.</p></li>
 <li><p><strong>Cross-sheet rule evaluation</strong>
-Delegates rule execution to <cite>CrossRuleEngine</cite>, applying rule sets such as
-connected presence, conditional blanks, conditional requirements, and
-date-based conditional requirements.</p></li>
+• Delegates rule execution to <cite>CrossRuleEngine</cite>.
+• Rules operate on the merged dataset (<cite>single_sheet</cite>), not individual sheets.</p></li>
 <li><p><strong>Error aggregation</strong>
-All normalization errors and cross-sheet violations are collected into
-DataFrames, accessible via <cite>engine.errors</cite> or <cite>engine.get_all_errors()</cite>.</p></li>
+• Combines normalization errors and cross-sheet rule violations.
+• Accessible via <cite>engine.errors</cite> or <cite>engine.get_all_errors()</cite>.</p></li>
+<li><p><strong>Optional database logging</strong>
+When <cite>logging=True</cite>, the engine:
+• creates validation runs (<cite>run_id</cite>)
+• resolves <cite>person_id</cite> and <cite>participant_id</cite>
+• logs normalized values and presence tracking
+• persists validation violations and mismatch events</p></li>
 </ol>
 </section>
 <section id="inputs">
@@ -292,14 +324,14 @@ DataFrames, accessible via <cite>engine.errors</cite> or <cite>engine.get_all_er
 <dl class="simple">
 <dt>The engine requires:</dt><dd><ul class="simple">
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">workbook_definitions</span></code> (dict):</dt><dd><p>Schema describing sheets, expected columns, column types, and
-accepted responses.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">workbook_definitions</span></code> (dict):</dt><dd><p>Schema describing sheets, expected columns, column types,
+and accepted responses.</p>
 </dd>
 </dl>
 </li>
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">cross_rules</span></code> (list[tuple], optional):</dt><dd><p>Rule sets to apply during cross-sheet validation. If not provided,
-the caller is expected to supply rule sets externally.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">cross_rules</span></code> (list[tuple], optional):</dt><dd><p>Rule sets applied during cross-sheet validation, structured as:
+[(label, ruleset), …]</p>
 </dd>
 </dl>
 </li>
@@ -313,7 +345,8 @@ the caller is expected to supply rule sets externally.</p>
 </dd>
 <dt>Within <cite>validate_workbook</cite>, the caller must supply:</dt><dd><ul class="simple">
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">file</span></code> (str):</dt><dd><p>Identifier in <code class="docutils literal notranslate"><span class="pre">org|period</span></code> format.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">file</span></code> (str):</dt><dd><p>Identifier in the form <code class="docutils literal notranslate"><span class="pre">org|period</span></code> or
+<code class="docutils literal notranslate"><span class="pre">org|period|filename</span></code>. Only the first two segments are used.</p>
 </dd>
 </dl>
 </li>
@@ -333,7 +366,12 @@ the caller is expected to supply rule sets externally.</p>
 </dl>
 </li>
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">keycreators</span></code> (list of (KeyCreator, str)):</dt><dd><p>Pairs of key generators and output column names for identity matching.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">passed_identity_sheet</span></code> (str):</dt><dd><p>Required for multi-sheet formats. Ignored for simple format.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">keycreators</span></code> (list of (KeyCreator, str), optional):</dt><dd><p>Used when logging is enabled to generate additional identity keys.</p>
 </dd>
 </dl>
 </li>
@@ -343,10 +381,22 @@ the caller is expected to supply rule sets externally.</p>
 </section>
 <section id="outputs">
 <h3>Outputs<a class="headerlink" href="#outputs" title="Link to this heading">¶</a></h3>
-<dl class="simple">
-<dt>Attributes populated during validation:</dt><dd><ul class="simple">
+<p>Attributes populated during validation:</p>
+<blockquote>
+<div><ul class="simple">
 <li><dl class="simple">
-<dt><code class="docutils literal notranslate"><span class="pre">normalized_data</span></code> (dict[str → DataFrame]):</dt><dd><p>Cleaned, normalized DataFrames for each sheet.</p>
+<dt><code class="docutils literal notranslate"><span class="pre">normalized_data</span></code> (dict[str → DataFrame]):</dt><dd><p>Per-sheet normalized DataFrames (raw + normalized columns).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">single_sheet</span></code> (DataFrame):</dt><dd><p>Fully merged dataset across sheets using <cite>id_key</cite>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">returnable_data</span></code> (DataFrame):</dt><dd><p>Reduced dataset containing only normalized columns,
+with suffixes removed for downstream use.</p>
 </dd>
 </dl>
 </li>
@@ -360,9 +410,13 @@ the caller is expected to supply rule sets externally.</p>
 </dd>
 </dl>
 </li>
-</ul>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">mismatches</span></code> (list[dict]):</dt><dd><p>Records of cross-sheet key inconsistencies.</p>
 </dd>
 </dl>
+</li>
+</ul>
+</div></blockquote>
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">-</span> <span class="pre">``validate_workbook``</span></span></dt>
@@ -375,24 +429,23 @@ the caller is expected to supply rule sets externally.</p>
 <dd><p>Returns a single concatenated DataFrame of all errors.</p>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">-</span> <span class="pre">``make_entry_key``</span></span></dt>
-<dd><p>Generates a deterministic hashed ID for record tracking.</p>
-</dd></dl>
-
 </section>
 <section id="assumptions-and-constraints">
 <h3>Assumptions and Constraints<a class="headerlink" href="#assumptions-and-constraints" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">workbook_definitions</span></code> fully describe all sheets and expected columns.</p></li>
-<li><p>Each sheet includes a <code class="docutils literal notranslate"><span class="pre">row_number</span></code> column corresponding to the original
-Excel row numbers.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">identity_sheet</span></code> must exist (“Report” for simple format, “Personal
-Information” for multi-sheet format).</p></li>
-<li><p>Column normalization must precede cross-sheet rule evaluation.</p></li>
-<li><p>KeyCreator fields must match post-normalization column names.</p></li>
-<li><p>Database schema must be initialized before enabling logging.</p></li>
+<li><p>Row tracking relies on sheet-specific columns (e.g., <cite>row_number_{sheet}</cite>),
+generated by the workbook loader.</p></li>
+<li><dl class="simple">
+<dt>Identity resolution depends on workbook format:</dt><dd><ul>
+<li><p>simple format: inferred</p></li>
+<li><p>multi-sheet format: explicitly provided</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Cross-sheet merging uses an inner join on <cite>id_key</cite>, which may drop records.</p></li>
+<li><p>Column provenance in merged outputs is encoded using <cite>_|_|_</cite>.</p></li>
 </ul>
 </section>
 <section id="side-effects">
@@ -400,10 +453,11 @@ Information” for multi-sheet format).</p></li>
 <ul>
 <li><dl class="simple">
 <dt>When <code class="docutils literal notranslate"><span class="pre">logging=True</span></code>, this module writes:</dt><dd><ul class="simple">
-<li><p>run metadata,</p></li>
-<li><p>normalized cell values,</p></li>
-<li><p>person/participant resolution events,</p></li>
-<li><p>presence logs,</p></li>
+<li><p>run metadata</p></li>
+<li><p>normalized cell values</p></li>
+<li><p>person/participant resolution events</p></li>
+<li><p>presence logs</p></li>
+<li><p>mismatch records</p></li>
 <li><p>validation rule violations</p></li>
 </ul>
 </dd>
@@ -415,12 +469,18 @@ Information” for multi-sheet format).</p></li>
 <section id="security-pii-notes">
 <h3>Security / PII Notes<a class="headerlink" href="#security-pii-notes" title="Link to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>This engine processes sensitive PII including names, DOB, ZIP code, and
-state ID values.</p></li>
+<li><p>This engine processes sensitive PII including names, DOB, ZIP code,
+and state ID values.</p></li>
 <li><p>Identity keys are generated using SHA-256, but raw PII exists in memory
 during normalization and logging.</p></li>
 <li><p>Database logs may contain raw and normalized values; appropriate access
 controls must be enforced externally.</p></li>
+</ul>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Inner joins across sheets will remove participants not present in all sheets.</p></li>
+<li><p>Duplicate <cite>id_key</cite> values are removed before merging.</p></li>
+<li><p>Logging mode performs row-wise operations and may be slow for large datasets.</p></li>
 </ul>
 <p>This module is intended to be imported by higher-level orchestration scripts
 (e.g., <cite>cc_validation_main.py</cite>) and is not designed for direct command-line
@@ -525,181 +585,148 @@ for each sheet in the workbook.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="validation_engine.validation_engine.ValidationEngine.set_file">
-<span class="sig-name descname"><span class="pre">set_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/validation_engine.html#ValidationEngine.set_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.validation_engine.ValidationEngine.set_file" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="validation_engine.validation_engine.ValidationEngine.normalize_data">
-<span class="sig-name descname"><span class="pre">normalize_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">workbook_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workbook_format</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfs_by_sheet</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/validation_engine.html#ValidationEngine.normalize_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.validation_engine.ValidationEngine.normalize_data" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="validation_engine.validation_engine.ValidationEngine.ensure_normalized_data">
-<span class="sig-name descname"><span class="pre">ensure_normalized_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">normalized_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/validation_engine.html#ValidationEngine.ensure_normalized_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.validation_engine.ValidationEngine.ensure_normalized_data" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>normalized_data</strong> (<em>dict</em>)</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="validation_engine.validation_engine.ValidationEngine.build_id_key">
-<span class="sig-name descname"><span class="pre">build_id_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">columns</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sep</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'|'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">null_token</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/validation_engine.html#ValidationEngine.build_id_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.validation_engine.ValidationEngine.build_id_key" title="Link to this definition">¶</a></dt>
-<dd><p>Build a deterministic ID key from an arbitrary list of columns.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>df</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>columns</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>)</p></li>
-<li><p><strong>normalize</strong> (<em>bool</em>)</p></li>
-<li><p><strong>sep</strong> (<em>str</em>)</p></li>
-<li><p><strong>null_token</strong> (<em>str</em>)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>Series</em></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="validation_engine.validation_engine.ValidationEngine.attach_identity_key">
-<span class="sig-name descname"><span class="pre">attach_identity_key</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">normalized_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">identity_sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_columns</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_col_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'id_key'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/validation_engine.html#ValidationEngine.attach_identity_key"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.validation_engine.ValidationEngine.attach_identity_key" title="Link to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>normalized_data</strong> (<em>dict</em>)</p></li>
-<li><p><strong>identity_sheet</strong> (<em>str</em>)</p></li>
-<li><p><strong>id_columns</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>)</p></li>
-<li><p><strong>id_col_name</strong> (<em>str</em>)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="validation_engine.validation_engine.ValidationEngine.validate_workbook">
 <span class="sig-name descname"><span class="pre">validate_workbook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workbook_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">workbook_format</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dfs_by_sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">passed_identity_sheet</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">keycreators</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/validation_engine/validation_engine.html#ValidationEngine.validate_workbook"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#validation_engine.validation_engine.ValidationEngine.validate_workbook" title="Link to this definition">¶</a></dt>
-<dd><p>Validate an entire workbook, generate normalized per-sheet data, resolve
-participant identity, apply cross-sheet rules, and optionally log all
-results to the validation database.</p>
-<p>This method orchestrates the entire validation lifecycle:</p>
-<ol class="arabic">
-<li><p><strong>Sheet-level validation</strong>
-• Each sheet listed in <cite>dfs_by_sheet</cite> is validated using column-type</p>
-<blockquote>
-<div><p>validators defined in <cite>workbook_definitions</cite>.</p>
-</div></blockquote>
-<ul class="simple">
-<li><p>Invalid values generate row-level error records.</p></li>
-<li><p>Blank records (all-NA except id_key/row_number) are removed.</p></li>
-<li><p>Normalized DataFrames are stored in <cite>self.normalized_data</cite>.</p></li>
-</ul>
-</li>
-<li><p><strong>Identity resolution</strong>
-• Determines the canonical identity sheet:</p>
+<dd><p>Validate an entire workbook, normalize sheet data, reconcile participant
+identity across sheets, construct merged outputs, apply cross-sheet rules,
+and optionally persist results to a validation database.</p>
+<p>This method orchestrates the full validation pipeline:</p>
+<p>1. <strong>Sheet-level validation</strong>
+• Each sheet in <cite>dfs_by_sheet</cite> is processed via <cite>_validate_sheet</cite>.
+• Produces:</p>
 <blockquote>
 <div><ul class="simple">
-<li><p><cite>“Report”</cite> for simple-format workbooks</p></li>
-<li><p><cite>“Personal Information”</cite> for four-sheet format</p></li>
+<li><p>normalized per-sheet DataFrames (<cite>self.normalized_data</cite>)</p></li>
+<li><p>column-level validation errors (<cite>self.errors</cite>)</p></li>
 </ul>
 </div></blockquote>
 <ul class="simple">
-<li><p>Ensures <cite>id_key</cite> exists (auto-generated for simple format).</p></li>
+<li><p>Rows that are entirely null across non-identity columns are removed.</p></li>
+</ul>
+<p>2. <strong>Identity construction</strong>
+• Establishes an <cite>id_key</cite> per row:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>simple format: constructed from <cite>“First Name” | “Last Name”</cite></p></li>
+<li><p>multi-sheet format: expected to already exist in the identity sheet</p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
 <li><dl class="simple">
-<dt>If database logging is enabled:</dt><dd><ul>
-<li><p>Applies all configured <cite>KeyCreator</cite> instances.</p></li>
-<li><p>Resolves or creates <cite>person</cite> records in the <cite>person</cite> table.</p></li>
-<li><p>Creates or updates <cite>participant</cite> records for the dataset.</p></li>
+<dt>Determines identity sheet:</dt><dd><ul>
+<li><p>simple format: inferred from processed sheets (caller must ensure correctness)</p></li>
+<li><p>four-sheet format: provided via <cite>passed_identity_sheet</cite></p></li>
 </ul>
 </dd>
 </dl>
 </li>
 </ul>
-</li>
-<li><p><strong>Logging normalized cell values</strong>
-• When logging is enabled, all normalized values for all sheets</p>
+<p>3. <strong>Duplicate and mismatch handling</strong>
+• Detects duplicate <cite>id_key</cite> values within sheets.
+• Removes all duplicated keys globally before merging.
+• Records mismatch events:</p>
 <blockquote>
-<div><p>are written to the database via <cite>ValidationDBLogger</cite>.</p>
+<div><ul class="simple">
+<li><p><cite>“duplicate_in_sheet”</cite></p></li>
+<li><p><cite>“missing_in_sheet”</cite></p></li>
+<li><p><cite>“extra_in_sheet”</cite></p></li>
+</ul>
 </div></blockquote>
-</li>
-<li><p><strong>Participant presence tracking</strong>
-• Marks participants as <cite>“present”</cite> or <cite>“missing”</cite> for the run,</p>
+<ul class="simple">
+<li><p>Mismatches are stored in <cite>self.mismatches</cite> and optionally logged.</p></li>
+</ul>
+<p>4. <strong>Cross-sheet merging</strong>
+• All sheets are inner-joined on <cite>id_key</cite>.
+• Only participants present in <em>all</em> sheets are retained.
+• Column names are suffixed with <cite>_|_|_{sheet_name}</cite> to preserve provenance.
+• Result stored as:</p>
 <blockquote>
-<div><p>enabling longitudinal participant tracking across reporting cycles.</p>
+<div><ul class="simple">
+<li><p><cite>self.single_sheet</cite> (fully merged dataset)</p></li>
+</ul>
 </div></blockquote>
-</li>
-<li><p><strong>Cross-sheet rule enforcement</strong>
-• Delegates to <cite>_apply_cross_rules()</cite> which uses <cite>CrossRuleEngine</cite></p>
+<p>5. <strong>Returnable dataset construction</strong>
+• A reduced dataset (<cite>self.returnable_data</cite>) is created:</p>
 <blockquote>
-<div><dl class="simple">
-<dt>to evaluate rules such as:</dt><dd><ul class="simple">
-<li><p>connected presence</p></li>
-<li><p>conditional required fields</p></li>
-<li><p>conditional blank-unless</p></li>
-<li><p>date comparison rules</p></li>
+<div><ul class="simple">
+<li><p>includes only normalized columns</p></li>
+<li><p>removes <cite>_normalized</cite> suffix</p></li>
+<li><p>excludes raw columns</p></li>
+<li><p>retains only rows surviving the inner join</p></li>
+</ul>
+</div></blockquote>
+<p>6. <strong>Database logging (optional)</strong>
+If <cite>logging=True</cite>:
+• Starts a validation run (<cite>run_id</cite>)
+• Applies <cite>KeyCreator</cite> instances to generate additional identity keys
+• Resolves or creates:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><cite>person_id</cite></p></li>
+<li><p><cite>participant_id</cite></p></li>
+</ul>
+</div></blockquote>
+<ul class="simple">
+<li><dl class="simple">
+<dt>Logs:</dt><dd><ul>
+<li><p>normalized cell values</p></li>
+<li><p>participant presence (present / missing)</p></li>
+<li><p>key mismatches</p></li>
+<li><p>validation rule violations</p></li>
 </ul>
 </dd>
 </dl>
-</div></blockquote>
-<ul class="simple">
-<li><p>Any violations are appended to the error collection.</p></li>
-</ul>
 </li>
-<li><p><strong>Violation persistence</strong>
-• If logging is enabled, attaches <cite>participant_id</cite> to each error row</p>
-<blockquote>
-<div><p>using <cite>id_key</cite> matching.</p>
-</div></blockquote>
-<ul class="simple">
-<li><p>Persists each rule violation into the <cite>validation_violation</cite> table.</p></li>
 </ul>
-</li>
-</ol>
+<p>7. <strong>Cross-sheet rule enforcement</strong>
+• Executes <cite>_apply_cross_rules()</cite> using the merged dataset (<cite>self.single_sheet</cite>)
+• Appends any violations to <cite>self.errors</cite></p>
+<p>8. <strong>Violation persistence (optional)</strong>
+• Maps <cite>id_key → participant_id</cite>
+• Persists each violation to the database</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>file</strong> (<em>str</em>) – Identifier for the workbook, typically of the form
-<cite>“org|quarter|filename”</cite>. Used for logging and lineage.</p></li>
+<li><p><strong>file</strong> (<em>str</em>) – Workbook identifier, typically <cite>“org|quarter”</cite> or
+<cite>“org|quarter|filename”</cite>. Only the first two segments are used
+to derive <cite>org</cite> and <cite>quarter</cite>.</p></li>
 <li><p><strong>workbook_type</strong> (<em>str</em>) – Dataset category (e.g., <cite>“CareerConneCT”</cite>).</p></li>
 <li><p><strong>workbook_format</strong> (<em>str</em>) – Layout style defined in <cite>workbook_definitions</cite>
 (e.g., <cite>“simple format”</cite>, <cite>“four sheet format”</cite>).</p></li>
-<li><p><strong>dfs_by_sheet</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>pandas.DataFrame</em><em>]</em>) – Raw DataFrames produced by the loader, keyed by sheet name.</p></li>
+<li><p><strong>dfs_by_sheet</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>pd.DataFrame</em><em>]</em>) – Raw DataFrames keyed by sheet name.</p></li>
+<li><p><strong>passed_identity_sheet</strong> (<em>str</em>) – Required for multi-sheet formats. Ignored for simple format.</p></li>
 <li><p><strong>keycreators</strong> (<em>list</em><em>[</em><em>tuple</em><em>]</em><em>, </em><em>optional</em>) – List of <cite>(KeyCreator, column_name)</cite> pairs used to generate
-additional hashed or unhashed identity keys.</p></li>
+additional identity keys when logging is enabled.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>None</dt><dd><p>All normalized data, errors, and logging output are stored in:
-• <cite>self.normalized_data</cite>
-• <cite>self.errors</cite>
-• database tables (if logging enabled)</p>
+<dd class="field-even"><p><p>None</p>
+<dl class="simple">
+<dt>Results are stored on the instance:</dt><dd><ul class="simple">
+<li><p><cite>self.normalized_data</cite>  → per-sheet normalized DataFrames</p></li>
+<li><p><cite>self.single_sheet</cite>     → merged cross-sheet dataset</p></li>
+<li><p><cite>self.returnable_data</cite>  → normalized-only dataset for downstream use</p></li>
+<li><p><cite>self.errors</cite>           → all validation errors</p></li>
+<li><p>database tables         → if logging is enabled</p></li>
+</ul>
 </dd>
 </dl>
 </p>
 </dd>
 <dt class="field-odd">Raises<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>ValueError</strong> – If the required identity sheet is missing.</p></li>
-<li><p><strong>KeyError</strong> – If workbook definitions are incomplete for the given
-    workbook type or format.</p></li>
+<li><p><strong>ValueError</strong> – If the identity sheet is missing.</p></li>
+<li><p><strong>KeyError</strong> – If workbook definitions are incomplete or a sheet schema is missing.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>This method must be called before any cross-rule checks or data export.</p></li>
-<li><p><cite>self.errors</cite> collects sheet-level and cross-sheet violations.</p></li>
-<li><p>Calling code may retrieve all errors via <cite>get_all_errors()</cite>.</p></li>
+<li><p>The inner join across sheets will drop participants not present in all sheets.</p></li>
+<li><p>Duplicate <cite>id_key</cite> values are removed prior to merging, which may reduce row counts.</p></li>
+<li><p>Column provenance is encoded using the delimiter <cite>_|_|_</cite>.</p></li>
+<li><p>Logging mode performs row-wise operations and may be slow for large datasets.</p></li>
+<li><p>This method mutates internal state and should be called once per workbook.</p></li>
 </ul>
 </dd></dl>
 
@@ -723,7 +750,7 @@ additional hashed or unhashed identity keys.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><p>A DataFrame with the standardized columns:
-[“file”, “sheet”, “row_number”, “column”, “rule”,</p>
+[“file”, “sheet”, “row_number”, “column”, “rule”, “severity”,</p>
 <blockquote>
 <div><p>”raw_value”, “normalized”]</p>
 </div></blockquote>
@@ -803,7 +830,7 @@ the correct schema is returned.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Validation Engine</a><ul>
-<li><a class="reference internal" href="#cc-validation-engine-py">cc_validation_engine.py</a><ul>
+<li><a class="reference internal" href="#validation-engine-py">validation_engine.py</a><ul>
 <li><a class="reference internal" href="#overview">Overview</a></li>
 <li><a class="reference internal" href="#inputs">Inputs</a></li>
 <li><a class="reference internal" href="#outputs">Outputs</a></li>
@@ -820,11 +847,6 @@ the correct schema is returned.</p>
 <li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.errors"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.errors</span></code></a></li>
 <li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.column_error_index"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.column_error_index</span></code></a></li>
 <li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.file"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.file</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.set_file"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.set_file()</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.normalize_data"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.normalize_data()</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.ensure_normalized_data"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.ensure_normalized_data()</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.build_id_key"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.build_id_key()</span></code></a></li>
-<li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.attach_identity_key"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.attach_identity_key()</span></code></a></li>
 <li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.validate_workbook"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.validate_workbook()</span></code></a></li>
 <li><a class="reference internal" href="#validation_engine.validation_engine.ValidationEngine.get_all_errors"><code class="docutils literal notranslate"><span class="pre">ValidationEngine.get_all_errors()</span></code></a></li>
 </ul>

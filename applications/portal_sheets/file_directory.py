@@ -77,7 +77,7 @@ from pathlib import Path
 from config import FILE_DIRECTORY_ROOT
 
 # Auto-generated results module
-portal_file_directory = {
+file_directory = {
   None: {
     "portal data": {
       "PY2 Q2":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.

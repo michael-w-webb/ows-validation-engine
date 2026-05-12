@@ -122,6 +122,7 @@ from datetime import datetime
 import warnings
 
 COLUMN_CLASS_MAP = {
+    "multiCategorical": multiCategoricalColumn,
     "categorical": categoricalColumn,
     "fileSpecificCategorical":fileSpecificCategoricalColumn,
     "identifier": identifierColumn,
@@ -292,22 +293,44 @@ class ValidationEngine:
             cls = COLUMN_CLASS_MAP[col_type]
             if col_type == "categorical":
                 accepted = spec.get("accepted_responses", [])
-                validator = cls(accepted_responses=accepted,
-                required=spec.get("required", False), 
-                row_numbers = df[f"row_number_{sheet_name}"])
-            elif col_type == "fileSpecificCategorical":
-                accepted = spec.get("accepted_responses",[])
-                validator = cls(accepted_responses = accepted, 
-                required = spec.get("required", False),
-                file = self.file.split("|")[0],
-                row_numbers = df[f"row_number_{sheet_name}"]
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
                 )
+
+            elif col_type == "multiCategorical":
+                accepted = spec.get("accepted_responses", [])
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
+            elif col_type == "fileSpecificCategorical":
+                accepted = spec.get("accepted_responses", [])
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    file=self.file.split("|")[0],
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
             elif col_type == "hourlyWage":
                 max_wage = spec.get("max_wage", 45)
                 min_wage = spec.get("min_wage", 0)
-                validator = cls(max_wage=max_wage, min_wage=min_wage, required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
+                validator = cls(
+                    max_wage=max_wage,
+                    min_wage=min_wage,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
             else:
-                validator = cls(required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
+                validator = cls(
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
 
             raw = df[col]
             s_norm = validator.normalize(raw)
@@ -325,6 +348,24 @@ class ValidationEngine:
 
             normalized_cols[col] = raw
             normalized_cols[f"{col}_normalized"] = s_fmt
+
+            # --- MultiCategorical: add indicator columns ---
+            if col_type == "multiCategorical":
+                s_ohe = validator.indicators(s_fmt)
+                num_indicators = s_ohe.shape[1]
+                num_accepted_values = len(validator.canonicals)
+
+                # sanity check (same as version 1)
+                if num_indicators != num_accepted_values:
+                    warnings.warn(
+                        f"Number of indicator columns ({num_indicators}) does not match "
+                        f"number of accepted values ({num_accepted_values}) for column "
+                        f"'{col}' in sheet '{sheet_name}'."
+                    )
+
+                # add each OHE column
+                for i, ohe_col in enumerate(s_ohe.columns):
+                    normalized_cols[f"{ohe_col}"] = s_ohe.iloc[:, i]
 
         normalized_df = pd.DataFrame(normalized_cols, index=df.index)
 
@@ -662,13 +703,17 @@ class ValidationEngine:
         if(workbook_format == "simple format"):
             identity_sheet = sheet_name
             id_df = self.normalized_data.get(identity_sheet)
-            id_df["id_key"] = (id_df["First Name"].fillna("") + "|" + id_df["Last Name"].fillna(""))
+            id_df["id_key"] = (
+                id_df["First Name"].astype(str).replace("nan", "").fillna("")
+                + "|" +
+                id_df["Last Name"].astype(str).replace("nan", "").fillna("")
+            ) # Cast to string b/c names of True or False will be viewed as booleans and break the script.
              
             raw_data = dfs_by_sheet.get(identity_sheet)
             if raw_data is None:
                 raise KeyError(f"Identity sheet '{identity_sheet}' not found")
 
-            raw_data["id_key"] = (raw_data["First Name"].fillna("") + "|" + raw_data["Last Name"].fillna(""))
+            raw_data["id_key"] = (raw_data["First Name"].astype(str).replace("nan", "").fillna("") + "|" + raw_data["Last Name"].astype(str).replace("nan", "").fillna("")) # Cast to string b/c names of True or False will be viewed as booleans and break the script.
         else: 
             identity_sheet = passed_identity_sheet
             id_df = self.normalized_data.get(identity_sheet)

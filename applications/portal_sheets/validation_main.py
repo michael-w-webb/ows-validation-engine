@@ -312,7 +312,7 @@ for target_period in periods_to_run:
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = OUTPUT_DIRECTORY / f"cc_validation_results_all_orgs_{target_period}.xlsx"
+    output_file = OUTPUT_DIRECTORY / f"portal_validation_results_{target_period}.xlsx"
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)

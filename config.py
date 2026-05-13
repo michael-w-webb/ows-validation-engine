@@ -27,8 +27,7 @@ def get_env_path(var_name: str) -> Path:
 ### These calls assume you have correctly specified paths in your .env file. 
 
 OUTPUT_DIRECTORY = get_env_path("OUTPUT_DIRECTORY")
-DB_PATH = get_env_path("DB_PATH") # Daly commented out on 4/23 b/c sqlite3.connect() was hitting error with PATh variable but not string. TODO: Investigate and FIX!
-# DB_PATH = "C:\Users\DalyRob\OneDrive - State of Connecticut\Documents\GitHub Repos\ows-validation-engine\database\validation_dev.db"
+DB_PATH = get_env_path("DB_PATH") 
 FILE_DIRECTORY_ROOT = get_env_path("FILE_DIRECTORY_ROOT")
 PROJECT_ROOT = get_env_path("PROJECT_ROOT")
 LINKING_ID_PEPPER = get_env("LINKING_ID_PEPPER")

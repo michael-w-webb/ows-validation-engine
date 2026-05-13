@@ -866,8 +866,7 @@ class booleanColumn(BaseColumn):
         self.required = required
         self.accepted = {
             "yes": "Yes", "y": "Yes", "true": "Yes", "1": "Yes", "1.0" : "Yes",
-            "no": "No", "n": "No", "false": "No", "0": "No", "0.0" : "No",
-            "unknown": "Unknown", "prefer not to say": "Unknown", "prefer not answer": "Unknown", "9": "Unknown" # Unknown added by Daly 4/10
+            "no": "No", "n": "No", "false": "No", "0": "No", "0.0" : "No"
         }
         self.row_numbers = row_numbers
 

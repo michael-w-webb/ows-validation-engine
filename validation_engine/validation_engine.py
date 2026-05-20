@@ -703,17 +703,13 @@ class ValidationEngine:
         if(workbook_format == "simple format"):
             identity_sheet = sheet_name
             id_df = self.normalized_data.get(identity_sheet)
-            id_df["id_key"] = (
-                id_df["First Name"].astype(str).replace("nan", "").fillna("")
-                + "|" +
-                id_df["Last Name"].astype(str).replace("nan", "").fillna("")
-            ) # Cast to string b/c names of True or False will be viewed as booleans and break the script.
+            id_df["id_key"] = (id_df["First Name"].fillna("") + "|" + id_df["Last Name"].fillna(""))
              
             raw_data = dfs_by_sheet.get(identity_sheet)
             if raw_data is None:
                 raise KeyError(f"Identity sheet '{identity_sheet}' not found")
 
-            raw_data["id_key"] = (raw_data["First Name"].astype(str).replace("nan", "").fillna("") + "|" + raw_data["Last Name"].astype(str).replace("nan", "").fillna("")) # Cast to string b/c names of True or False will be viewed as booleans and break the script.
+            raw_data["id_key"] = (raw_data["First Name"].fillna("") + "|" + raw_data["Last Name"].fillna(""))
         else: 
             identity_sheet = passed_identity_sheet
             id_df = self.normalized_data.get(identity_sheet)

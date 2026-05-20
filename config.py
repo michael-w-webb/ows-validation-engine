@@ -27,7 +27,7 @@ def get_env_path(var_name: str) -> Path:
 ### These calls assume you have correctly specified paths in your .env file. 
 
 OUTPUT_DIRECTORY = get_env_path("OUTPUT_DIRECTORY")
-DB_PATH = get_env_path("DB_PATH") 
+DB_PATH = get_env_path("DB_PATH")
 FILE_DIRECTORY_ROOT = get_env_path("FILE_DIRECTORY_ROOT")
 PROJECT_ROOT = get_env_path("PROJECT_ROOT")
 LINKING_ID_PEPPER = get_env("LINKING_ID_PEPPER")

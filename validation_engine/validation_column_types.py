@@ -2077,8 +2077,8 @@ class hourlyWageColumn(BaseColumn):
 
     def __init__(self, required: bool = False, min_wage: float = 5.0, max_wage: float = 45.0, row_numbers = None):
         self.required = required
-        self.min_wage = 5.0 if min_wage is None else min_wage # daly added 2/20 to make function defensive against None inputs, which were causing errors in the lambda functions in errors_df when min_wage or max_wage were None.
-        self.max_wage = 45.0 if max_wage is None else max_wage # daly added 2/20 to make function defensive against None inputs, which were causing errors in the lambda functions in errors_df when min_wage or max_wage were None.
+        self.min_wage = 5.0 if min_wage is None else min_wage
+        self.max_wage = 45.0 if max_wage is None else max_wage
         self._pattern_strip = re.compile(r"[^0-9\.]")  # strip everything except digits and dot
         self._range_pattern = re.compile(r"\d+\s*[-/]\s*\d+|\d+\s+to\s+\d+", re.IGNORECASE)
         self.row_numbers = row_numbers

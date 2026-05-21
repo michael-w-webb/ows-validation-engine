@@ -414,6 +414,10 @@ file_directory = {
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Health CareeRx" / "Y4Q2" / "Y4Q2 - CareerConneCT Data Entry Spreadsheet (1).xlsx",
         "format": "four sheet format"
+      },
+      "PY4 Q3": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Health CareeRx" / "Y4Q3" / "Y4Q3 CareerConneCT Data Entry Spreadsheet (2).xlsx",
+        "format": "four sheet format"
       }
     }
   },
@@ -501,6 +505,10 @@ file_directory = {
       },
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y4Q2" / "Career ConneCT Staggered DataEntry Spreadsheet Charter OakState College Foundation December2025FINAL.xlsx",
+        "format": "four sheet format"
+      },
+      "PY4 Q3": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y4Q3" / "CareerConneCT Staggered Data Entry Spreadsheet Charter Oak State College FoundationApril152026FINAL.xlsx",
         "format": "four sheet format"
       }
     }
@@ -638,8 +646,11 @@ file_directory = {
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q2" / "Havenly - Data Entry Spreadsheet Y4Q2.xlsm",
         "format": "four sheet format"
+      }, 
+    "PY4 Q3": {
+          "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q3" / "Havenly - Data Entry Spreadsheet Y4Q2 (2).xlsm", 
+          "format": "four sheet format"
       }
-
     }
   },
   "ReadyCT": {

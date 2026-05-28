@@ -211,11 +211,12 @@ simple_format_training_data_labels = {  "First Name": [
       "Is the participant receiving any other forms of public assistance not listed here?_12070"
     ],
     "Hourly Wage in most recent employment prior to participation": [
-      "Hours worked per week most recent employment prior to participation:_12081",
+      "Hourly wage in most recent employment prior to participation:_12129",
       "Hourly Wage in most recent employment prior to participation"
     ],
     "Hours worked per week most recent employment prior to participation (Only go back 9 months.)": [
-      "Hours worked per week most recent employment prior to participation"
+      "Hours worked per week most recent employment prior to participation",
+      "Hours worked per week most recent employment prior to participation:_12081"
     ],
     "Occupational Code of Most Recent Employment Prior to Participation": [
       "Occupational Code of Most Recent Employment Prior to Participation"

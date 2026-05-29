@@ -195,7 +195,7 @@ def add_synthetic_npld(tables, agg_df, run_id):
             cvh_payload = {
                 "Received Training?": "Yes",
                 "Training Completed?": "Yes" if i < completed else "No",
-                "Employment Status at exit": "Employed" if i < employment_count else "Unknown"
+                "Employment Status at exit": "Employed" if i < employment_count else None
             }
 
             # CVH — REAL NPLD VALUES (Use existing column_ids)
@@ -220,8 +220,8 @@ def add_synthetic_npld(tables, agg_df, run_id):
                     "run_id": run_id,
                     "participant_id": pid,
                     "column_id": col_id,
-                    "value_raw": "Unknown",
-                    "value_normalized": "Unknown",
+                    "value_raw": None,
+                    "value_normalized": None,
                     "timestamp": datetime.now(UTC)
                 })
 

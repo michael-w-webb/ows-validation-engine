@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Workbook Definitions
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- ================================= -->
+    <!-- Queue Success Banner -->
+    <!-- ================================= -->
+
+    {% if queued %}
+
+        <div class="success-banner">
+
+            Validation job queued successfully.
+
+        </div>
+
+    {% endif %}
+
+    <!-- ================================= -->
+    <!-- Top Bar -->
+    <!-- ================================= -->
+
+    <div class="top-bar">
+
+        <div class="top-bar-actions">
+
+            <a
+                href="/workbook-definitions/new"
+                class="primary-button"
+            >
+                Create New 
+                Workbook Definition
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- ================================= -->
+    <!-- Workbook Definitions Table -->
+    <!-- ================================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+
+            <h2>
+                Workbook Definitions
+            </h2>
+
+            <p class="subtitle">
+            Persisted workbook schemas available
+            for validation runs.
+            </p>
+
+        </div>
+
+        {% if workbook_definitions %}
+
+
+
+            <table class="preview-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Workbook
+                        </th>
+
+                        <th>
+                            Format
+                        </th>
+
+                        <th>
+                            Version
+                        </th>
+
+                        <th>
+                            Created
+                        </th>
+
+                        <th>
+                            Active
+                        </th>
+
+                        <th>
+                            Actions
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for definition in workbook_definitions %}
+
+                        <tr>
+
+                            <td>
+                                {{ definition.workbook_name }}
+                            </td>
+
+                            <td>
+                                {{ definition.format_name }}
+                            </td>
+
+                            <td>
+                                v{{ definition.version }}
+                            </td>
+
+                            <td>
+                                {{ definition.created_at }}
+                            </td>
+
+                            <td>
+
+                                {% if definition.is_active %}
+
+                                    <span
+                                        class="status-badge
+                                        status-configured"
+                                    >
+                                        Active
+                                    </span>
+
+                                {% else %}
+
+                                    <span
+                                        class="status-badge
+                                        status-unconfigured"
+                                    >
+                                        Inactive
+                                    </span>
+
+                                {% endif %}
+
+                            </td>
+
+                            <td>
+
+                                <div class="table-actions">
+
+                                    <!-- ================= -->
+                                    <!-- View Definition -->
+                                    <!-- ================= -->
+
+                                    <a
+                                        href="/workbook-definitions/{{ definition.workbook_definition_id }}"
+                                        class="secondary-button"
+                                    >
+                                        View
+                                    </a>
+
+                                    <!-- ================= -->
+                                    <!-- Run Validation -->
+                                    <!-- ================= -->
+
+                                    <a
+                                        href="/validate/{{ definition.workbook_definition_id }}"
+                                        class="primary-button"
+                                    >
+                                        Run Validation
+                                    </a>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        {% else %}
+
+            <!-- ================================= -->
+            <!-- Empty State -->
+            <!-- ================================= -->
+
+            <div class="empty-state">
+
+                <h2>
+                    No Workbook Definitions Found
+                </h2>
+
+                <p>
+
+                    Create your first workbook
+                    definition to begin configuring
+                    validation schemas.
+
+                </p>
+
+                <a
+                    href="/workbook-definitions/new"
+                    class="primary-button"
+                >
+                    Create Workbook Definition
+                </a>
+
+            </div>
+
+        {% endif %}
+
+    </section>
+
+    <!-- ================================= -->
+    <!-- Active Validation Runs -->
+    <!-- ================================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+
+            <h2>
+                Active Validation Runs
+            </h2>
+
+            <p class="subtitle">
+                Currently executing validation jobs.
+            </p>
+
+        </div>
+
+        <div class="card">
+
+            {% if active_runs %}
+
+                <table class="preview-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Organization
+                            </th>
+
+                            <th>
+                                Reporting Period
+                            </th>
+
+                            <th>
+                                Workbook
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                            <th>
+                                Started
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for run in active_runs %}
+
+                            <tr>
+
+                                <td>
+                                    {{ run.org }}
+                                </td>
+
+                                <td>
+                                    {{ run.target_period }}
+                                </td>
+
+                                <td>
+                                    {{ run.workbook_name }}
+                                </td>
+
+                                <td>
+
+                                    <span
+                                        class="status-badge
+                                        status-unconfigured"
+                                    >
+                                        {{ run.status }}
+                                    </span>
+
+                                </td>
+
+                                <td>
+                                    {{ run.created_at }}
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            {% else %}
+
+                <p>
+
+                    No active validation runs.
+
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+    <!-- ================================= -->
+    <!-- Completed Validation Runs -->
+    <!-- ================================= -->
+
+    <section class="section">
+
+        <div class="section-header">
+
+            <h2>
+                Completed Validation Runs
+            </h2>
+
+            <p class="subtitle">
+                Currently executing validation jobs.
+            </p>
+
+        </div>
+    
+        <div class="card">
+
+            {% if completed_runs %}
+
+                <table class="preview-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                Organization
+                            </th>
+
+                            <th>
+                                Reporting Period
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                            <th>
+                                Runtime
+                            </th>
+
+                            <th>
+                                Errors
+                            </th>
+
+                            <th>
+                                Download
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for run in completed_runs %}
+
+                            <tr>
+
+                                <td>
+                                    {{ run.org }}
+                                </td>
+
+                                <td>
+                                    {{ run.target_period }}
+                                </td>
+
+                                <td>
+
+                                    {% if run.status == "completed" %}
+
+                                        <span
+                                            class="status-badge
+                                            status-configured"
+                                        >
+                                            Completed
+                                        </span>
+
+                                    {% else %}
+
+                                        <span
+                                            class="status-badge
+                                            status-unconfigured"
+                                        >
+                                            Failed
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+
+                                    {% if run.runtime_seconds %}
+
+                                        {{
+                                            run.runtime_seconds
+                                        }} sec
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+
+                                    {% if run.error_count is not none %}
+
+                                        {{ run.error_count }}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+
+                                    {% if run.output_file_path %}
+
+                                        <a
+                                            href="/validation-results/download?file_path={{ run.output_file_path }}"
+                                            class="primary-button"
+                                        >
+                                            Download
+                                        </a>
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            {% else %}
+
+                <p>
+
+                    No completed validation runs.
+
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

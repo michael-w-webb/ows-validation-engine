@@ -348,6 +348,10 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "The WorkPlace, Inc" / "PY4 Q3" / "TWP_TPI_Updated (3)For Michael (2).xlsm",
             "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "The WorkPlace, Inc" / "PY4 Q4" / "TWP_TPI_Updated (3)For Michael last quarter (1) (1).xlsm",
+            "format": "standard"
         }
     }
 }

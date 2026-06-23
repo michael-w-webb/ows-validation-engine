@@ -6,212 +6,161 @@ import json
 from validation_engine.cross_rule_descriptions import * 
 from validation_engine.cross_rule_classes import BaseVariable, NumericVariable, DateVariable, CategoricalVariable
 
+from validation_engine.column_names import (
+    find_column,
+    find_columns,
+    get_value,
+)
+
 class CrossRuleEngine:
     """
-    ============================================================
-    🧩 CrossRuleEngine — Unified Cross-Sheet Logic Evaluator
-    ============================================================
+    Recursive engine for evaluating cross-sheet validation rules against
+    normalized workbook data.
 
-    The CrossRuleEngine evaluates logical dependencies across multiple
-    worksheets within a normalized workbook. It supports both
-    cross-sheet and multi-column validation using a single recursive
-    logical grammar (the “clause tree” model).
+    Rules are defined as nested clause trees composed of:
 
-    ─────────────────────────────────────────────────────────────
-    🔹 Overview
-    ─────────────────────────────────────────────────────────────
-    The engine replaces legacy rule categories (e.g. “conditionally
-    required,” “connected presence”) with a single clause structure that
-    can express any logical or conditional relationship between columns.
+        - atomic conditions
+        - logical operators
+        - conditional operators
+        - recursively nested subclauses
 
-    Each rule is defined as a nested dictionary (“clause tree”) using
-    logical operators (AND, OR, NOT, etc.) and conditional modifiers
-    (IF_THEN, IF_THEN_ELSE, etc.). The recursion allows arbitrarily deep
-    combinations of conditions.
+    Variables are referenced using:
 
-    ─────────────────────────────────────────────────────────────
-    🔹 Clause Tree Structure
-    ─────────────────────────────────────────────────────────────
-    • Simple relational clause:
-        {"var": ("Training", "Completed Date"), "op": "is_not_blank"}
-
-    • Compound logical clause:
-        {"AND": [
-            {"var": ("Training", "Completed Date"), "op": "is_not_blank"},
-            {"var": ("Outcomes", "Employment Status"), "op": "is_not_blank"}
-        ]}
-
-    • Conditional clause:
-        {"IF_THEN": [
-            {"var": ("Training", "Completed Date"), "op": "is_not_blank"},
-            {"var": ("Outcomes", "Employment Status"), "op": "is_not_blank"}
-        ]}
-
-    Clause trees can nest indefinitely:
-        {
-            "AND": [
-                {"IF_THEN": [
-                    {"var": ("Training", "Completed Date"), "op": "is_not_blank"},
-                    {"var": ("Outcomes", "Employment Status"), "op": "is_not_blank"}
-                ]},
-                {"NOT": [
-                    {"var": ("Outcomes", "Withdrawal Reason"), "op": "is_not_blank"}
-                ]}
-            ]
-        }
-
-    ─────────────────────────────────────────────────────────────
-    🔹 Variable References
-    ─────────────────────────────────────────────────────────────
-    Each variable reference is a tuple:
         (sheet_name, column_name)
 
-    Examples:
-        ("Training", "Completed Date")
-        ("Outcomes", "Employment Status")
+    tuples and resolved dynamically against the merged validation
+    dataframe produced by the ValidationEngine.
 
-    When used with “var_ref”, the engine performs column-to-column
-    comparisons across sheets rather than static value checks.
+    Example
+    -------
+    Atomic clause:
 
-    ─────────────────────────────────────────────────────────────
-    🔹 Evaluation Process
-    ─────────────────────────────────────────────────────────────
-    1️⃣  Leaf nodes containing "var" are evaluated using the correct
-        Variable subclass (DateVariable, CategoricalVariable, etc.)
-        and return a pandas.Series[bool].
+    >>> {
+    ...     "var": ("Training", "Completed Date"),
+    ...     "op": "is_not_blank"
+    ... }
 
-    2️⃣  Compound nodes (AND, IF_THEN, etc.) recursively evaluate their
-        subclauses, combine Boolean results via the `combine()` method,
-        and return a Boolean mask of valid rows.
+    Compound clause:
 
-    3️⃣  Rows that evaluate False are treated as violations.
+    >>> {
+    ...     "IF_THEN": [
+    ...         {
+    ...             "var": ("Training", "Completed Date"),
+    ...             "op": "is_not_blank"
+    ...         },
+    ...         {
+    ...             "var": ("Outcomes", "Employment Status"),
+    ...             "op": "is_not_blank"
+    ...         }
+    ...     ]
+    ... }
 
-    ─────────────────────────────────────────────────────────────
-    🔹 Supported Operators
-    ─────────────────────────────────────────────────────────────
-    Logical / Conditional modifiers supported in `combine()`:
+    Evaluation Pipeline
+    -------------------
+    Rule execution proceeds in five stages:
 
-        Operator         Arity    Meaning
-        ----------------------------------------------------------
-        AND              n        All clauses must be True
-        OR               n        At least one clause must be True
-        NOT              1        Negates the clause
-        IF_THEN          2        If first clause True → second must be True
-        IF_THEN_ELSE     3        If first True → second; else → third
-        EQUIVALENT/IFF   2        Clauses must share same Boolean value
-        XOR              2        Exactly one clause True
-        ONE_OF           n        Exactly one of n clauses True
-        AT_LEAST         n+1      At least k of n clauses True (last arg = k)
+        1. normalize clause-tree structure
+        2. expand grouped rule definitions
+        3. resolve schema-aware variables
+        4. recursively evaluate Boolean masks
+        5. generate validation violations
 
-    All masks are re-indexed to align DataFrame lengths safely.
+    Data Model
+    ----------
+    The engine operates on a row-aligned dataframe in which workbook
+    sheets have already been merged together.
 
-    ─────────────────────────────────────────────────────────────
-    🔹 Output Format
-    ─────────────────────────────────────────────────────────────
-    Each rule produces a DataFrame of violations matching the
-    normalization-error schema:
+    Sheet provenance is preserved using the delimiter:
 
-        file | sheet | row_number | column | rule | raw_value | normalized
+        _|_|_
 
-    • `file`: workbook name
-    • `sheet`: sheet of primary variable
-    • `row_number`: row index (1-based)
-    • `column`: variable name
-    • `rule`: human-readable description
-    • `raw_value`: left blank for cross-rules
-    • `normalized`: normalized value from the source sheet
+    Example column:
 
-    This ensures cross-rule violations can be concatenated directly
-    with standard normalization errors.
+        Employment Status_normalized_|_|_Outcomes
 
-    ─────────────────────────────────────────────────────────────
-    🔹 Human-Readable Descriptions
-    ─────────────────────────────────────────────────────────────
-    The `describe_logic()` method walks any clause tree recursively
-    and builds a natural-language explanation.
+    Responsibilities
+    ----------------
+    The engine is responsible for:
 
-    Example:
-        {"IF_THEN": [
-            {"var": ("Training", "Completed Date"), "op": "is_not_blank"},
-            {"var": ("Outcomes", "Employment Status"), "op": "is_not_blank"}
-        ]}
+        - recursive rule evaluation
+        - logical mask combination
+        - schema-aware variable resolution
+        - grouped rule expansion
+        - natural-language rule descriptions
+        - validation violation generation
 
-    ➜ “If ‘Completed Date’ (Training) is filled, then
-       ‘Employment Status’ (Outcomes) must also be filled.”
-
-    Compound example:
-        {"AND": [
-            {"IF_THEN": [...]},
-            {"NOT": [{"var": ("Outcomes", "Withdrawal Reason"), "op": "is_not_blank"}]}
-        ]}
-
-    ➜ “(If ‘Completed Date’ (Training) is filled, then
-       ‘Employment Status’ (Outcomes) must also be filled) and
-       (not (‘Withdrawal Reason’ (Outcomes) is filled)).”
-
-    ─────────────────────────────────────────────────────────────
-    🔹 Rule Expansion
-    ─────────────────────────────────────────────────────────────
-    For authoring convenience, rules can include multiple references
-    using the `var_refs` key:
-        {
-            "rule_name": "Program Entry → Status dependencies",
-            "logic": {
-                "var": ("Training", "Date of Program Entry"),
-                "op": "connected_presence",
-                "var_refs": [
-                    ("Personal Information", "Low Income Status"),
-                    ("Personal Information", "Single Parent Status")
-                ]
-            }
-        }
-
-    The engine’s `expand_rules()` method automatically generates one
-    atomic rule for each reference pair.
-
-    ─────────────────────────────────────────────────────────────
-    🔹 Summary
-    ─────────────────────────────────────────────────────────────
-    • Unified recursive framework replaces legacy rule types.
-    • Clause grammar supports arbitrary nesting and combinations.
-    • Descriptions generated automatically from rule logic.
-    • Output schema aligns with normalization validation results.
-
-    This design makes the CrossRuleEngine extensible, debuggable, and
-    suitable for future UI-driven rule builders or schema generators.
+    Notes
+    -----
+    The engine assumes workbook data has already been normalized and
+    merged by the ValidationEngine before cross-rule execution begins.
     """
-
     def __init__(self, workbook_type, workbook_format, normalized_single_sheet, normalization_schema, file):
-        
-        """
-        Initialize a CrossRuleEngine.
 
-        Args:
-            workbook_type (str):
-                Logical grouping of the workbook, e.g., "Training Data".
-            workbook_format (str):
-                Structural format of the workbook
-                (e.g. "simple format", "four sheet format").
-            dfs_by_sheet (dict[str, pd.DataFrame]):
-                Normalized DataFrames indexed by sheet name.
-            normalization_schema (dict):
-                Schema specifying accepted responses, variable types,
-                and metadata for each column in each sheet.
-            file (str):
-                Identifier used in error reporting (typically filename).
         """
-        
+        Initialize the cross-rule evaluation engine.
+
+        Parameters
+        ----------
+        workbook_type : str
+            Logical workbook category used for schema lookup.
+
+        workbook_format : str
+            Workbook layout definition used within the schema hierarchy.
+
+        normalized_single_sheet : pandas.DataFrame
+            Unified normalized dataframe containing merged workbook sheets.
+
+        normalization_schema : dict
+            Nested workbook schema containing variable metadata and
+            accepted response definitions.
+
+        file : str
+            File identifier used in validation output and error reporting.
+
+        Notes
+        -----
+        The engine operates on a merged dataframe representation in which
+        sheet provenance is encoded directly into column names using the
+        delimiter:
+
+            _|_|_
+        """
         self.workbook_type = workbook_type          # e.g. "training data (workbook type)"
         self.workbook_format = workbook_format      # e.g. "four sheet format" or "simple format (workbook format)"
         self.single_sheet_df = normalized_single_sheet                   # normalized DataFrames by sheet
         self.schema = normalization_schema          # e.g. cc_column_label_list
         self.file = file
-        self.DELIM = "_|_|_"                            # file name reference (for error reporting)
 
     def _collect_vars(self, logic):
+
         """
-        Recursively collect all (sheet, column) variable references
-        appearing anywhere in a clause tree.
+        Recursively collect all variable references used in a clause tree.
+
+        Variable references are extracted from:
+
+            - "var"
+            - "compare_to"
+
+        fields appearing anywhere within the nested logic structure.
+
+        Parameters
+        ----------
+        logic : dict
+            Recursive clause-tree structure.
+
+        Returns
+        -------
+        set[tuple[str, str]]
+            Deduplicated set of:
+
+                (sheet_name, column_name)
+
+            references used by the rule.
+
+        Notes
+        -----
+        This method performs structural traversal only. It does not resolve
+        dataframe columns or evaluate logic.
         """
         vars_found = set()
 
@@ -241,9 +190,33 @@ class CrossRuleEngine:
 
     def _snapshot_values(self, vars_used, violation_mask):
         """
-        Build a per-row snapshot of all relevant variable values
-        for rows where the rule is violated.
-        """
+        Extract contextual variable values for violated rows.
+
+        For each referenced variable, values are pulled from the merged
+        dataframe for rows where the supplied violation mask is True.
+
+        Parameters
+        ----------
+        vars_used : set[tuple[str, str]]
+            Set of logical variable references in the form:
+
+                (sheet_name, column_name)
+
+        violation_mask : pandas.Series[bool]
+            Boolean mask identifying rows that violated the rule.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Snapshot dataframe containing one column per referenced
+            variable and one row per violated record.
+
+        Notes
+        -----
+        Variable references that cannot be resolved are skipped silently.
+        Snapshot values are primarily used for debugging, explainability,
+        and audit output.
+        """ 
         snapshots = []
 
         for (sheet, col) in vars_used:
@@ -274,72 +247,103 @@ class CrossRuleEngine:
 
     def _resolve_series(self, df, var_name, sheet_key):
         """
-        Resolve a column Series from a DataFrame with _|_|_ encoded sheet names.
+        Resolve a logical variable reference to a dataframe column.
 
-        Prefers:
-        1. normalized columns
-        2. specified sheet
-        3. left-to-right fallback
+        Resolution prefers normalized columns before falling back to raw columns.
+        Ambiguous matches are treated as structural errors.
         """
 
         base = var_name.replace("_normalized", "")
 
-        norm_prefix = base + "_normalized"
-        raw_prefix = base
+        # Prefer normalized column for this sheet.
+        try:
+            col = find_column(
+                df.columns,
+                base=base,
+                sheet=sheet_key,
+                normalized=True
+            )
+            return df[col]
 
-        # --- collect candidates ---
-        norm_candidates = [
-            c for c in df.columns
-            if c == norm_prefix or c.startswith(norm_prefix + self.DELIM)
-        ]
+        except KeyError:
+            # No normalized match; try raw below.
+            pass
 
-        raw_candidates = [
-            c for c in df.columns
-            if c == raw_prefix or c.startswith(raw_prefix + self.DELIM)
-        ]
+        except ValueError as e:
+            raise ValueError(
+                "Ambiguous normalized column reference in cross-rule resolution.\n"
+                f"var_name={var_name!r}, sheet_key={sheet_key!r}\n\n"
+                f"{e}"
+            ) from e
 
-        candidates = norm_candidates if norm_candidates else raw_candidates
+        # Fall back to raw column for this sheet.
+        try:
+            col = find_column(
+                df.columns,
+                base=base,
+                sheet=sheet_key,
+                normalized=False
+            )
+            return df[col]
 
-        if not candidates:
-            raise KeyError(f"'{var_name}' not found in DataFrame (no matching columns).")
+        except KeyError as e:
+            raise KeyError(
+                "Column not found in cross-rule resolution.\n"
+                f"var_name={var_name!r}, sheet_key={sheet_key!r}, base={base!r}"
+            ) from e
 
-        # --- prefer explicit sheet ---
-        if sheet_key:
-            for col in candidates:
-                if col.endswith(f"{self.DELIM}{sheet_key}"):
-                    return df[col]
-
-        # --- fallback: first candidate ---
-        return df[candidates[0]]
-
+        except ValueError as e:
+            raise ValueError(
+                "Ambiguous raw column reference in cross-rule resolution.\n"
+                f"var_name={var_name!r}, sheet_key={sheet_key!r}\n\n"
+                f"{e}"
+            ) from e
     # ============================================================
     # 🔹 Variable retrieval
     # ============================================================
     def get_variable(self, var_name, sheet_key):
         """
-        Retrieve and instantiate the appropriate Variable subclass for a
-        given (sheet, column) reference.
+        Resolve and instantiate a schema-aware Variable object.
 
         This method:
-            • Navigates the normalization schema to retrieve metadata  
-            • Identifies the correct Variable subclass  
-            • Extracts the Series from the workbook  
-            • Attaches schema metadata and file context  
 
-        Args:
-            var_name (str):
-                Column name to retrieve.
-            sheet_key (str):
-                Sheet containing the column.
+            - retrieves variable metadata from the normalization schema
+            - resolves the associated dataframe column
+            - selects the appropriate Variable subclass
+            - attaches runtime metadata used during evaluation
 
-        Returns:
-            BaseVariable:
-                An instantiated Variable subclass (NumericVariable,
-                DateVariable, CategoricalVariable, etc.).
+        Supported subclasses include:
 
-        Raises:
-            KeyError:
-                If the sheet, column, or schema metadata is missing.
+            - NumericVariable
+            - DateVariable
+            - CategoricalVariable
+            - BaseVariable
+
+        Parameters
+        ----------
+        var_name : str
+            Logical variable name.
+
+        sheet_key : str
+            Logical sheet reference associated with the variable.
+
+        Returns
+        -------
+        BaseVariable
+            Initialized Variable subclass instance.
+
+        Raises
+        ------
+        KeyError
+            If the variable definition, schema entry, or dataframe column
+            cannot be resolved.
+
+        Notes
+        -----
+        Simple-format workbooks internally normalize all sheet references
+        to:
+
+            "Report"
         """
         
         #### specifying 'report' here because it is the value used in the 
@@ -401,25 +405,56 @@ class CrossRuleEngine:
     def combine(self, masks, logic_op):
 
         """
-        Combine a list of boolean masks using a specified logical operator.
+        Combine Boolean masks using a logical operator.
 
-        Supports all operators in the clause grammar:
-            AND, OR, NOT, IF_THEN, IF_THEN_ELSE,
-            EQUIVALENT/IFF, XOR, ONE_OF, AT_LEAST.
+        Parameters
+        ----------
+        masks : list[pandas.Series[bool]]
+            Boolean masks produced by recursive subclause evaluation.
 
-        Args:
-            masks (list[pd.Series[bool]]):
-                Boolean masks produced by sub-clauses.
-            logic_op (str):
-                Logical operator name (case-insensitive).
+        logic_op : str
+            Logical operator name.
 
-        Returns:
-            pd.Series[bool]:
-                Combined boolean mask.
+        Returns
+        -------
+        pandas.Series[bool]
+            Combined Boolean evaluation mask.
 
-        Raises:
-            ValueError:
-                If an unknown operator is encountered.
+        Supported Operators
+        -------------------
+        AND
+            All clauses must evaluate True.
+
+        OR
+            At least one clause must evaluate True.
+
+        NOT
+            Negates a single clause.
+
+        IF_THEN
+            Conditional implication.
+
+        IF_THEN_ELSE
+            Conditional branching.
+
+        EQUIVALENT / IFF
+            Clauses must share the same truth value.
+
+        XOR / ONE_OF
+            Exactly one clause must evaluate True.
+
+        AT_LEAST
+            At least N clauses must evaluate True.
+
+        Raises
+        ------
+        ValueError
+            If an unsupported logical operator is encountered.
+
+        Notes
+        -----
+        All masks are assumed to be index-aligned to the merged validation
+        dataframe.
         """
 
         op = logic_op.upper()
@@ -436,21 +471,31 @@ class CrossRuleEngine:
 
 
     def evaluate_logic(self, logic_dict):
+        
         """
-        Recursively evaluate a clause tree.
+        Recursively evaluate a clause-tree logical expression.
 
-        Behavior:
-            • Atomic clauses ("var": ...) evaluate via Variable.evaluate().
-            • Compound clauses recursively compute sub-masks and merge
-            them using ``combine()``.
+        Atomic clauses are evaluated using schema-aware Variable objects.
+        Compound clauses recursively evaluate descendant clauses and combine
+        their Boolean masks using logical operators.
 
-        Args:
-            logic_dict (dict):
-                A nested clause tree representing a logical expression.
+        Parameters
+        ----------
+        logic_dict : dict
+            Recursive clause-tree structure describing the rule logic.
 
-        Returns:
-            pd.Series[bool]:
-                Boolean mask indicating whether each row satisfies the clause.
+        Returns
+        -------
+        pandas.Series[bool]
+            Boolean mask where:
+
+                True  -> row satisfies rule
+                False -> row violates rule
+
+        Notes
+        -----
+        This method forms the core recursive evaluation layer of the
+        CrossRuleEngine.
         """
 
         logic_dict = self.normalize_logic(logic_dict)
@@ -490,21 +535,27 @@ class CrossRuleEngine:
     def describe_logic(self, logic_dict, is_condition=False, is_negated = False):
         
         """
-        Generate a human-readable natural-language description of a clause tree.
+        Generate a human-readable description for a clause tree.
 
-        Used for producing interpretable validation error messages.
+        Atomic clauses are rendered using `describe_atomic()`.
+        Compound clauses are rendered recursively using
+        `describe_compound()`.
 
-        Args:
-            logic_dict (dict):
-                Logic tree corresponding to a rule.
-            is_condition (bool):
-                If True, phrasing is softened to reflect antecedent logic
-                ("is filled" vs. "must be filled").
+        Parameters
+        ----------
+        logic_dict : dict
+            Recursive clause-tree structure.
 
-        Returns:
-            str:
-                Human-readable description of the rule logic.
+        is_condition : bool, default False
+            If True, descriptive phrasing is used for conditional
+            antecedents.
+
+        Returns
+        -------
+        str
+            Natural-language description of the logical expression.
         """
+         
         logic_dict = self.normalize_logic(logic_dict)
 
         # --- Base case: atomic clause ---
@@ -601,6 +652,43 @@ class CrossRuleEngine:
 
     def normalize_logic(self, logic):
 
+        """
+        Validate and canonicalize a recursive clause-tree structure.
+
+        Compound operators are normalized into a consistent internal form
+        so downstream evaluation logic can assume predictable structure.
+
+        Canonicalization behavior includes:
+
+            - uppercasing logical operators
+            - enforcing operator arity
+            - recursively normalizing subclauses
+            - wrapping single compound subclauses in lists
+
+        Atomic clauses containing ``"var"`` are passed through unchanged.
+
+        Parameters
+        ----------
+        logic : dict
+            Recursive clause-tree structure.
+
+        Returns
+        -------
+        dict
+            Normalized logic tree suitable for evaluation.
+
+        Raises
+        ------
+        ValueError
+            If the logic structure is invalid or violates operator arity
+            requirements.
+
+        Notes
+        -----
+        This method validates structure only. It does not resolve variables
+        or evaluate rule logic.
+        """
+
         COMPOUND_OPS = {"AND", "OR", "NOT", "IF_THEN", "IF_THEN_ELSE", "AT_LEAST"}
 
         if not isinstance(logic, dict):
@@ -645,25 +733,27 @@ class CrossRuleEngine:
     # ============================================================
 
     def evaluate_rule(self, rule):
+
         """
-        Evaluate a single rule definition.
+        Evaluate a single cross-rule definition and generate violations.
 
-        Steps:
-            1. Evaluate the rule's clause tree to a boolean mask.
-            2. Identify rows where the rule is violated (mask == False).
-            3. Determine the rule's primary variable for error context.
-            4. Produce a DataFrame conforming to the validation error schema.
+        Parameters
+        ----------
+        rule : dict
+            Rule definition containing:
 
-        Args:
-            rule (dict):
-                A rule definition containing:
-                    • "rule_name"
-                    • "logic" (nested clause tree)
+                - rule_name
+                - logic
 
-        Returns:
-            pd.DataFrame:
-                Violations with metadata for file, sheet, row_number,
-                column, rule description, normalized value, and id_key.
+        Returns
+        -------
+        pandas.DataFrame
+            Validation violations generated by the rule.
+
+        Notes
+        -----
+        Violations are returned using the standard validation schema and
+        include contextual snapshots of referenced variable values.
         """
 
         rule_name = rule.get("rule_name", "Unnamed Rule")
@@ -694,9 +784,10 @@ class CrossRuleEngine:
         if self.workbook_format == "simple format":
             main_sheet = "Report"
 
-        row_col = next(
-            (c for c in df.columns if c.startswith(f"row_number_{main_sheet}") and self.DELIM in c),
-            None
+        row_col = find_column(
+            df.columns,
+            base=f"row_number_{main_sheet}",
+            normalized=False
         )
 
         row_values = df.loc[violations, row_col].values if row_col else None
@@ -726,21 +817,30 @@ class CrossRuleEngine:
 
     def expand_rules(self, rules):
         """
-        Expand rules that contain lists of variables or compare-to
-        references into multiple atomic rule variants.
+        Expand grouped rule definitions into atomic rule variants.
 
-        This supports authoring syntactic sugar such as:
-            • Multiple "var" references
-            • Multiple "compare_to" references
-            • Nested logical constructs with variable lists
+        Rules containing lists in:
 
-        Args:
-            rules (list[dict]):
-                List of rule definitions (each containing "logic").
+            - "var"
+            - "compare_to"
 
-        Returns:
-            list[dict]:
-                Fully expanded rules, one per atomic pair of references.
+        are expanded into multiple concrete rule definitions before
+        evaluation.
+
+        Parameters
+        ----------
+        rules : list[dict]
+            Rule definitions.
+
+        Returns
+        -------
+        list[dict]
+            Expanded atomic rule definitions.
+
+        Notes
+        -----
+        Expansion improves rule authoring ergonomics while preserving
+        granular violation reporting.
         """
 
         def expand_node(node):
@@ -795,41 +895,31 @@ class CrossRuleEngine:
 
         return expanded_rules
 
-
-    # def expand_rules(self, rules):
-    #     """Expand multi-reference rules into individual atomic rules."""
-    #     expanded = []
-    #     for rule in rules:
-    #         logic = rule.get("logic", {})
-    #         if "var_refs" in logic:  # cluster syntax
-    #             for ref_sheet, ref_var in logic["var_refs"]:
-    #                 new_rule = {
-    #                     **rule,
-    #                     "rule_name": f"{rule['rule_name']} ↔ {ref_var}",
-    #                     "logic": {
-    #                         "var": logic["var"],
-    #                         "op": logic["op"],
-    #                         "var_ref": ref_var,
-    #                         "sheet_ref": ref_sheet,
-    #                     },
-    #                 }
-    #                 expanded.append(new_rule)
-    #         else:
-    #             expanded.append(rule)
-    #     return expanded
-
     def run_all_rules(self, rules):
+        
         """
-        Execute a list of rules (expanding them first) and aggregate violations.
+        Evaluate a collection of cross-rule definitions.
 
-        Args:
-            rules (list[dict]):
-                Rules to evaluate.
+        Rules are first expanded into atomic variants and then evaluated
+        individually. Violations produced by each rule are concatenated
+        into a single validation dataframe.
 
-        Returns:
-            pd.DataFrame:
-                Concatenated violation results for all rules.
-                Empty DataFrame if no violations occur.
+        Parameters
+        ----------
+        rules : list[dict]
+            Cross-rule definitions.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Combined validation violations generated across all rules.
+
+            Returns an empty dataframe with the standard validation schema
+            if no violations are detected.
+
+        Notes
+        -----
+        Rules producing no violations are omitted from the final output.
         """
         all_violations = []
         for rule in self.expand_rules(rules): ## expand rules accounts for rules that are grouped for ease of interpretation in cross_rule_sets

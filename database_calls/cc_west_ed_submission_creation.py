@@ -1,5 +1,5 @@
 import pandas as pd
-
+import uuid
 from applications.career_connect_grantee_sheets.workbook_definitions import workbook_definitions as td_defs
 from applications.ct_hires_west_ed_request.workbook_definitions import workbook_definitions as full_pull_defs
 from applications.career_connect_supportive_services.workbook_definitions import workbook_definitions as ss_defs
@@ -57,26 +57,31 @@ def ensure_linking_first(df):
 
 def create_linking_id(df, dataset_name):
 
-    pii_cols = PII_COLUMNS.get(dataset_name, [])
-    available_cols = [c for c in pii_cols if c in df.columns]
+    # pii_cols = PII_COLUMNS.get(dataset_name, [])
+    # available_cols = [c for c in pii_cols if c in df.columns]
 
-    if not available_cols:
-        df["linking_id"] = pd.NA
-        return df
+    # if not available_cols:
+    #     df["linking_id"] = pd.NA
+    #     return df
 
-    def hash_row(row):
-        values = [str(row[c]).strip().lower() for c in available_cols]
-        raw = "|".join(values)
+    # def hash_row(row):
+    #     values = [str(row[c]).strip().lower() for c in available_cols]
+    #     raw = "|".join(values)
 
-        digest = hmac.new(
-            PEPPER.encode(),
-            raw.encode(),
-            hashlib.sha256
-        ).hexdigest()
+    #     df_pepper = PEPPER + dataset_name
 
-        return digest
+    #     digest = hmac.new(
+    #         PEPPER.encode(),
+    #         raw.encode(),
+    #         hashlib.sha256
+    #     ).hexdigest()
 
-    df["linking_id"] = df.apply(hash_row, axis=1)
+    #     return digest
+
+    # df[f"{dataset_name}_linking_id"] = df.apply(hash_row, axis=1)
+    df["linking_id"] = [
+        uuid.uuid4().hex for _ in range(len(df))
+    ]
 
     return df
 

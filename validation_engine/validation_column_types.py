@@ -1,3 +1,81 @@
+"""
+Column validation and normalization framework.
+
+This module defines reusable column-validator classes used to standardize,
+validate, and format structured tabular data originating from Excel-based
+workforce and training-provider reporting systems.
+
+The validators are designed for high-variability real-world datasets where
+values may contain:
+    • inconsistent formatting
+    • spreadsheet export artifacts
+    • mixed data types
+    • malformed categorical responses
+    • placeholder or junk values
+    • organization-specific conventions
+
+Core Responsibilities
+---------------------
+Each validator is responsible for some combination of:
+
+    • normalization
+        Converting messy raw values into canonical internal representations.
+
+    • validation
+        Applying type- and domain-specific validation rules.
+
+    • formatting
+        Converting normalized values into standardized output forms.
+
+    • error reporting
+        Producing structured row-level validation metadata suitable for
+        QA workflows, audit reporting, and downstream review interfaces.
+
+Validation Workflow
+-------------------
+Most validators follow a common lifecycle:
+
+    1. base_clean()
+        Shared low-level preprocessing such as whitespace cleanup and
+        normalization of spreadsheet error tokens.
+
+    2. normalize()
+        Type-specific parsing and canonicalization logic.
+
+    3. format()
+        Optional output formatting or presentation normalization.
+
+    4. errors_df()
+        Structured validation-error generation.
+
+Validator Types
+---------------
+Included validators support a range of common workforce-reporting fields,
+including:
+
+    • categorical responses
+    • booleans
+    • dates
+    • ZIP codes
+    • State IDs
+    • O*NET occupation codes
+    • NAICS industry codes
+    • hourly wages
+    • hours-worked values
+
+Design Notes
+------------
+The framework prioritizes:
+    • deterministic normalization behavior
+    • explicit handling of malformed data
+    • transparent validation logic
+    • spreadsheet-oriented reporting compatibility
+    • vectorized pandas operations where practical
+
+These validators are primarily intended for structured reporting pipelines
+rather than permissive end-user form validation systems.
+"""
+
 import pandas as pd 
 from rapidfuzz import process, fuzz
 import re
@@ -24,13 +102,18 @@ class BaseColumn:
     
     def base_clean(self, s: pd.Series) -> pd.Series:
         """
-        Perform low-level normalization of a column before type-specific validation.
+        Apply shared low-level cleaning used by all column validators.
 
-        Operations performed:
-        - Convert to pandas `"string"` dtype
-        - Strip leading/trailing whitespace
-        - Replace empty strings or whitespace-only strings with `pd.NA`
-        - Replace common Excel/CSV error tokens (e.g. "#VALUE!", "NaN") with `pd.NA`
+        This method standardizes missing-value handling and performs lightweight
+        string normalization before type-specific parsing or validation logic is
+        applied.
+
+        Cleaning steps:
+            1. Convert values to pandas `"string"` dtype
+            2. Strip leading and trailing whitespace
+            3. Replace empty or whitespace-only values with `pd.NA`
+            4. Replace known spreadsheet error tokens and null-like literals
+            (e.g. "#VALUE!", "NaN", "<NA>") with `pd.NA`
 
         Args:
             s (pd.Series):
@@ -38,107 +121,64 @@ class BaseColumn:
 
         Returns:
             pd.Series:
-                Cleaned series with standardized missing-value representation.
+                Cleaned Series with standardized missing-value representation.
         """
         s = s.astype("string")
         s = s.str.strip().replace("", pd.NA)
         s = s.replace(r"^\s*$", pd.NA, regex=True)
         s = s.replace(self.ERROR_TOKENS, pd.NA)
         return s
+    
     def errors_df(self):
         """
-        This is a function shell in the base column class, each sublcass implements its own
-        version. 
+        Construct a standardized validation-error DataFrame.
 
-        Construct a standardized DataFrame describing validation errors for this
-        column type.
+        Subclasses implement column-specific validation logic and return
+        row-level error metadata using a consistent schema.
 
-        Each subclass defines its own validation rules (e.g., required values,
-        type constraints, range checks, format rules), but all error reports
-        returned from column validators share the same structure.
-
-        Typical error conditions include (depending on subclass logic):
-            - Missing required values
-            - Values that cannot be normalized or parsed
-            - Values that violate type- or format-specific constraints
-            - Values that fall outside allowed or expected ranges
-
-        Args:
-            col (str):
-                Name of the column being validated.
-            raw (pd.Series):
-                Original unnormalized values as read from the dataset.
-            s_norm (pd.Series):
-                Normalized or canonicalized values produced by `normalize()`.
-            file (str or None):
-                Optional identifier of the source file, included for reporting.
-            sheet (str or None):
-                Sheet name or dataset section used for contextual error reporting.
-            row_offset (int):
-                Offset applied when converting DataFrame index positions to
-                Excel-style row numbers.
+        Expected output columns:
+            [
+                "file",
+                "sheet",
+                "row_number",
+                "column",
+                "rule",
+                "raw_value",
+                "normalized"
+            ]
 
         Returns:
             pd.DataFrame:
-                A structured validation error table with columns:
-                [
-                    "file",
-                    "sheet",
-                    "row_number",
-                    "column",
-                    "rule",
-                    "raw_value",
-                    "normalized"
-                ]
-
-                If no errors are found, returns an empty DataFrame with this schema.
-    
+                Validation errors for the column. Implementations should return
+                an empty DataFrame with the standard schema when no errors exist.
         """
 
     def _clean(self):
         """
+        Normalize a raw value into a canonical representation suitable for
+        comparison and downstream validation logic.
 
-        This is a function shell in the base column class, each sublcass implements its own
-        version. 
-
-        Normalize a raw value into a standardized string representation suitable
-        for comparison and downstream validation logic.
-
-        This helper performs lightweight canonicalization to ensure consistent
-        matching across different input formats.
-
-        Typical cleaning steps:
-            - Convert value to string if needed
-            - Convert to lowercase for case-insensitive comparison
-            - Collapse excessive internal whitespace
-            - Strip leading/trailing whitespace
-            - Treat sequences of zeros ("0", "00", etc.) or empty strings as missing
+        Subclasses implement type-specific cleaning behavior. Typical operations
+        may include whitespace normalization, case normalization, formatting
+        cleanup, or conversion of placeholder values to missing representations.
 
         Args:
-            text (str or any):
+            text:
                 Raw input value.
 
         Returns:
             str:
-                A normalized string representation, or an empty string if the value
-                is considered missing.
+                Cleaned canonical representation of the value.
         """
     
     def normalize(self, s: pd.Series) -> pd.Series:
         """
-        This is a function shell in the base column class, each sublcass implements its own
-        version. 
-
-        Normalize a column's raw values into a standardized representation suitable
+        Normalize raw column values into a standardized representation suitable
         for validation and downstream processing.
 
-        Normalization typically includes:
-            1. Applying the shared base cleaning (string coercion, trimming,
-            whitespace collapsing, and removal of known error tokens)
-            2. Performing type-specific transformations (e.g., parsing dates,
-            numeric coercion, mapping to canonical labels)
-            3. Producing a clean, consistent output that downstream validators
-            can rely on
+        Subclasses implement type-specific normalization behavior. Implementations
+        typically apply shared base cleaning followed by transformations such as
+        parsing, coercion, canonical mapping, or formatting standardization.
 
         Args:
             s (pd.Series):
@@ -146,39 +186,43 @@ class BaseColumn:
 
         Returns:
             pd.Series:
-                A normalized representation of the column. The specific form depends
-                on the column subtype (e.g., strings, codes, dates, booleans). Values
-                that cannot be meaningfully interpreted should be represented as
-                `pd.NA`.
+                Normalized column values. Values that cannot be meaningfully
+                interpreted should generally be represented as `pd.NA`.
         """
-
 class categoricalColumn(BaseColumn):
 
     """
-    Validator for limited-response categorical fields.
+    Validator for constrained categorical fields.
 
-    Responsibilities:
-    - Normalize raw text (case, whitespace, Excel error tokens)
-    - Map cleaned text to a canonical accepted value
-    - Optionally perform fuzzy matching for near-misses or typos
-    - Produce per-row error diagnostics
+    This column type normalizes free-text categorical responses into
+    canonical accepted values using exact and optional fuzzy matching.
 
-    Supports two accepted-response formats:
-        • list[str] — literal accepted values
-        • dict[str, list[str]] — canonical value → alternative spellings/variants
+    Accepted responses may be provided as:
+        • list[str]:
+            Literal accepted values.
+        • dict[str, list[str]]:
+            Canonical value mapped to alternative spellings or variants.
+
+    Behavior:
+        • Applies shared base cleaning from `BaseColumn`
+        • Normalizes whitespace and casing
+        • Maps cleaned values to canonical accepted responses
+        • Optionally applies fuzzy matching for near matches
+        • Produces standardized row-level validation errors
 
     Attributes:
         required (bool):
-            Whether blank values should be treated as validation errors.
+            Whether missing values should be treated as validation errors.
         fuzzy (bool):
-            Whether to fuzzy-match unmatched responses.
+            Whether fuzzy matching is enabled for unmatched values.
         min_score (int):
-            Minimum fuzzy match ratio (0–100) required to accept a match.
+            Minimum fuzzy-match score required for acceptance.
         accepted (dict[str, str]):
-            Lookup from normalized input → canonical value.
+            Mapping of cleaned input values to canonical labels.
         row_numbers (pd.Series | None):
-            Sheet row numbers used to report error locations.
+            Row references used in validation error reporting.
     """
+
 
     def __init__(self, accepted_responses: list[str], required: bool = False,
                  fuzzy: bool = True, min_score: int = 90, row_numbers = None):
@@ -217,6 +261,30 @@ class categoricalColumn(BaseColumn):
             self.accepted = {self._clean(r): r for r in accepted_responses}
 
     def _clean(self, text):
+
+        """
+        Apply categorical-specific text normalization used for value matching.
+
+        This helper standardizes categorical values into a canonical comparison
+        form after shared preprocessing from `base_clean()`.
+
+        Cleaning behavior includes:
+            • stripping leading/trailing whitespace
+            • collapsing repeated internal whitespace
+            • converting numeric float strings such as "1.0" to "1"
+            • treating sequences of zeros as missing
+            • case-insensitive normalization via `casefold()`
+
+        Args:
+            text:
+                Raw categorical value.
+
+        Returns:
+            str:
+                Canonical comparison value used for exact and fuzzy matching.
+                Missing values are returned as an empty string.
+        """
+
         if text is None or pd.isna(text):
             return ""
 
@@ -236,21 +304,22 @@ class categoricalColumn(BaseColumn):
     def normalize(self, s: pd.Series) -> pd.Series:
         
         """
-        Normalize a categorical column.
+        Normalize categorical values into canonical accepted responses.
 
-        Workflow:
-            1. Apply base cleaning (from BaseColumn)
-            2. Convert cleaned text into canonical category labels
-            3. For unmatched values, attempt fuzzy matching (if enabled)
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Apply categorical-specific normalization via `_clean()`
+            3. Perform exact matching against accepted responses
+            4. Optionally apply fuzzy matching for unmatched values
 
         Args:
             s (pd.Series):
-                Raw column values.
+                Raw categorical values.
 
         Returns:
             pd.Series:
-                Normalized categorical values (canonical form), or `pd.NA` where
-                no acceptable value can be determined.
+                Canonical categorical values or `pd.NA` for values that
+                cannot be matched or interpreted.
         """
 
         s = s.astype("string")     
@@ -282,6 +351,7 @@ class categoricalColumn(BaseColumn):
 
     # --- format (just return canonical string) ---
     def format(self, s_norm: pd.Series) -> pd.Series:
+        """Return canonical categorical values unchanged."""
         return s_norm
 
     # --- errors ---
@@ -289,12 +359,13 @@ class categoricalColumn(BaseColumn):
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
 
         """
-        Construct a DataFrame describing validation errors for this categorical column.
+        Construct validation errors for categorical values.
 
-        Error types recorded:
-            - "Required but missing": value is missing but field is required
-            - "Invalid Value, not in accepted responses": raw value was present
-                but could not be mapped (even via fuzzy matching)
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, not in accepted responses"
+                Value could not be mapped to an accepted categorical response.
 
         Args:
             col (str):
@@ -303,18 +374,16 @@ class categoricalColumn(BaseColumn):
                 Original unnormalized values.
             s_norm (pd.Series):
                 Normalized categorical values.
-            file (str or None):
-                Optional file identifier used in reporting.
-            sheet (str or None):
-                Sheet name for context in error reporting.
+            file (str | None):
+                Optional source file identifier.
+            sheet (str | None):
+                Optional sheet or dataset section name.
             row_offset (int):
-                Offset applied when raw indices do not match Excel row numbers.
+                Offset used when deriving row numbers from the index.
 
         Returns:
             pd.DataFrame:
-                Structured error report with columns:
-                ["file", "sheet", "row_number", "column",
-                 "rule", "raw_value", "normalized"]
+                Structured categorical validation errors.
         """
 
         masks = {
@@ -351,64 +420,40 @@ class categoricalColumn(BaseColumn):
 
 class fileSpecificCategoricalColumn(BaseColumn):
     """
-    Column type for categorical fields whose valid responses depend on the
-    originating file (e.g., different CBOs use different program names).
+    Validator for categorical fields whose accepted responses vary by file
+    or source organization.
 
-    This validator selects the appropriate canonical-to-variant mapping based on
-    the provided `file` identifier, normalizes raw text values, and applies
-    both exact and optional fuzzy matching to produce consistent categorical
-    outputs.
+    This column type selects a file-specific accepted-response mapping and
+    normalizes raw categorical values into canonical labels using exact and
+    optional fuzzy matching.
 
-    Expected Structure of accepted_responses:
+    Expected accepted-response structure:
         {
-            "FILE_ID_A": {
-                "Canonical Label 1": ["variant1", "v1", ...],
-                "Canonical Label 2": ["variant2", "v2", ...],
-            },
-            "FILE_ID_B": {
-                "Canonical Label X": [...],
-                ...
+            "FILE_A": {
+                "Canonical Value": ["variant1", "variant2"]
             }
         }
 
-    Args:
-        accepted_responses (dict):
-            Nested dictionary mapping file IDs to canonical labels and their
-            allowable variants.
-        required (bool, optional):
-            If True, missing values are treated as validation errors.
-        fuzzy (bool, optional):
-            Whether to attempt fuzzy matching for values not in `accepted_responses`.
-        min_score (int, optional):
-            Minimum fuzzy-match score (0–100) required to accept a near match.
-        row_numbers (pd.Series, optional):
-            Spreadsheet-aware row references used when constructing error logs.
-        file (str, optional):
-            File identifier (e.g., "CWP", "BRBC") selecting which accepted-response
-            mapping to use.
-
-    Returns:
-        This class does not return directly; its methods return normalized Series
-        or structured error DataFrames (see below).
-
     Behavior:
-        • Builds a reverse mapping (variant → canonical) for the active file.
-        • Cleans raw values (casefold, whitespace collapsing, handling "0"/Excel tokens).
-        • Performs exact matches first, then fuzzy matching (if enabled).
-        • Returns canonical category labels or `pd.NA` for invalid/unmatched values.
-        • Generates structured error reports for:
-            - required but missing values
-            - invalid or file-incompatible categorical entries
+        • Applies shared preprocessing via `base_clean()`
+        • Applies categorical-specific normalization via `_clean()`
+        • Selects accepted responses using `self.file`
+        • Performs exact and optional fuzzy matching
+        • Produces standardized validation errors
 
-    Side Effects:
-        • May raise `ValueError` if `self.file` does not exist in accepted_responses.
-        • Uses `row_numbers` to produce precise Excel-style row metadata.
-
-    Notes:
-        • File-specific categorical validation is essential when partners use
-          distinct naming conventions or inconsistent capitalization/spelling.
-        • Fuzzy matching should be used cautiously for fields where misclassification
-          has high cost (e.g., credentials, program names).
+    Attributes:
+        accepted_responses (dict):
+            File-specific accepted categorical mappings.
+        required (bool):
+            Whether missing values should generate validation errors.
+        fuzzy (bool):
+            Whether fuzzy matching is enabled.
+        min_score (int):
+            Minimum fuzzy-match score required for acceptance.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
+        file (str | None):
+            File identifier used to select the accepted-response mapping.
     """
     def __init__(self, accepted_responses: dict, required: bool = False,
                  fuzzy: bool = True, min_score: int = 90, row_numbers=None, file = None):
@@ -421,7 +466,20 @@ class fileSpecificCategoricalColumn(BaseColumn):
         self.file = file
 
     def _clean(self, text: str) -> str:
-        """Normalize text for lookup."""
+        """
+        Normalize categorical values into a canonical comparison form.
+
+        Cleaning behavior includes whitespace normalization, case normalization,
+        and treatment of zero-only values as missing.
+
+        Args:
+            text (str):
+                Raw categorical value.
+
+        Returns:
+            str:
+                Canonical comparison value used for matching.
+        """
         if pd.isna(text):
             return ""
         if re.fullmatch(r"0+", text):
@@ -430,8 +488,26 @@ class fileSpecificCategoricalColumn(BaseColumn):
 
     def normalize(self, s: pd.Series) -> pd.Series:
         """
-        Normalize categorical text values based on file-specific accepted responses.
-        file_id must match a key in accepted_responses.
+        Normalize categorical values using file-specific accepted responses.
+
+        Processing steps:
+            1. Select the accepted-response mapping for `self.file`
+            2. Apply shared preprocessing via `base_clean()`
+            3. Apply categorical-specific normalization via `_clean()`
+            4. Perform exact matching
+            5. Optionally apply fuzzy matching for unmatched values
+
+        Args:
+            s (pd.Series):
+                Raw categorical values.
+
+        Returns:
+            pd.Series:
+                Canonical categorical values or `pd.NA` for unmatched values.
+
+        Raises:
+            ValueError:
+                If `self.file` does not exist in `accepted_responses`.
         """
 
         if self.file not in self.accepted_responses:
@@ -470,7 +546,19 @@ class fileSpecificCategoricalColumn(BaseColumn):
 
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
-        """Report missing or invalid categorical entries."""
+        """
+        Construct validation errors for file-specific categorical values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, not in accepted responses"
+                Value could not be matched to a valid file-specific response.
+
+        Returns:
+            pd.DataFrame:
+                Structured categorical validation errors.
+        """
         masks = {
             "Required but missing": (
                 s_norm.isna() if self.required else pd.Series(False, index=s_norm.index)
@@ -626,8 +714,31 @@ class identifierColumn(BaseColumn):
 class booleanColumn(BaseColumn): 
 
     """
-    Column type for Yes/No fields. 
-    Accepts common yes/no variants, noramlizes and casts to 1/0.
+    Validator for boolean-like categorical fields.
+
+    This column type normalizes common yes/no representations into canonical
+    boolean categories.
+
+    Accepted representations include:
+        • yes / no
+        • y / n
+        • true / false
+        • 1 / 0
+        • numeric float equivalents such as 1.0 / 0.0
+
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Normalizes numeric-like values before string conversion
+        • Maps accepted variants to canonical "Yes" / "No" values
+        • Produces standardized validation errors for invalid entries
+
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        accepted (dict[str, str]):
+            Mapping of accepted boolean variants to canonical values.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
 
     name: str = "boolean"
@@ -643,6 +754,25 @@ class booleanColumn(BaseColumn):
         self.row_numbers = row_numbers
 
     def normalize(self, s: pd.Series) -> pd.Series:
+
+        """
+        Normalize boolean-like values into canonical "Yes" / "No" labels.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Normalize numeric values such as `1.0` → `1`
+            3. Standardize casing and whitespace
+            4. Map accepted variants to canonical boolean labels
+
+        Args:
+            s (pd.Series):
+                Raw boolean-like values.
+
+        Returns:
+            pd.Series:
+                Canonical "Yes" / "No" values or `pd.NA` for invalid
+                or unrecognized entries.
+        """
 
         s = self.base_clean(s)
 
@@ -664,12 +794,57 @@ class booleanColumn(BaseColumn):
         return mapped
     
     def format(self, s_norm: pd.Series) -> pd.Series:
+        """
+        Format canonical boolean values as nullable integer indicators.
+
+        Canonical values are converted as follows:
+            • "Yes" → 1
+            • "No"  → 0
+
+        Missing values are preserved using pandas nullable integer dtype
+        (`Int64`).
+
+        Args:
+            s_norm (pd.Series):
+                Normalized boolean values.
+
+        Returns:
+            pd.Series:
+                Nullable integer representation of boolean values.
+        """
         return(
             s_norm.map({"Yes":1, "No":0}).astype("Int64")
         )
     
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        """
+        Construct validation errors for boolean-like values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, must be Yes/No"
+                Value could not be interpreted as a recognized boolean variant.
+
+        Args:
+            col (str):
+                Column name being validated.
+            raw (pd.Series):
+                Original unnormalized values.
+            s_norm (pd.Series):
+                Normalized boolean values.
+            file (str | None):
+                Optional source file identifier.
+            sheet (str | None):
+                Optional sheet or dataset section name.
+            row_offset (int):
+                Offset used when deriving row numbers from the index.
+
+        Returns:
+            pd.DataFrame:
+                Structured boolean validation errors.
+        """
 
         masks = {
             "Required but missing": (
@@ -706,83 +881,37 @@ class booleanColumn(BaseColumn):
 class dateTimeColumn(BaseColumn): 
 
     """
-    Column type for parsing, normalizing, and validating date values.
+    Validator for date and datetime fields.
 
-    This validator handles a wide variety of messy real-world date formats,
-    including embedded month names, Unicode separators, Excel-style shorthand,
-    and inconsistent spacing. It attempts to extract a canonical date in
-    ISO format (YYYY-MM-DD), enforcing optional minimum and maximum bounds.
+    This column type normalizes a wide variety of real-world date formats
+    into pandas datetime values and validates them against optional minimum
+    and maximum bounds.
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning to remove whitespace, Excel error tokens,
-          and placeholder junk.
-        • Normalizes text using `_clean_text`, which:
-            - Removes invisible unicode characters
-            - Converts non-ASCII dashes and separators to "/"
-            - Preserves month names (Jan, February, etc.)
-            - Extracts ISO (YYYY-MM-DD), US (MM/DD/YYYY), or fallback numeric patterns
-        • Converts cleaned strings into pandas datetime objects via
-          `pd.to_datetime(..., errors="coerce")`.
-        • Flags dates outside the configured allowable range.
-        • Supports explicit invalid tokens ("n/a", "null", "NaT", etc.).
+    Supported behaviors include:
+        • normalization of inconsistent separators and unicode characters
+        • handling of month names and mixed formatting styles
+        • recovery from partially malformed date strings
+        • coercion of invalid or placeholder values to missing values
+        • validation against configurable date ranges
 
-    Args:
-        required (bool, optional):
-            If True, missing values after cleaning generate "Required but missing"
-            validation errors.
-        min_date (str or None, optional):
-            Earliest permissible date (inclusive). If None, no lower bound is applied.
-        max_date (str or None, optional):
-            Latest permissible date (inclusive). If None, no upper bound is applied.
-        row_numbers (pd.Series, optional):
-            Excel-style row numbers used when creating error reports. If omitted,
-            DataFrame index + `row_offset` is used instead.
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Applies date-specific text normalization via `_clean_text()`
+        • Parses cleaned values using `pd.to_datetime()`
+        • Produces standardized validation errors for:
+            - missing required values
+            - invalid dates
+            - out-of-range dates
 
-    normalize(s):
-        • Input:
-            s (pd.Series): Raw date values (strings, numerics, mixed).
-        • Output:
-            pd.Series of pandas datetime64 values or `NaT` where coercion fails.
-
-        Steps:
-            1. Base cleaning.
-            2. Replace common invalid tokens with NA.
-            3. Apply `_clean_text` to extract a date-like pattern.
-            4. Parse via `pd.to_datetime`.
-
-    format(s_norm):
-        • Formats parsed datetime objects as ISO strings ("YYYY-MM-DD").
-        • Missing values are emitted as empty strings.
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        • Constructs a structured DataFrame describing date validation errors.
-        • Error categories include:
-            - "Required but missing"
-            - "Invalid Value, not a valid date"
-            - "Invalid Value, date before minimum allowed"
-            - "Invalid Value, date after maximum allowed"
-        • Output columns:
-            ["file", "sheet", "row_number", "column",
-             "rule", "raw_value", "normalized"]
-
-        Row numbers use:
-            • self.row_numbers (if provided), otherwise
-            • DataFrame index + `row_offset`.
-
-    Returns:
-        The class does not return values directly, but its methods produce:
-            • normalized datetime Series
-            • formatted ISO date strings
-            • structured validation error DataFrames
-
-    Notes:
-        • `_clean_text` attempts to recover dates from extremely irregular input.
-        • The validator avoids interpreting 2-digit years heuristically unless
-          clearly part of a recognizable MM/DD/YY pattern.
-        • Inputs like ".", "---", "/", empty strings, or placeholder artifacts
-          are treated as missing.
-        • Date ranges allow you to prevent absurd historical values (e.g. 1/1/1895)
-          or future dates beyond expected operational windows.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        min_date (pd.Timestamp | None):
+            Minimum allowed date.
+        max_date (pd.Timestamp | None):
+            Maximum allowed date.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
 
     name: str = "date_time"
@@ -808,6 +937,28 @@ class dateTimeColumn(BaseColumn):
 
     
     def _clean_text(self, val: str):
+        """
+        Normalize irregular date text into a parseable date representation.
+
+        Cleaning behavior includes:
+            • unicode normalization
+            • separator normalization
+            • removal of invisible/control characters
+            • preservation of recognized month names
+            • extraction of common ISO and U.S. date patterns
+
+        The method attempts to recover usable date strings from malformed
+        or inconsistently formatted inputs prior to datetime parsing.
+
+        Args:
+            val (str):
+                Raw date value.
+
+        Returns:
+            str | pd.NA:
+                Cleaned date string suitable for parsing, or `pd.NA`
+                if no valid date structure can be identified.
+        """
         if pd.isna(val):
             return pd.NA
 
@@ -877,6 +1028,24 @@ class dateTimeColumn(BaseColumn):
     # ---- normalize ----
     
     def normalize(self, s: pd.Series) -> pd.Series:
+
+        """
+        Normalize raw date values into pandas datetime objects.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Replace common invalid tokens with missing values
+            3. Apply date-specific normalization via `_clean_text()`
+            4. Parse cleaned values using `pd.to_datetime()`
+
+        Args:
+            s (pd.Series):
+                Raw date values.
+
+        Returns:
+            pd.Series:
+                Parsed datetime values or `NaT` where parsing fails.
+        """
         
         s = self.base_clean(s)
         
@@ -896,6 +1065,19 @@ class dateTimeColumn(BaseColumn):
 
     def format(self, s_norm: pd.Series) -> pd.Series: 
 
+        """
+        Format datetime values as ISO date strings.
+
+        Args:
+            s_norm (pd.Series):
+                Normalized datetime values.
+
+        Returns:
+            pd.Series:
+                ISO-formatted date strings (`YYYY-MM-DD`). Missing
+                values are returned as empty strings.
+        """
+
         out = s_norm.dt.strftime("%Y-%m-%d")
         return out.fillna("")
     
@@ -903,6 +1085,23 @@ class dateTimeColumn(BaseColumn):
 
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        """
+        Construct validation errors for date values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, not a valid date"
+                Value could not be parsed as a valid date.
+            • "Invalid Value, date before minimum allowed"
+                Parsed date is earlier than the configured minimum.
+            • "Invalid Value, date after maximum allowed"
+                Parsed date is later than the configured maximum.
+
+        Returns:
+            pd.DataFrame:
+                Structured date validation errors.
+        """
         
 
         raw = raw.replace({"<NA>": pd.NA, "NaT": pd.NA, "nan": pd.NA})
@@ -952,92 +1151,30 @@ class dateTimeColumn(BaseColumn):
 class zipCodeColumn(BaseColumn):
 
     """
-    Column type for validating and normalizing U.S. ZIP codes.
+    Validator for U.S. ZIP code fields.
 
-    This validator supports the two most common ZIP formats used in workforce
-    datasets:
-        • Standard 5-digit ZIPs (e.g., "06511")
-        • 4-digit values that should be left-padded to five digits (e.g., "6877" → "06877")
+    This column type normalizes ZIP code values into canonical 5-digit
+    representations and validates basic ZIP formatting rules.
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning (removing whitespace, Excel error tokens, etc.).
-        • Optionally strips all non-digit characters (hyphens, spaces) before processing.
-        • Normalizes values to string digits or `pd.NA` if unusable.
-        • Formats values by:
-            - Padding 4-digit ZIPs to 5 digits.
-            - Correcting misplaced trailing zeros in some user-entered patterns.
-            - Ensuring only valid 5-digit ZIP codes remain in the output.
+    Supported behaviors include:
+        • removal of formatting characters
+        • preservation of leading zeros
+        • normalization of 4-digit ZIPs via left-padding
+        • handling of malformed or placeholder values
 
-        • Provides structured validation errors for:
-            - Missing required values
-            - Non-numeric or improperly formatted ZIP entries
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Optionally strips non-digit formatting characters
+        • Normalizes ZIP values into canonical digit strings
+        • Produces standardized validation errors for invalid ZIP codes
 
-    Args:
-        required (bool, optional):
-            If True, missing values (after cleaning) generate
-            "Required but missing" validation errors.
-        strip_formatting (bool, optional):
-            If True, remove non-digit characters prior to validation
-            (recommended for handling "06-511", "06511 ", "06511-1234", etc.).
-        row_numbers (pd.Series, optional):
-            Excel row numbers to attach to error output. If omitted,
-            DataFrame index + `row_offset` is used.
-
-    normalize(s):
-        Normalize raw ZIP values.
-
-        Input:
-            s (pd.Series): Raw ZIP values.
-
-        Output:
-            pd.Series of cleaned string values (digits only), or `pd.NA` where
-            the value cannot be interpreted as a ZIP code.
-
-        Steps:
-            1. Base cleaning
-            2. Strip formatting (if enabled)
-            3. Remove empty strings → set to NA
-
-    validate(s_norm):
-        Vectorized boolean test evaluating whether each normalized value is:
-            • 5 digits, or
-            • NA (if not required)
-
-        Returns:
-            pd.Series of bool values indicating validity.
-
-    format(s_norm):
-        Convert normalized string digits into final 5-digit ZIPs.
-
-        Logic:
-            • 4-digit → left-pad with "0"
-            • Overlong patterns ending with unnecessary zeros → corrected
-            • Invalid patterns → replaced with `pd.NA`
-
-        Returns:
-            pd.Series containing canonical ZIP strings.
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        Produce a structured DataFrame describing ZIP-code validation errors.
-
-        Error types recorded:
-            • "Required but missing"
-            • "Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)"
-              (raised for non-numeric, malformed, or incorrectly sized values)
-
-        Output columns:
-            ["file", "sheet", "row_number", "column",
-             "rule", "raw_value", "normalized"]
-
-        Row numbers use:
-            • `self.row_numbers` if supplied, otherwise
-            • DataFrame index + `row_offset`
-
-    Notes:
-        • This validator does *not* process ZIP+4 formats (e.g., "06511-1234"),
-          but can strip them down if `strip_formatting=True`.
-        • ZIP codes beginning with "0" (common in New England) are preserved correctly.
-        • Ensures downstream systems receive clean, canonical 5-digit ZIP codes.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        strip_formatting (bool):
+            Whether non-digit formatting characters should be removed.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
 
     name = "zip_code"
@@ -1060,11 +1197,30 @@ class zipCodeColumn(BaseColumn):
 
     def normalize(self, s: pd.Series) -> pd.Series:
 
+        """
+        Normalize raw ZIP code values.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Normalize whitespace
+            3. Optionally remove non-digit formatting characters
+            4. Convert empty values to `pd.NA`
+
+        Args:
+            s (pd.Series):
+                Raw ZIP code values.
+
+        Returns:
+            pd.Series:
+                Cleaned ZIP code strings or `pd.NA`.
+        """
+
         s = self.base_clean(s)
 
         s = (
             s.astype("string")
-            .str.replace(r"\s+", " ", regex=True)  # normalize whitespace
+            .str.replace(r"\.0$", "", regex=True)
+            .str.replace(r"\s+", " ", regex=True)
             .str.strip()
         )
 
@@ -1086,6 +1242,22 @@ class zipCodeColumn(BaseColumn):
     
     def format(self, 
                s_norm: pd.Series) -> pd.Series: 
+        """
+        Convert normalized ZIP values into canonical 5-digit ZIP codes.
+
+        Formatting behavior includes:
+            • left-padding 4-digit ZIP codes
+            • correcting certain misplaced trailing-zero patterns
+            • invalidating malformed ZIP values
+
+        Args:
+            s_norm (pd.Series):
+                Normalized ZIP code values.
+
+        Returns:
+            pd.Series:
+                Canonical 5-digit ZIP codes or `pd.NA` for invalid values.
+        """
 
         out = s_norm.copy()
 
@@ -1119,6 +1291,20 @@ class zipCodeColumn(BaseColumn):
                   file = None, 
                   sheet = None, 
                   row_offset: int = 1) -> pd.DataFrame:
+
+        """
+        Construct validation errors for ZIP code values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, zipcode must 5 digits (e.g. 06543) or 4 digits (6434)"
+                ZIP value could not be interpreted as a valid ZIP code.
+
+        Returns:
+            pd.DataFrame:
+                Structured ZIP code validation errors.
+        """
 
         masks = {
             "Required but missing": s_norm.isna() & raw.isna() if self.required else pd.Series(False, index = s_norm.index),
@@ -1156,84 +1342,33 @@ class zipCodeColumn(BaseColumn):
 class stateID7Column(BaseColumn):
 
     """
-    Column type for validating and normalizing 7-digit State ID numbers.
+    Validator for State ID identifier fields.
 
-    This validator enforces the Connecticut-style “State ID #” format used in
-    workforce and education datasets, where each identifier must be exactly
-    seven digits (e.g., ``"0123456"``). The column may contain formatting noise
-    such as whitespace, decimal artifacts (``"0123456.0"``), or hyphens, all of
-    which can be removed prior to validation.
+    This column type validates and normalizes numeric State ID values used
+    in workforce and education datasets.
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning (strip whitespace, remove Excel error tokens).
-        • Optionally removes all non-digit characters (``strip_formatting=True``).
-        • Converts values to canonical digit-only strings or `pd.NA`.
-        • Validates that final normalized values contain exactly 7 digits.
-        • Returns structured error metadata for missing/invalid identifiers.
+    Supported identifier formats include:
+        • legacy 6-digit identifiers
+        • modern 7-digit identifiers
 
-    Args:
-        required (bool, optional):
-            If True, missing values (after cleaning and normalization)
-            generate a ``"Required but missing"`` error.
-        strip_formatting (bool, optional):
-            If True, remove non-digit characters such as hyphens, spaces,
-            and decimal suffixes (e.g., convert ``"0123456.0"`` → ``"0123456"``).
-        row_numbers (pd.Series, optional):
-            Excel row numbers aligned with the Series index. Used to populate
-            the ``row_number`` field in error logs.
+    Supported behaviors include:
+        • removal of formatting characters
+        • preservation of leading zeros
+        • removal of Excel float artifacts such as ".0"
 
-    normalize(s):
-        Normalize raw State ID values.
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Optionally strips non-digit formatting characters
+        • Normalizes identifiers into canonical digit strings
+        • Produces standardized validation errors for invalid identifiers
 
-        Steps:
-            1. Apply BaseColumn cleaning.
-            2. Strip whitespace and optional formatting noise.
-            3. Remove non-digit characters.
-            4. Convert empty strings to `pd.NA`.
-
-        Returns:
-            pd.Series of cleaned digit strings or `pd.NA`.
-
-    validate(s_norm):
-        Validate that each normalized value matches the required pattern.
-
-        Requirements:
-            • Exactly seven digits (``"\\d{7}"``)
-            • OR NA if not required
-
-        Returns:
-            pd.Series of boolean indicators.
-
-    format(s_norm):
-        Return final formatted values.
-
-        Notes:
-            • No auto-padding is performed.
-            • Valid inputs must already be seven digits.
-            • Returned values are suitable for reporting and database storage.
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        Construct a structured DataFrame of validation errors.
-
-        Error types recorded:
-            • ``"Required but missing"`` — value missing when `required=True`
-            • ``"Invalid Value, State ID must be 7 Digits (e.g. '0123456')"`` —
-              triggered for:
-                • Non-empty raw inputs that do not normalize to 7 digits
-                • Values that normalize to NA but were present in raw form
-
-        Output columns:
-            ["file", "sheet", "row_number", "column",
-             "rule", "raw_value", "normalized"]
-
-        Row number logic:
-            • Use `self.row_numbers` if supplied,
-            • Otherwise fall back to DataFrame index + ``row_offset``.
-
-    Notes:
-        • State IDs may begin with leading zeros, which are preserved.
-        • This validator does not support alphanumeric IDs.
-        • Downstream systems should rely on normalized output for uniqueness checks.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        strip_formatting (bool):
+            Whether formatting characters should be removed.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
 
     name = "state_id_7"
@@ -1245,7 +1380,6 @@ class stateID7Column(BaseColumn):
                  row_numbers = None):
 
         """
-        required = True -> blank after cleaning counts as an error 
         strip_formatting -> remove hyphens/spaces/etc. before validating
         """
 
@@ -1256,6 +1390,24 @@ class stateID7Column(BaseColumn):
     # ---- Step 1: normalize (vectorized) ----
 
     def normalize(self, s: pd.Series) -> pd.Series:
+
+        """
+        Normalize raw State ID values.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Remove formatting artifacts and non-digit characters
+            3. Remove Excel float suffixes such as ".0"
+            4. Convert empty values to `pd.NA`
+
+        Args:
+            s (pd.Series):
+                Raw State ID values.
+
+        Returns:
+            pd.Series:
+                Normalized 6-digit or 7-digit State ID values, or `pd.NA`.
+        """
 
         s = s.astype("string")
         s = self.base_clean(s)
@@ -1270,21 +1422,43 @@ class stateID7Column(BaseColumn):
 
     def validate(self, s_norm: pd.Series) -> pd.Series:
         ## confirm the pattern is 7 digits (or blank if not required)
-        ok_pattern = s_norm.str.fullmatch(r"\d{7}", na=False)
+        ok_pattern = s_norm.str.fullmatch(r"\d{6,7}", na=False)
         ok_required = ok_pattern & (~s_norm.isna() if self.required else True)
         return ok_required
     
     def format(self, s_norm: pd.Series) -> pd.Series:
-        # We don't auto-pad; must already be 7 digits to be considered valid. 
-        # Return the normalized value as the final, canonical display. 
+        """Return canonical State ID values unchanged."""
         return s_norm
     
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series, file = None, sheet = None, row_offset: int=1) -> pd.DataFrame:
+   
+        """
+        Construct validation errors for State ID values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, State ID must be 6 or 7 digits"
+                Value could not be interpreted as a valid State ID.
+
+        Returns:
+            pd.DataFrame:
+                Structured State ID validation errors.
+        """
+        
+        invalid_mask = (
+            (s_norm.notna() & ~s_norm.str.fullmatch(r"\d{6,7}")) |
+            (s_norm.isna() & raw.notna())
+        )
 
         masks = {
-            "Required but missing": s_norm.isna() & raw.isna() if self.required else pd.Series(False, index = s_norm.index),
-            "Invalid Value, State ID must be 7 Digits (e.g. '0123456')": s_norm.notna() & ~s_norm.str.fullmatch(r"\d{7}"),
-            "Invalid Value, State ID must be 7 Digits (e.g. '0123456')": s_norm.isna() & raw.notna()
+            "Required but missing": (
+                s_norm.isna() & raw.isna()
+                if self.required
+                else pd.Series(False, index=s_norm.index)
+            ),
+            "Invalid Value, State ID must be 6 or 7 digits (e.g. '123456' or '0123456')":
+                invalid_mask
         }
 
         frames = []
@@ -1515,92 +1689,32 @@ class ONETCodeColumn(BaseColumn):
 
 class CIPCodeColumn(BaseColumn):
     """
-    Column type for CIP (Classification of Instructional Programs) codes.
+    Validator for O*NET-SOC occupation code fields.
 
-    This validator normalizes and validates CIP codes to one of the three
-    canonical forms defined by NCES:
+    This column type normalizes and validates O*NET occupation codes into
+    canonical `DD-DDDD.DD` format.
 
-        • ``DD``           — 2-digit “CIP Series”
-        • ``DD.DD``        — 4-digit “CIP Subseries”
-        • ``DD.DDDD``      — 6-digit “CIP Program”
+    Supported behaviors include:
+        • normalization of common malformed O*NET formats
+        • handling of multi-code cells
+        • removal of formatting noise and invalid characters
+        • canonicalization of codes into semicolon-delimited output
 
-    It also supports multi-valued cells (e.g., several CIP codes separated by
-    commas, semicolons, or whitespace) and outputs them as a semicolon-delimited
-    string in normalized form.
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Normalizes codes into canonical O*NET format
+        • Supports multiple codes per cell
+        • Produces standardized validation errors for invalid codes
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning (strip whitespace, replace Excel errors).
-        • Splits multi-code entries on common separators.
-        • Removes all characters except digits and periods.
-        • Automatically converts common malformed forms into canonical patterns:
-
-              - ``"151201"``     → ``"15.1201"``
-              - ``"1512"``       → ``"15.12"``
-              - ``"15.120100"``  → ``"15.1201"``
-              - ``"15 12"``      → ``"15.12"``
-
-        • Drops unparseable junk codes.
-        • Produces ``pd.NA`` if no valid CIP codes remain.
-
-    Args:
-        required (bool, optional):
-            If True, missing values after normalization generate a
-            ``"Required but missing"`` validation error.
-        row_numbers (pd.Series, optional):
-            Excel row numbers aligned to Series indices. Used to populate the
-            ``row_number`` field in error logs.
-
-    normalize(s):
-        Normalize raw CIP code strings.
-
-        Steps:
-            1. Apply BaseColumn cleaning and strip floating-point suffixes.
-            2. Split each entry into candidate codes.
-            3. Sanitize by removing non-digit/non-dot characters.
-            4. Attempt to coerce each candidate into a canonical CIP format.
-            5. Recombine valid codes as a semicolon-delimited string.
-
-        Returns:
-            pd.Series:
-                Normalized CIP code strings, or ``pd.NA`` if no valid codes
-                could be derived.
-
-    format(s_norm):
-        Formatting step; returns normalized CIP strings unchanged.
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        Construct a structured DataFrame of validation errors.
-
-        Error types recorded:
-            • ``"Required but missing"`` —
-                Value is empty after cleaning but column is marked required.
-            • ``"Invalid Value, must match CIP format (e.g. '15', '15.12', '15.1201')"`` —
-                Triggered when:
-                    – raw data is present but normalization fails, or
-                    – one or more CIP codes in a multi-code cell do not
-                      conform to allowed patterns.
-
-        Validation rule:
-            All CIP codes within a cell must match one of the canonical patterns
-            (2-digit, 4-digit with dot, or 6-digit with dot). If any code is invalid,
-            the entire cell is flagged.
-
-        Returns:
-            pd.DataFrame with columns:
-                ["file", "sheet", "row_number", "column",
-                 "rule", "raw_value", "normalized"]
-
-        Row number logic:
-            • If ``row_numbers`` was supplied, values are pulled from it.
-            • Otherwise, row numbers default to ``index + row_offset``.
-
-    Notes:
-        • This validator checks *format only* — it does not confirm that a CIP
-          code exists in the official NCES taxonomy.
-        • Empty or malformed codes are silently skipped during normalization.
-        • Use semicolon-delimited output for downstream exploding or mapping.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        pattern (Pattern):
+            Regular expression defining canonical O*NET format.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
-
+     
     name: str = "cip_code"
 
     def __init__(self, required: bool = False, row_numbers = None):
@@ -1615,6 +1729,24 @@ class CIPCodeColumn(BaseColumn):
 
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
+
+        """
+        Normalize raw O*NET code values.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Remove Excel float artifacts such as ".0"
+            3. Apply O*NET-specific canonicalization logic
+            4. Return canonical semicolon-delimited code strings
+
+        Args:
+            s (pd.Series):
+                Raw O*NET code values.
+
+        Returns:
+            pd.Series:
+                Canonical O*NET code values or `pd.NA`.
+        """
         
         s = s.astype("string").str.strip()
         s = self.base_clean(s)
@@ -1673,11 +1805,29 @@ class CIPCodeColumn(BaseColumn):
 
     # --- format ---
     def format(self, s_norm: pd.Series) -> pd.Series:
+        """Return canonical O*NET codes unchanged."""
         return s_norm
 
     # --- errors ---
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        
+        """
+        Construct validation errors for O*NET code values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, must match ONET format (e.g. '15-2051.00')"
+                Value could not be interpreted as a valid O*NET code.
+
+        Multi-code cells are considered invalid if any contained code
+        fails validation.
+
+        Returns:
+            pd.DataFrame:
+                Structured O*NET validation errors.
+        """
 
         def all_valid_codes(val: str) -> bool:
             if pd.isna(val) or val == "":
@@ -1693,8 +1843,7 @@ class CIPCodeColumn(BaseColumn):
             ),
             "Invalid Value, must match CIP format (e.g. '15', '15.12', '15.1201')": (
                 s_norm.isna() & raw.notna()
-            ),
-            "Invalid Value, must match CIP format (e.g. '15', '15.12', '15.1201')": (
+            ) | (
                 s_norm.notna() & ~mask_valid
             ),
         }
@@ -1723,96 +1872,36 @@ class CIPCodeColumn(BaseColumn):
 
 class hourlyWageColumn(BaseColumn):
     """
-    Column type for hourly wage fields.
+    Validator for hourly wage fields.
 
-    This validator extracts and validates hourly wage values expressed as
-    free-text, stripping currency symbols and extraneous wording while enforcing
-    configurable minimum and maximum wage thresholds.
+    This column type extracts and validates hourly wage values from
+    free-text input and normalizes them into numeric wage values.
 
-    Unlike typical numeric validators, this class *explicitly detects wage ranges*
-    (e.g., ``"15-20"``, ``"12/15"``, ``"10 to 12"``). Ranges are not coerced and are
-    instead surfaced as validation errors because they represent ambiguous or
-    non-atomic wage entries.
+    Supported behaviors include:
+        • removal of currency symbols and wage-related text
+        • parsing of numeric wage values from free text
+        • detection of ambiguous wage ranges
+        • configurable minimum and maximum wage thresholds
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning (remove Excel error tokens, strip whitespace).
-        • Detects and flags wage *ranges* via regular expressions.
-        • Removes currency symbols and common unit labels (e.g. ``"per hr"``).
-        • Strips all non-numeric characters except the decimal point.
-        • Parses remaining text into a float (e.g., ``"$17" → 17.0``).
-        • Values of ``0`` are treated as missing (commonly an encoding issue).
-        • Formatting step outputs wages as ``"$17.00"``.
+    Wage ranges (e.g. "15-20", "10 to 12") are intentionally treated
+    as invalid because they represent non-atomic wage entries.
 
-    Args:
-        required (bool, optional):
-            If True, missing values after cleaning generate a
-            ``"Required but missing"`` validation error.
-        min_wage (float, optional):
-            Lower bound for valid wages. Values below this threshold raise the
-            error ``"Invalid Value, must be >= $X.XX"``.
-        max_wage (float, optional):
-            Upper bound for reasonable wages. Values above this threshold trigger
-            a *confirmation* warning rather than a hard failure.
-        row_numbers (pd.Series, optional):
-            Excel row numbers used for reporting. If None, row numbers default to
-            ``index + row_offset``.
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Detects wage ranges before numeric parsing
+        • Removes formatting and currency artifacts
+        • Converts valid values into numeric hourly wages
+        • Produces standardized validation errors and confirmation warnings
 
-    normalize(s):
-        Normalize free-text wage values into numeric floats.
-
-        Steps:
-            1. Lowercase and trim text.
-            2. Detect ranges using ``self._range_pattern`` and preserve the raw
-               value for error classification.
-            3. Remove currency symbols, “hr”/“hourly”/“per hr”, etc.
-            4. Strip all non-digit / non-decimal characters.
-            5. Convert to float; invalid or zero values → ``pd.NA``.
-
-        Returns:
-            pd.Series:
-                Floats representing hourly wages, or ``pd.NA`` where the value is
-                missing, invalid, or a detected range.
-
-    format(s_norm):
-        Convert normalized floats into ``"$XX.XX"`` formatted strings.
-
-        Returns:
-            pd.Series of strings or ``pd.NA`` for missing values.
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        Construct a structured DataFrame of validation errors.
-
-        Error types recorded:
-            • ``"Required but missing"`` —
-                  Value is empty after normalization and column is required.
-            • ``"Invalid Value, must be >= $min_wage"`` —
-                  Wage is below the configured lower bound.
-            • ``"Confirmation required, unusually high (> $max_wage)"`` —
-                  Wage exceeds typical labor-market ranges; not technically invalid
-                  but requires human review.
-            • ``"Invalid Value, must be a number indicating hourly wage"`` —
-                  Raw value exists but cannot be parsed (including detected ranges).
-
-        Range handling:
-            • Any raw entry matching the range pattern (e.g. ``"15-20"``, ``"14/16"``,
-              ``"10 to 12"``) is automatically flagged in the last category.
-
-        Returns:
-            pd.DataFrame:
-                A structured table with columns:
-                    ["file", "sheet", "row_number",
-                     "column", "rule", "raw_value", "normalized"]
-
-        Row number logic:
-            • Uses ``row_numbers`` when provided.
-            • Otherwise computes ``index + row_offset``.
-
-    Notes:
-        • This validator enforces *atomic* wage entries — ranges must be corrected
-          manually before analysis.
-        • Currency formatting is normalized consistently in `format()`.
-        • ``0`` is treated as missing because spreadsheets sometimes export empty
-          wage cells as ``0`` when coerced to numeric types.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        min_wage (float):
+            Minimum allowed hourly wage.
+        max_wage (float):
+            Threshold above which confirmation warnings are generated.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
 
     name: str = "hourly_wage"
@@ -1827,6 +1916,28 @@ class hourlyWageColumn(BaseColumn):
 
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
+
+        """
+        Normalize free-text wage values into numeric hourly wages.
+
+        Processing steps:
+            1. Normalize casing and whitespace
+            2. Detect wage ranges
+            3. Remove currency and unit formatting
+            4. Strip non-numeric characters
+            5. Parse numeric wage values
+
+        Values equal to zero are treated as missing values.
+
+        Args:
+            s (pd.Series):
+                Raw wage values.
+
+        Returns:
+            pd.Series:
+                Numeric hourly wage values or `pd.NA`.
+        """
+
         s = s.astype("string").str.strip().str.lower()
 
         def clean(val):
@@ -1848,11 +1959,41 @@ class hourlyWageColumn(BaseColumn):
 
     # --- format ---
     def format(self, s_norm: pd.Series) -> pd.Series:
+        """
+        Format numeric wage values as currency strings.
+
+        Args:
+            s_norm (pd.Series):
+                Normalized hourly wage values.
+
+        Returns:
+            pd.Series:
+                Currency-formatted wage strings (e.g. "$17.00").
+        """
         return s_norm.map(lambda x: f"${x:.2f}" if isinstance(x, float) else pd.NA)
 
     # --- errors ---
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        """
+        Construct validation errors for hourly wage values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, must be >= $X.XX"
+                Wage falls below the configured minimum threshold.
+            • "Confirmation required, unusually high (> $X.XX)"
+                Wage exceeds the configured confirmation threshold.
+            • "Invalid Value, must be a number indicating hourly wage"
+                Value could not be interpreted as a valid atomic wage.
+
+        Wage ranges are treated as invalid values.
+
+        Returns:
+            pd.DataFrame:
+                Structured hourly wage validation errors.
+        """
 
         # Identify ranges directly from raw values
         range_mask = raw.astype("string").str.lower().str.contains(self._range_pattern)
@@ -1897,92 +2038,34 @@ class hourlyWageColumn(BaseColumn):
 
 class hoursWorkedColumn(BaseColumn):
     """
-    Column type for hours-worked fields.
+    Validator for hours-worked fields.
 
-    This validator parses typical weekly or program hours from free-text inputs,
-    enforcing numeric constraints and reasonable upper bounds (e.g., ``<= 80``).
-    All values are cleaned, coerced to floats when possible, and validated
-    against minimum/maximum thresholds.
+    This column type normalizes and validates numeric hour values from
+    free-text input.
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning (strip whitespace, remove Excel error tokens).
-        • Converts valid numeric strings into floats.
-        • Treats empty strings, whitespace-only values, and failed parses as ``pd.NA``.
-        • Enforces non-negative hours.
-        • Enforces a configurable maximum (default: 80 hours).
-        • Formatting step converts whole-number floats to integers for cleaner output.
+    Supported behaviors include:
+        • parsing numeric hour values from text
+        • coercion of invalid or blank values to missing values
+        • validation against configurable minimum and maximum thresholds
+        • normalization of whole-number floats for cleaner output
 
-    Examples of accepted inputs:
-        ┌──────────────┬────────────────────────────┐
-        │ Raw Input     │ Normalized Representation  │
-        ├──────────────┼────────────────────────────┤
-        │ "40"          │ 40                         │
-        │ "37.5"        │ 37.5                       │
-        │ "  15  "      │ 15                         │
-        │ "" / " "      │ NA                         │
-        │ "abc"         │ NA (with validation error) │
-        └──────────────┴────────────────────────────┘
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Converts valid numeric values into floats
+        • Produces standardized validation errors for:
+            - missing required values
+            - negative hour values
+            - excessively large hour values
+            - non-numeric inputs
 
-    Args:
-        required (bool, optional):
-            If True, missing values after cleaning generate a
-            ``"Required but missing"`` validation error.
-        max_hours (int, optional):
-            Upper bound for reasonable reported weekly hours.
-            Values exceeding this threshold are considered invalid.
-        row_numbers (pd.Series, optional):
-            Excel row numbers for accurate error reporting.
-            If None, row numbers default to ``index + row_offset``.
-
-    normalize(s):
-        Normalize free-text hour values to numeric form.
-
-        Steps:
-            1. Clean via `BaseColumn.base_clean()`.
-            2. Strip whitespace and coerce to float using a safe converter.
-            3. Invalid numbers or blank values → ``pd.NA``.
-
-        Returns:
-            pd.Series of floats or ``pd.NA`` values.
-
-    format(s_norm):
-        Format normalized numeric values.
-
-        • Whole-number floats are converted to integers (e.g., ``40.0 → 40``).
-        • Fractional hours remain floats (e.g., ``37.5``).
-
-        Returns:
-            pd.Series with cleaned numeric values.
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        Produce a structured error report for invalid hour entries.
-
-        Error types recorded:
-            • ``"Required but missing"`` —
-                  No usable value and field is required.
-            • ``"Invalid Value, must be non-negative"`` —
-                  Negative hours such as ``-5``.
-            • ``"Invalid Value, cannot exceed X hours"`` —
-                  Hours greater than ``max_hours`` (e.g., > 80).
-            • ``"Invalid Value, must be a number indicating typical weekly hours"`` —
-                  Raw input exists but could not be parsed to a number.
-
-        Returns:
-            pd.DataFrame with columns:
-                ["file", "sheet", "row_number",
-                 "column", "rule", "raw_value", "normalized"]
-
-        Row number handling:
-            • Uses `row_numbers` when supplied.
-            • Otherwise computes row numbers from index + `row_offset`.
-
-    Notes:
-        • This validator treats ambiguous or text-based entries (e.g. "a lot")
-          as invalid unless manually corrected by the user.
-        • Hours are assumed to refer to *weekly* or *program* hours and therefore
-          constrained to realistic ranges.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        max_hours (int | float):
+            Maximum allowed hour value.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
-
     name: str = "hours_worked"
 
     def __init__(self, required: bool = False, max_hours: int = 80, row_numbers = None):
@@ -1992,6 +2075,22 @@ class hoursWorkedColumn(BaseColumn):
 
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
+        """
+        Normalize raw hour values into numeric hour values.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Strip whitespace and coerce values to numeric form
+            3. Convert invalid values to `pd.NA`
+
+        Args:
+            s (pd.Series):
+                Raw hour values.
+
+        Returns:
+            pd.Series:
+                Numeric hour values or `pd.NA`.
+        """
         s = s.astype("string").str.strip()
         s = self.base_clean(s)   
 
@@ -2007,11 +2106,42 @@ class hoursWorkedColumn(BaseColumn):
 
     # --- format ---
     def format(self, s_norm: pd.Series) -> pd.Series:
+        """
+        Format normalized hour values for output.
+
+        Whole-number floats are converted to integers while fractional
+        values are preserved.
+
+        Args:
+            s_norm (pd.Series):
+                Normalized hour values.
+
+        Returns:
+            pd.Series:
+                Cleaned numeric hour values.
+        """
         return s_norm.map(lambda x: int(x) if pd.notna(x) and float(x).is_integer() else x)
 
     # --- errors ---
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        """
+        Construct validation errors for hour values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, must be non-negative"
+                Hour value is negative.
+            • "Invalid Value, cannot exceed X hours"
+                Hour value exceeds the configured maximum.
+            • "Invalid Value, must be a number indicating typical weekly hours"
+                Value could not be interpreted as a numeric hour value.
+
+        Returns:
+            pd.DataFrame:
+                Structured hour validation errors.
+        """
 
         masks = {
             "Required but missing": (
@@ -2053,79 +2183,31 @@ class hoursWorkedColumn(BaseColumn):
 
 class NAICSCodeColumn(BaseColumn):
     """
-    Column type for NAICS (North American Industry Classification System) codes.
+    Validator for NAICS (North American Industry Classification System)
+    code fields.
 
-    This validator parses and normalizes NAICS industry codes as 2–6 digit
-    numeric identifiers, supporting a wide range of common input formats
-    (e.g., "31", "31151", "311513", "311513.0", "311/3115", "31; 311; 31151" ).
+    This column type normalizes and validates NAICS codes represented as
+    2–6 digit numeric identifiers.
 
-    Behavior Overview:
-        • Applies BaseColumn cleaning (strip whitespace, remove Excel errors).
-        • Strips non-numeric characters, removes decimal suffixes, and splits
-          multi-code entries on common delimiters (comma, semicolon, slash, spaces).
-        • Accepts any valid NAICS code length (2, 3, 4, 5, or 6 digits).
-        • Filters out malformed or ambiguous codes.
-        • Produces a semicolon-delimited list for rows containing multiple codes.
+    Supported behaviors include:
+        • normalization of malformed numeric formats
+        • removal of formatting artifacts and decimal suffixes
+        • handling of multi-code cells
+        • canonicalization of semicolon-delimited code lists
 
-    Examples of valid normalized outputs:
-        ┌───────────────────────┬────────────────────────────┐
-        │ Raw Input             │ Normalized Output          │
-        ├───────────────────────┼────────────────────────────┤
-        │ "31151"               │ "31151"                    │
-        │ "311513.0"            │ "311513"                   │
-        │ "31/311/3115"         │ "31;311;3115"              │
-        │ "31151300"            │ "311513" (trailing zeros)  │
-        │ "" / " " / None       │ NA                         │
-        └───────────────────────┴────────────────────────────┘
+    Behavior:
+        • Applies shared preprocessing via `base_clean()`
+        • Extracts valid 2–6 digit NAICS codes
+        • Supports multiple codes per cell
+        • Produces standardized validation errors for invalid codes
 
-    Args:
-        required (bool, optional):
-            If True, missing values after normalization generate a
-            ``"Required but missing"`` validation error.
-        row_numbers (pd.Series, optional):
-            Spreadsheet row numbers for accurate error reporting. If not
-            provided, error logs compute row numbers from index + ``row_offset``.
-
-    normalize(s):
-        Normalize raw NAICS entries to 2–6 digit codes.
-
-        Steps:
-            1. Apply BaseColumn cleaning.
-            2. Remove junk characters & decimal portions.
-            3. Split multi-code entries on common delimiters.
-            4. Keep only numeric strings of length 2–6.
-            5. Collapse malformed entries to ``pd.NA``.
-
-        Returns:
-            pd.Series of semicolon-delimited valid NAICS codes,
-            or ``pd.NA`` where no valid codes are detected.
-
-    format(s_norm):
-        Return normalized NAICS codes unchanged (no further formatting applied).
-
-    errors_df(col, raw, s_norm, file, sheet, row_offset):
-        Construct a structured error report describing invalid NAICS codes.
-
-        Error types recorded:
-            • ``"Required but missing"`` —
-                  Field is required but no usable value exists.
-            • ``"Invalid Value, must match NAICS format (e.g. '31', '31151', '311513')"`` —
-                  Raw values present but not convertible into any valid NAICS code, or
-                  normalized values that fail the 2–6 digit rule.
-
-        Returns:
-            pd.DataFrame with columns:
-                ["file", "sheet", "row_number",
-                 "column", "rule", "raw_value", "normalized"]
-
-        Row-number logic:
-            • Uses provided ``row_numbers`` when available.
-            • Falls back to index + ``row_offset`` for consistent reporting.
-
-    Notes:
-        • NAICS codes represent hierarchical sectors (2 digits → broad, 6 digits → detailed).
-        • This validator tolerates multi-code entries but does not attempt semantic
-          validation beyond confirming valid digit lengths.
+    Attributes:
+        required (bool):
+            Whether missing values should generate validation errors.
+        patterns (list[Pattern]):
+            Regular expressions defining valid NAICS code lengths.
+        row_numbers (pd.Series | None):
+            Row references used in validation reporting.
     """
     name: str = "naics_code"
 
@@ -2144,6 +2226,24 @@ class NAICSCodeColumn(BaseColumn):
 
     # --- normalize ---
     def normalize(self, s: pd.Series) -> pd.Series:
+        """
+        Normalize raw NAICS values into canonical code strings.
+
+        Processing steps:
+            1. Apply shared preprocessing via `base_clean()`
+            2. Remove Excel float artifacts such as ".0"
+            3. Split multi-code entries on common delimiters
+            4. Remove invalid formatting characters
+            5. Extract valid 2–6 digit NAICS codes
+
+        Args:
+            s (pd.Series):
+                Raw NAICS values.
+
+        Returns:
+            pd.Series:
+                Semicolon-delimited NAICS code strings or `pd.NA`.
+        """
         s = s.astype("string").str.strip()
         s = self.base_clean(s)
         s = s.str.replace(r"\.0$", "", regex=True)
@@ -2188,11 +2288,28 @@ class NAICSCodeColumn(BaseColumn):
         return s.map(fix_format)
     # --- format ---
     def format(self, s_norm: pd.Series) -> pd.Series:
+        """Return canonical NAICS codes unchanged."""
         return s_norm
 
     # --- errors ---
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        """
+        Construct validation errors for NAICS code values.
+
+        Error rules:
+            • "Required but missing"
+                Missing value in a required field.
+            • "Invalid Value, must match NAICS format"
+                Value could not be interpreted as a valid NAICS code.
+
+        Multi-code cells are considered invalid if any contained code
+        fails validation.
+
+        Returns:
+            pd.DataFrame:
+                Structured NAICS validation errors.
+        """
 
         def all_valid_codes(val: str) -> bool:
             if pd.isna(val) or val == "":

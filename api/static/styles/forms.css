@@ -1,0 +1,102 @@
+input,
+button,
+select,
+textarea {
+
+    box-sizing: border-box;
+
+    border-radius: var(--radius-sm);
+
+    border: 1px solid var(--border);
+
+    font-size: 14px;
+}
+
+input,
+select,
+textarea {
+
+    padding: 10px 12px;
+}
+
+button {
+
+    border: none;
+
+    cursor: pointer;
+
+    transition: 0.15s ease;
+}
+
+button:hover {
+
+    transform: translateY(-1px);
+}
+
+.form-grid {
+
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 24px;
+}
+
+.form-group {
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+.form-group label {
+
+    margin-bottom: 8px;
+
+    font-weight: 600;
+}
+
+.checkbox-input {
+
+    width: 18px;
+
+    height: 18px;
+}
+
+.primary-button {
+
+    background-color: var(--primary);
+
+    color: white;
+
+    padding: 12px 20px;
+
+    border-radius: var(--radius-sm);
+
+    font-weight: 600;
+}
+
+.primary-button:hover {
+
+    background-color: var(--primary-hover);
+}
+
+.secondary-button {
+
+    background: white;
+
+    border: 1px solid var(--border);
+
+    padding: 12px 20px;
+
+    border-radius: var(--radius-sm);
+
+    text-decoration: none;
+}
+
+textarea {
+
+    min-height: 180px;
+
+    resize: vertical;
+}

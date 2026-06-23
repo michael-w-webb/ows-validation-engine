@@ -3,7 +3,14 @@ from datetime import datetime
 import pandas as pd
 import datetime as dt
 from config import DB_PATH
-
+from validation_engine.column_names import (
+    get_required_value,
+    get_value,
+    is_normalized,
+    remove_normalized_suffix,
+    sheet_name,
+    base_name
+)
 class ValidationDBLogger:
 
     """
@@ -21,10 +28,26 @@ class ValidationDBLogger:
       - Column-level metadata normalization across sheets and datasets
       - Cell-level value history logging for post-normalization analysis
       - Structured violation logging with severity levels
+      
 
     SQLite is configured for concurrent-safe access using WAL mode and
     foreign key enforcement. All timestamps are generated at write time
     using the database clock.
+
+    Persistence Model
+    -----------------
+    Some logging operations are buffered in memory and persisted in batches
+    for performance reasons. Methods such as:
+
+    - ``mark_presence_participant``
+    - ``log_violation``
+    - ``resolve_person`` (new people)
+    - ``get_or_create_participant`` (new participants)
+
+    defer database writes until their corresponding ``flush_*`` methods are
+    called.
+
+    This design reduces transaction overhead during large validation runs.
 
     Notes
     -----
@@ -51,7 +74,7 @@ class ValidationDBLogger:
     components (e.g., validation engines, workbook loaders) rather than
     directly by end users.
     """
-    def __init__(self):
+    def __init__(self, db_path = None):
 
         """
         Initialize a SQLite connection for validation logging.
@@ -83,9 +106,16 @@ class ValidationDBLogger:
 
         self._new_people_buffer = []
 
-        self.raw_data_points = {}
+        self.keycreators = None
 
-        self.conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        self.raw_data_points = {}
+        self.db_path = db_path or DB_PATH
+
+        self.conn = sqlite3.connect(
+            self.db_path,
+            check_same_thread=False
+        )
+
         self.conn.execute("PRAGMA foreign_keys = ON;")
         self.conn.execute("PRAGMA journal_mode = WAL;")
         self.conn.execute("PRAGMA synchronous = NORMAL;")
@@ -99,12 +129,31 @@ class ValidationDBLogger:
     org: str | None = None,
     ):
         """
-        Preload participant identifiers into an in-memory map for fast lookup.
+        Preload participant identifiers into an in-memory lookup map.
 
-        Populates self._participant_map with keys of the form:
+        Loads existing participant records from the database into
+        ``self._participant_map`` for O(1) participant resolution during
+        validation.
+
+        Keys are stored as:
+
             (person_id, dataset_name, org) -> participant_id
 
-        This should be called once per run, before validation begins.
+        Parameters
+        ----------
+        dataset_name : str
+            Dataset scope to preload.
+        org : str, optional
+            If provided, restricts loading to a single organization.
+            Otherwise all organizations for the dataset are loaded.
+
+        Notes
+        -----
+        This method clears any previously loaded participant map state before
+        loading new records.
+
+        Typically called once at the beginning of a validation run to avoid
+        repeated database lookups during participant resolution.
         """
 
         self._participant_map.clear()
@@ -133,7 +182,24 @@ class ValidationDBLogger:
     def load_person_maps(self):
 
         """
-        Preload person identity key maps into memory.
+        Preload deterministic identity-key maps into memory.
+
+        Loads strict and medium-strength identity hashes from the ``person``
+        table into in-memory dictionaries used during participant resolution.
+
+        Loaded maps include:
+
+        - strict: name + DOB + ZIP
+        - medium: name + DOB
+        - medium: name + ZIP
+
+        Weak-name-only matching is intentionally excluded to reduce the risk
+        of false-positive merges.
+
+        Notes
+        -----
+        This method should typically be called once before processing rows in
+        a validation run.
         """
 
         self._person_by_strict.clear()
@@ -157,6 +223,22 @@ class ValidationDBLogger:
             if med_zip:
                 self._person_by_med_zip[med_zip] = pid
  
+    def get_primary_identity_creator(self):
+        if not self.keycreators:
+            raise ValueError("ValidationDBLogger.keycreators must be set before resolving people.")
+
+        return max(
+            self.keycreators,
+            key=lambda item: len(item[0].key_fields)
+        )[0]
+    
+    def _extract_primary_identity_values(self, row):
+        kc = self.get_primary_identity_creator()
+
+        return [
+            kc._resolve_field(row, field)
+            for field in kc.key_fields
+        ]
 
     def _clean_sql_value(self, v):
 
@@ -382,57 +464,137 @@ class ValidationDBLogger:
         self.conn.commit()
         return person_id
 
-    
-    def resolve_person(self, row) -> str:
+    def resolve_person(self, row):
+
         """
-        Resolve a person using in-memory identity key maps.
-        Creates a new person *logically* if no match is found,
-        deferring persistence until later.
+        Resolve or logically create a person identifier using deterministic
+        identity keys.
+
+        Matching priority:
+        1. strict key (name + DOB + ZIP)
+        2. medium key (name + DOB)
+        3. medium key (name + ZIP)
+
+        If no match is found, a new ``person_id`` is generated and staged in
+        ``self._new_people_buffer`` for later persistence.
+
+        Parameters
+        ----------
+        row : pandas.Series or dict-like
+            Row containing identity-key fields and participant attributes.
+
+        Returns
+        -------
+        str
+            Resolved or newly generated ``person_id``.
+
+        Notes
+        -----
+        New people are not immediately written to the database. Persistence
+        occurs when ``flush_new_people_buffer`` is called.
+
+        Weak-name-only matching is intentionally disabled to reduce false
+        positive merges.
         """
 
-        strict  = row.get("id_key_strict_name_dob_zip")
+        strict = row.get("id_key_strict_name_dob_zip")
         med_dob = row.get("id_key_medium_name_dob")
         med_zip = row.get("id_key_medium_name_zip")
-        weak    = row.get("id_key_weak_name")
+        weak = row.get("id_key_weak_name")
 
-        # 1️⃣ strict
+        # --------------------------------------------------
+        # Existing person lookup
+        # --------------------------------------------------
+
         if strict and strict in self._person_by_strict:
             return self._person_by_strict[strict]
 
-        # 2️⃣ medium (name + dob)
         if med_dob and med_dob in self._person_by_med_dob:
             return self._person_by_med_dob[med_dob]
 
-        # 3️⃣ medium (name + zip)
         if med_zip and med_zip in self._person_by_med_zip:
             return self._person_by_med_zip[med_zip]
 
-        # 4️⃣ No match → register new person
+        # --------------------------------------------------
+        # New person creation
+        # --------------------------------------------------
+
         person_id = str(uuid.uuid4())
 
-        self._new_people_buffer.append((
-            person_id,
-            row.get("First Name"),
-            row.get("Last Name"),
-            row.get("Client Date of Birth"),
-            row.get("Zip Code"),
-            strict,
-            med_dob,
-            med_zip,
-            weak,
-        ))
+        kc = self.get_primary_identity_creator()
 
-        # Register keys immediately for downstream rows
+        identity_fields = [
+            field.replace("_normalized", "", 1)
+            for field in kc.key_fields
+        ]
+
+        first_name = (
+            get_value(row, identity_fields[0], normalized=True)
+            if len(identity_fields) > 0
+            else None
+        )
+
+        last_name = (
+            get_value(row, identity_fields[1], normalized=True)
+            if len(identity_fields) > 1
+            else None
+        )
+
+        dob = (
+            get_value(row, identity_fields[2], normalized=True)
+            if len(identity_fields) > 2
+            else None
+        )
+
+        zip_code = (
+            get_value(row, identity_fields[3], normalized=True)
+            if len(identity_fields) > 3
+            else None
+        )
+
+        self._new_people_buffer.append(
+            (
+                person_id,
+                first_name,
+                last_name,
+                dob,
+                zip_code,
+                strict,
+                med_dob,
+                med_zip,
+                weak
+            )
+        )
+
+        # --------------------------------------------------
+        # Update lookup dictionaries
+        # --------------------------------------------------
+
         if strict:
             self._person_by_strict[strict] = person_id
+
         if med_dob:
             self._person_by_med_dob[med_dob] = person_id
+
         if med_zip:
             self._person_by_med_zip[med_zip] = person_id
 
         return person_id
 
     def flush_new_people_buffer(self):
+        """
+        Persist buffered person records to the database.
+
+        Writes all pending entries from ``self._new_people_buffer`` into the
+        ``person`` table using a batched insert operation.
+
+        Notes
+        -----
+        This method is typically called once near the end of a validation run
+        after all rows have been processed.
+
+        The in-memory buffer is cleared after a successful commit.
+        """
         if not self._new_people_buffer:
             return
 
@@ -530,7 +692,6 @@ class ValidationDBLogger:
 
         self.conn.commit()
         self._new_participants_buffer.clear()
-        
     
     def mark_presence_participant(self, run_id, participant_id, status, row_number, sheet_name, quarter):
         
@@ -571,6 +732,18 @@ class ValidationDBLogger:
 
     def flush_participant_presence(self):
 
+        """
+        Persist buffered participant presence records.
+
+        Writes all queued presence records to
+        ``participant_presence_log`` using a batched transaction.
+
+        Notes
+        -----
+        Insertion uses ``INSERT OR REPLACE`` semantics so repeated writes for
+        the same ``(run_id, participant_id)`` pair overwrite prior state.
+        """
+
         if not self._participant_presence_buffer:
             return
         try:
@@ -603,6 +776,110 @@ class ValidationDBLogger:
         dataset_name,
         df   # <- this is self.single_sheet
     ):
+            
+        """
+        Persist normalized and raw cell values in long-form history tables.
+
+        Transforms a validation dataframe from wide format into a normalized
+        long-form structure suitable for longitudinal storage in the
+        ``cell_value_history`` table. Both raw and normalized representations
+        of each tracked value are preserved.
+
+        This method is designed to support:
+            - historical auditing of participant data
+            - value change detection across runs
+            - cross-sheet normalization analysis
+            - downstream rule evaluation and diagnostics
+
+        Parameters
+        ----------
+        run_id : str
+            Validation run identifier associated with the logged values.
+        dataset_name : str
+            Dataset name used for column metadata normalization and lookup.
+        df : pandas.DataFrame
+            Combined validation dataframe containing:
+            
+            - ``person_id``
+            - ``participant_id``
+            - normalized columns
+            - corresponding raw columns
+
+            Normalized columns are expected to follow the convention:
+
+                <column_name>_normalized_|_|_<sheet_name>
+
+            Raw columns are expected to share the same base structure
+            without the ``_normalized`` marker.
+
+        Expected DataFrame Structure
+        ----------------------------
+        The dataframe should contain paired raw/normalized columns generated
+        during workbook normalization. For example:
+
+            First Name_|_|_Training
+            First Name_normalized_|_|_Training
+
+        The delimiter ``_|_|_`` is used to preserve sheet provenance while
+        allowing multiple sheets to be merged into a single dataframe.
+
+        Columns without sheet delimiters are assigned the fallback sheet name
+        ``"combined"``.
+
+        Transformation Process
+        ----------------------
+        The method performs the following operations:
+
+        1. Identifies all normalized columns
+        2. Derives corresponding raw column names
+        3. Converts both normalized and raw values into long format using
+        ``pandas.melt``
+        4. Parses logical column names and sheet names from suffixed columns
+        5. Verifies alignment between raw and normalized representations
+        6. Resolves persistent ``column_id`` values
+        7. Inserts records into ``cell_value_history``
+
+        Alignment Validation
+        --------------------
+        Several assertions are intentionally enforced before merging raw and
+        normalized values:
+
+            - equal row counts
+            - matching participant ordering
+            - matching logical column names
+            - matching sheet names
+
+        Failure of these assertions indicates a structural mismatch between
+        raw and normalized dataframe representations and should be treated as
+        a critical pipeline error.
+
+        Column Normalization
+        --------------------
+        Logical columns are normalized into persistent ``column_id`` values
+        using ``get_or_create_column``. This allows:
+
+            - stable column tracking across runs
+            - cross-sheet comparisons
+            - schema evolution analysis
+            - reduced storage duplication
+
+        Persistence Behavior
+        --------------------
+        Records are inserted in batches using ``executemany`` to reduce SQLite
+        transaction overhead during large validation runs.
+
+        Values are cleaned using ``_clean_sql_value`` before insertion so that:
+
+            - Pandas missing values become ``NULL``
+            - datetime objects become ISO-8601 strings
+
+        Notes
+        -----
+        Only rows with non-null ``participant_id`` values are logged.
+
+        This method assumes that normalized and raw columns were generated
+        through the standard validation-engine normalization pipeline.
+        """
 
         if "person_id" not in df.columns:
             raise ValueError("single_sheet must contain person_id")
@@ -610,32 +887,21 @@ class ValidationDBLogger:
         if "participant_id" not in df.columns:
             raise ValueError("single_sheet must contain participant_id")
 
-        df = df[df["participant_id"].notna()].copy()
+        df = df[df["participant_id"].notna()].copy()    
 
-        DELIM = "_|_|_"
-
-        def split_col(col):
-            # remove normalization marker first
-            col = col.replace("_normalized", "")
-            
-            if DELIM in col:
-                base, sheet = col.split(DELIM, 1)
-            else:
-                base, sheet = col, "combined"  # fallback
-
-            return base, sheet
-
-        # -------------------------------------------------------
-        # Identify normalized columns
-        # -------------------------------------------------------
-        norm_cols = [c for c in df.columns if "_normalized_" in c]
+        norm_cols = [
+            c for c in df.columns
+            if is_normalized(c)
+        ]
 
         if not norm_cols:
-            return
 
-        raw_cols = [c.replace("_normalized", "") for c in norm_cols]
+            print(
+                f"{dataset_name}: no normalized columns found, "
+                "skipping cell value logging."
+            )
 
-        
+            return    
 
         # -------------------------------------------------------
         # Melt normalized values
@@ -647,15 +913,49 @@ class ValidationDBLogger:
             value_name="value_normalized"
         )
 
-        parsed = long_norm["column_name"].apply(split_col)
+        long_norm["sheet_name"] = (
+            long_norm["column_name"]
+            .map(sheet_name)
+        )
 
-        long_norm["column_name"] = parsed.map(lambda x: x[0])
-        long_norm["sheet_name"] = parsed.map(lambda x: x[1])
+        missing_sheet = long_norm["sheet_name"].isna()
+
+        if missing_sheet.any():
+
+            bad_cols = (
+                long_norm.loc[missing_sheet, "column_name"]
+                .drop_duplicates()
+                .tolist()
+            )
+
+            raise ValueError(
+                "Columns missing sheet provenance:\n"
+                + "\n".join(f"    - {c}" for c in bad_cols)
+            )
+
+        long_norm["column_name"] = (
+            long_norm["column_name"]
+            .map(base_name)
+        )
 
         # -------------------------------------------------------
         # Melt raw values
         # -------------------------------------------------------
-        raw_cols = [c for c in raw_cols if c in df.columns]
+        raw_cols = [
+            remove_normalized_suffix(c)
+            for c in norm_cols
+        ]
+
+        missing_raw_cols = [
+            c for c in raw_cols
+            if c not in df.columns
+        ]
+
+        if missing_raw_cols:
+            raise ValueError(
+                "Missing raw columns for normalized columns:\n"
+                + "\n".join(f"    - {c}" for c in missing_raw_cols)
+            )
 
         long_raw = df.melt(
             id_vars=["person_id", "participant_id"],
@@ -664,23 +964,56 @@ class ValidationDBLogger:
             value_name="value_raw"
         )
 
-        parsed_raw = long_raw["column_name"].apply(split_col)
+        long_raw["sheet_name"] = (
+            long_raw["column_name"]
+            .map(sheet_name)
+        )
 
-        long_raw["column_name"] = parsed_raw.map(lambda x: x[0])
-        long_raw["sheet_name"] = parsed_raw.map(lambda x: x[1])
+        missing_sheet = long_raw["sheet_name"].isna()
+
+        if missing_sheet.any():
+
+            bad_cols = (
+                long_raw.loc[missing_sheet, "column_name"]
+                .drop_duplicates()
+                .tolist()
+            )
+
+            raise ValueError(
+                "Columns missing sheet provenance:\n"
+                + "\n".join(f"    - {c}" for c in bad_cols)
+            )
+
+        long_raw["column_name"] = (
+            long_raw["column_name"]
+            .map(base_name)
+        )
 
         # -------------------------------------------------------
         # Combine
         # -------------------------------------------------------
 
         ### confirm alignment before merging, this is a critical failure if it doesn't pass
-        assert len(long_norm) == len(long_raw)
+        if len(long_norm) != len(long_raw):
+            raise ValueError(
+                "Raw and normalized melts produced different row counts."
+            )
 
-        assert (long_norm["participant_id"].values == long_raw["participant_id"].values).all()
+        if not (long_norm["participant_id"].values == long_raw["participant_id"].values).all():
+            raise ValueError(
+                "Normalized and raw participant ID lists do not match."
+            )
 
-        assert (long_norm["column_name"].values == long_raw["column_name"].values).all()
 
-        assert (long_norm["sheet_name"].values == long_raw["sheet_name"].values).all()
+        if not (long_norm["column_name"].values == long_raw["column_name"].values).all():
+            raise ValueError(
+                "Normalized and raw column_name lists do not match."
+            )
+
+        if  not (long_norm["sheet_name"].values == long_raw["sheet_name"].values).all():
+            raise ValueError(
+                "Normalized and raw sheet_name lists do not match."
+            )
         
         long_df = long_norm.copy()
         long_df["value_raw"] = long_raw["value_raw"].values
@@ -792,6 +1125,34 @@ class ValidationDBLogger:
 
     def flush_violations(self):
 
+        """
+        Persist buffered validation violations to the database.
+
+        Writes all queued entries from ``self._violation_buffer`` into the
+        ``validation_violation`` table using a batched transaction.
+
+        Violations are accumulated during validation through
+        ``log_violation`` and deferred until this method is called in order
+        to reduce transaction overhead during large validation runs.
+
+        Persistence is performed using ``executemany`` within an explicit
+        transaction boundary.
+
+        Raises
+        ------
+        Exception
+            Re-raises any database exception encountered during insertion
+            after rolling back the transaction.
+
+        Notes
+        -----
+        The in-memory violation buffer is cleared after successful insertion
+        or rollback.
+
+        This method is typically called near the end of a validation run
+        after all rule evaluation has completed.
+        """
+
         if not self._violation_buffer:
             return
         try:
@@ -850,4 +1211,7 @@ class ValidationDBLogger:
             rows
         )
         self.conn.commit()
+
+    def close(self):
+        self.conn.close()
 

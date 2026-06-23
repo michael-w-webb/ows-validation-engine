@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Configure Linking Columns
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- ================================= -->
+    <!-- Top Bar -->
+    <!-- ================================= -->
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Configure Linking Columns
+            </h1>
+
+            <p class="subtitle">
+                Select the columns used to identify and
+                connect participant records across sheets.
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- ================================= -->
+    <!-- Linking Form -->
+    <!-- ================================= -->
+
+    <form
+        action="/draft/{{ session.resource_id }}/linking"
+        method="post"
+    >
+
+        {% for sheet_name in session.selected_sheets %}
+
+            <section class="card sheet-card">
+
+                <!-- ========================= -->
+                <!-- Sheet Header -->
+                <!-- ========================= -->
+
+                <div class="sheet-header">
+
+                    <div>
+
+                        <h2>
+                            {{ sheet_name }}
+                        </h2>
+
+                        <p class="header-label">
+
+                            Select up to five columns that
+                            can be used for participant linking.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <!-- ========================= -->
+                <!-- Linking Dropdowns -->
+                <!-- ========================= -->
+
+                <div class="columns-section">
+
+                    <div class="form-grid">
+
+                        {% for i in range(1, 6) %}
+
+                            <div class="form-group">
+
+                                <label>
+                                    Link Column {{ i }}
+                                </label>
+
+                                <select
+                                    name="{{ sheet_name }}_link_{{ i }}"
+                                >
+
+                                    <option value="">
+                                        --
+                                    </option>
+
+                                    {% for column in session.workbook_structure[sheet_name] %}
+
+                                        <option
+
+                                            value="{{ column }}"
+
+                                            {% if (
+                                                session.linking_rules.get(sheet_name)
+                                                and
+                                                column in session.linking_rules[sheet_name]
+                                            ) %}
+                                                selected
+                                            {% endif %}
+
+                                        >
+                                            {{ column }}
+                                        </option>
+
+                                    {% endfor %}
+
+                                </select>
+
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+                <!-- ========================= -->
+                <!-- Available Columns -->
+                <!-- ========================= -->
+
+                <div class="columns-section">
+
+                    <label class="dropdown-label">
+                        Available Columns
+                    </label>
+
+                    <div class="column-grid">
+
+                        {% for column in session.workbook_structure[sheet_name] %}
+
+                            <span class="column-pill">
+
+                                {{ column }}
+
+                            </span>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        {% endfor %}
+
+        <!-- ================================= -->
+        <!-- Footer Actions -->
+        <!-- ================================= -->
+
+        <div class="footer-actions">
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Save Linking Rules
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

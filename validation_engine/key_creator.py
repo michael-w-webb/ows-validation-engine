@@ -57,6 +57,11 @@ Dependencies
 
 import pandas as pd
 import hashlib
+import warnings
+
+from validation_engine.column_names import (
+    find_columns
+)
 
 class KeyCreator:
     """
@@ -86,7 +91,6 @@ class KeyCreator:
         self.sep = sep
         self.hash_fn = hash_fn
         self.return_unhashed = return_unhashed
-        self.DELIM = "_|_|_"
 
     # --------------------------
     # Hash utility
@@ -143,41 +147,65 @@ class KeyCreator:
     
     def _resolve_field(self, row, field):
         """
-        Resolve a field from a row.
+        Resolve a logical field from a row.
 
-        Rules:
-        1. Prefer normalized columns if they exist
-        2. Handle _|_|_ sheet suffix
-        3. Fall back to raw columns
+        Preference order:
+
+        1. Normalized values
+        2. Raw values
+
+        Within each group:
+        1. First non-null value
+        2. Otherwise first matching column
         """
 
-        base = field.replace("_normalized", "")
+        base = field.replace(
+            "_normalized",
+            ""
+        )
 
-        norm_prefix = base + "_normalized"
-        raw_prefix = base
+        norm_candidates = find_columns(
+            row.index,
+            base=base,
+            normalized=True
+        )
 
-        # --- 1. Collect candidates ---
-        norm_candidates = [
-            c for c in row.index
-            if c == norm_prefix or c.startswith(norm_prefix + self.DELIM)
-        ]
+        if len(norm_candidates) > 1:
 
-        raw_candidates = [
-            c for c in row.index
-            if c == raw_prefix or c.startswith(raw_prefix + self.DELIM)
-        ]
+            values = {
+                row.get(col)
+                for col in norm_candidates
+                if pd.notna(row.get(col))
+                and row.get(col) != ""
+            }
 
-        # --- 2. Prefer normalized ---
-        candidates = norm_candidates if norm_candidates else raw_candidates
+            if len(values) > 1:
+
+                warnings.warn(
+                    f"Multiple normalized values found for '{base}' "
+                    f"with conflicting values: {values}"
+                )
+
+        raw_candidates = find_columns(
+            row.index,
+            base=base,
+            normalized=False
+        )
+
+        candidates = (
+            norm_candidates
+            if norm_candidates
+            else raw_candidates
+        )
 
         if not candidates:
             return None
 
-        # --- 3. Prefer non-null values ---
         for col in candidates:
-            val = row[col]
-            if pd.notna(val) and val not in ("", None):
-                return val
 
-        # --- 4. Fallback ---
-        return row[candidates[0]]
+            value = row.get(col)
+
+            if pd.notna(value) and value not in ("", None):
+                return value
+
+        return row.get(candidates[0])

@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}
+    New Workbook Definition
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- ================================= -->
+    <!-- Top Bar -->
+    <!-- ================================= -->
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Create Workbook Definition
+            </h1>
+
+            <p class="subtitle">
+                Upload a workbook and configure the
+                schema used by the validation engine.
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- ================================= -->
+    <!-- Upload Form -->
+    <!-- ================================= -->
+
+    <form
+        action="/workbook-definitions/new"
+        method="post"
+        enctype="multipart/form-data"
+    >
+
+        <section class="card sheet-card">
+
+            <div class="form-grid">
+
+                <!-- ========================= -->
+                <!-- Workbook Name -->
+                <!-- ========================= -->
+
+                <div class="form-group">
+
+                    <label>
+                        Workbook Name
+                    </label>
+
+                    <input
+                        type="text"
+                        name="workbook_name"
+                        required
+                    >
+
+                </div>
+
+                <!-- ========================= -->
+                <!-- Format Name -->
+                <!-- ========================= -->
+
+                <div class="form-group">
+
+                    <label>
+                        Format Name
+                    </label>
+
+                    <input
+                        type="text"
+                        name="format_name"
+                        required
+                    >
+
+                </div>
+
+                <!-- ========================= -->
+                <!-- Workbook Structure -->
+                <!-- ========================= -->
+
+                <div class="form-group">
+
+                    <label>
+                        Workbook Structure
+                    </label>
+
+                    <select
+                        name="is_multi_sheet"
+                    >
+
+                        <option value="false">
+                            Single Sheet
+                        </option>
+
+                        <option value="true">
+                            Multi Sheet
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- ========================= -->
+                <!-- Workbook Upload -->
+                <!-- ========================= -->
+
+                <div class="form-group">
+
+                    <label>
+                        Upload Workbook
+                    </label>
+
+                    <input
+                        type="file"
+                        name="workbook_file"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================================= -->
+        <!-- Footer Actions -->
+        <!-- ================================= -->
+
+        <div class="footer-actions">
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Create Workbook Definition
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

@@ -1,75 +1,62 @@
 """
-cc_file_directory.py
-====================
+CareerConneCT File Registry
+===========================
 
-Configuration module defining the directory structure, file paths, workbook
-formats, and metadata for all CareerConneCT training data submissions. This
-mapping is consumed by the workbook loader (`WorkbookLoader` or
-`MultiWorkbookLoader`) to locate, interpret, and ingest the correct files for
-each organization and reporting period.
+Configuration registry defining workbook locations, reporting periods,
+workbook formats, and ingestion metadata for CareerConneCT submissions.
+
+This mapping is used by validation orchestration scripts and workbook
+loaders to dynamically locate and ingest the correct files for each
+organization and reporting period.
 
 Structure
 ---------
-The top-level dictionary is organized as:
+The registry follows the structure:
 
-    cc_file_directory[org][dataset_type][period] = {
-        "file path": str or list[str],
-        "format": "simple format" | "four sheet format",
-        "starting_row": int (optional)
+    file_directory[organization][dataset_type][period] = {
+        "file path": Path | list[Path],
+        "format": str,
+        "starting row": int (optional)
     }
 
-Where:
-    - ``org`` (str):
-        Name of the submitting organization or program.
-    - ``dataset_type`` (str):
-        Currently `"training data"` for CareerConneCT. Additional types may be
-        added for other program components.
-    - ``period`` (str):
-        Reporting period identifier (e.g., "PY3 Q4", "PY4 Q1").
-    - ``file path`` (str or list[str]):
-        Absolute path(s) to the Excel workbook(s). A list indicates a dataset
-        split across multiple files (e.g., multi-location submissions).
-    - ``format`` (str):
-        Determines which workbook schema/layout to use during parsing:
-            * `"simple format"` - single-sheet layout
-            * `"four sheet format"` - multi-sheet program template
-    - ``starting_row`` (int, optional):
-        Used when the Excel file has header rows above the actual dataset.
+Fields
+------
+organization
+    Name of the submitting organization.
+
+dataset_type
+    Dataset category, such as ``"training data"``.
+
+period
+    Reporting-period identifier (e.g. ``"PY4 Q1"``).
+
+file path
+    Workbook path or collection of workbook paths.
+
+format
+    Workbook schema/layout identifier used by the workbook loader.
+
+starting row
+    Optional override specifying the dataset header row during ingestion.
 
 Usage
 -----
-This module is imported by orchestration scripts such as
-``cc_validation_main.py``, which iterate through all organizations and periods
-to:
+This registry is consumed by:
 
-    1. Select the relevant file(s)
-    2. Identify workbook format and any custom metadata
-    3. Pass the mapping to ``WorkbookLoader`` for preprocessing and loading
-    4. Forward loaded sheets to the ``ValidationEngine``
+- ``WorkbookLoader``
+- ``MultiWorkbookLoader``
+- validation orchestration scripts
 
-The validation pipeline depends on this dictionary for automated ingestion of
-program submissions.
+to determine which files should be loaded and how they should be parsed.
 
-Maintenance Notes
------------------
-- File paths must be updated each reporting period as new submissions arrive.
-- Workbook formats must match the underlying Excel template version used by
-  the grantee.
-- Avoid trailing spaces or inconsistent casing in organization names, as these
-  act as dictionary keys.
-- This module may contain PII file paths; store it in a controlled location if
-  using version control.
-- For multi-file submissions, ensure all related files for a period are
-  grouped into a list.
+Notes
+-----
+- Multi-file submissions should be grouped into a list.
+- Workbook formats must align with the associated schema definitions.
+- Organization names act as dictionary keys and should remain stable.
 
-Security Considerations
------------------------
-This file contains absolute local paths to directories that may house sensitive
-participant data. While no data is loaded directly here, these paths should not
-be published to public repositories. External users should define their own
-directory mapping in a private environment.
-
-This module is strictly configuration data and defines no executable logic.
+This module contains configuration data only and defines no executable
+pipeline logic.
 """
 from config import FILE_DIRECTORY_ROOT
 

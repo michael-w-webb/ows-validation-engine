@@ -2,31 +2,42 @@
 Workbook Loading and Preprocessing Utilities
 ============================================
 
-This module provides high-reliability tools for loading CareerConneCT / GJC Excel
-workbooks in environments where files may be protected, contain inconsistent
-schemas, differ across organizations, or be intermittently locked by OneDrive
-or user activity. It handles:
+This module provides tools for loading CareerConneCT / GJC Excel workbooks
+in environments where files may be protected, contain inconsistent schemas,
+differ across organizations, or be intermittently locked by OneDrive or
+concurrent users.
 
-1. **Excel COM automation**  
-   - Unprotecting sheets
-   - Unhiding sheets
-   - Saving and stabilizing workbook visibility  
-   - Robust initialization and teardown of `win32com` Excel instances
+Capabilities
+------------
 
-2. **Dynamic or static sheet loading**
-   - Retry logic for transient `PermissionError` (common with OneDrive syncing)
-   - Config-driven `starting_row`, `starting_column`, and `columns_used`
-   - Header extraction using noisy, variant-aware matching against canonical labels
+1. **Excel COM preprocessing (optional)**
+   - Attempts to unprotect and unhide worksheets
+   - Saves workbooks in a readable state for downstream processing
+   - Uses defensive (best-effort) initialization and cleanup of
+     ``win32com`` Excel instances
 
-3. **Key creation**
-   - Optional integration with :class:`KeyCreator` for row-level ID generation
-   - Automatic dropping of invalid rows (e.g., non-alphabetic name fields)
-   - Provenance tagging (e.g., file-of-origin for multi-workbook ingestion)
+2. **Resilient sheet loading**
+   - Unbounded retry on ``PermissionError`` with capped backoff
+     (to tolerate transient file locks)
+   - Config-driven ``starting_row``, ``starting_column``, and ``columns_used``
+   - Fallback sheet detection via header matching when expected sheets
+     are missing
 
-4. **Multi-workbook concatenation**
-   - Load multiple files for a single organization or reporting period
-   - Merge sheets across files while preserving source metadata
-   - Final de-duplication and index resetting
+3. **Header normalization**
+   - Dynamic mode: tolerant, variant-aware matching of column headers
+     via :func:`extract_columns_noisy`
+   - Static mode: positional slicing with assumed alignment to configured labels
+
+4. **Row-level processing**
+   - Optional integration with :class:`KeyCreator` for identifier generation
+   - Lightweight text normalization via :func:`clean_text`
+   - Conditional filtering of rows based on name field validity
+
+5. **Multi-workbook aggregation**
+   - Batch loading of multiple files using a shared schema
+   - Sheet-wise concatenation across workbooks
+   - Provenance tracking via ``source_file`` column
+   - Final row-wise deduplication and index normalization
 
 Major Components
 ----------------
@@ -34,34 +45,39 @@ Major Components
 Functions
 ~~~~~~~~~
 - ``ensure_unprotected_visible``  
-  Unprotects and unhides all sheets in a workbook using Excel COM.
+  Attempts to remove protection and unhide all sheets via Excel COM.
 
 - ``extract_columns_noisy``  
-  Maps messy/variant Excel headers to canonical labels using normalization
-  and tolerant matching. Useful for inconsistent partner submissions.
+  Maps variant Excel headers to canonical labels using normalization
+  and tolerant matching.
 
 - ``clean_text``  
-  Basic string cleaning for Excel messiness (nonbreaking spaces, stray encodings).
+  Performs conservative normalization of cell-level text values.
+
+- ``find_sheet_by_headers``  
+  Heuristically identifies the correct sheet and header row when expected
+  sheets are missing.
 
 Classes
 ~~~~~~~
 - :class:`WorkbookLoader`  
-  Loads a single workbook according to a schema-defined set of sheets.
-  Handles COM preprocessing (optional), header extraction, dynamic column mapping,
-  and row-level cleanup + key creation.
+  Loads a single workbook using a schema definition. Handles resilient
+  file access, optional header normalization, fallback sheet detection,
+  and row-level processing.
 
 - :class:`MultiWorkbookLoader`  
-  Loads and concatenates multiple workbooks that conform to the same schema.
-  Useful for partners who submit multiple files by region, cohort, or location.
+  Aggregates multiple workbooks into a unified sheet-by-sheet structure
+  using a shared schema. Ingestion is best-effort; missing or failed
+  sheets do not halt processing.
 
 Typical Workflow
 ----------------
-1. Preprocess the workbook (unprotect/hide/clean).
-2. Read each configured sheet using pandas.
-3. Apply canonical header mapping (dynamic or fixed).
-4. Insert ``id_key`` or other KeyCreator-derived identifiers.
-5. Clean unusable rows (blank/invalid names).
-6. Return ``dict[sheet_name → DataFrame]`` to the validation engine.
+1. (Optional) Preprocess workbooks to remove protection and unhide sheets.
+2. Load configured sheets using :class:`WorkbookLoader`.
+3. Apply canonical header mapping (dynamic or static).
+4. Optionally generate row-level identifiers.
+5. Apply basic row filtering and text normalization.
+6. (Optional) Aggregate multiple workbooks via :class:`MultiWorkbookLoader`.
 
 Dependencies
 ------------
@@ -69,24 +85,19 @@ Dependencies
 - win32com (Excel COM automation)
 - pythoncom
 - traceback / datetime / os / time
-- KeyCreator (optional row-level ID generator)
-- strict_alphabetic_normalize (optional row filtering helper)
+- KeyCreator (optional)
+- strict_alphabetic_normalize (optional)
 
 Notes
 -----
-This module assumes:
-- Windows environment (due to COM).
-- Excel is installed.
-- User has permissions to unprotect sheets (passwords may vary per program).
-- The provided `sheet_defs` schema contains label specifications and 
-  starting rows/columns.
-
-It is intentionally robust against inconsistent partner data submissions,
-permission locks, and malformed Excel headers.
+- Requires a Windows environment with Microsoft Excel installed (for COM).
+- Preprocessing is optional but may be required for protected workbooks.
+- File loading is resilient by design; partial results may be returned when
+  errors occur.
+- Assumes ``sheet_defs`` provides label definitions and positional metadata.
 """
 
 import pandas as pd 
-import os
 import win32com.client as win32
 import time
 import traceback
@@ -99,50 +110,50 @@ from validation_engine.standard_normalizations import strict_alphabetic_normaliz
 
 def ensure_unprotected_visible(excel, file_path, password="workforce"):
     """
-    Open an Excel workbook via COM automation, unprotect all sheets, and make them visible.
+    Open an Excel workbook via COM automation, attempt to remove protection,
+    and ensure all worksheets are visible.
 
-    This utility is designed for partner-submitted CareerConneCT/GJC workbooks that may
-    arrive locked, password-protected, or with hidden sheets. It modifies the file
-    *in-place*, ensuring that all sheets can be read downstream by pandas.
+    This utility is intended for partner-submitted CareerConneCT/GJC workbooks
+    that may be locked, password-protected, or contain hidden sheets. It modifies
+    the file *in-place* to improve downstream readability (e.g., by pandas).
 
-    The function:
-      1. Opens the workbook using a provided Excel COM instance.
-      2. Attempts to unprotect the workbook-level protection (if present).
-      3. Iterates through all worksheets:
-         - Unprotects each sheet using the provided password.
-         - Sets sheet visibility (``ws.Visible = -1``).
-      4. Saves the workbook.
-      5. Ensures proper cleanup and closes the workbook object in a ``finally`` block.
+    Behavior:
+        1. Opens the workbook using a provided Excel COM instance.
+        2. Attempts to remove workbook-level protection.
+        3. Iterates through all worksheets:
+        - Attempts to unprotect each sheet using the provided password.
+        - Sets sheet visibility to visible (``xlSheetVisible = -1``).
+        4. Saves the workbook.
+        5. Closes the workbook in a ``finally`` block, with retry logic to
+        mitigate transient COM failures.
 
     Args:
         excel:
-            An active ``win32com.client.Dispatch("Excel.Application")`` instance.
-            The caller is responsible for creating and later quitting this instance.
+            Active ``win32com.client.Dispatch("Excel.Application")`` instance.
+            Caller is responsible for lifecycle management (including ``Quit()``).
         file_path (str):
-            Absolute path to the Excel file to modify.
+            Absolute path to the Excel file.
         password (str, optional):
-            Password used to unprotect sheets and workbooks. Defaults to ``"workforce"``.
+            Password used for unprotect operations. Defaults to ``"workforce"``.
 
     Returns:
         str:
-            The original ``file_path`` (for chaining or logging).
+            The original ``file_path``.
 
     Side Effects:
-        - Modifies the workbook on disk (saves changes immediately).
-        - Unhides all sheets.
-        - Removes sheet- and workbook-level protection when the password matches.
-        - Prints status messages and warnings to stdout.
+        - Modifies and saves the workbook on disk.
+        - Attempts to unhide all worksheets.
+        - Emits diagnostic output to stdout.
 
     Raises:
-        None explicitly. Errors during unprotect/unhide operations are caught and logged.
-        Non-COM failures during file opening may propagate.
+        Exception:
+            Propagates errors from ``Workbooks.Open`` and other non-handled COM failures.
 
     Notes:
-        - This function assumes a Windows environment with Microsoft Excel installed.
-        - If the supplied password is incorrect, sheets may remain protected.
-        - Hidden sheets that are explicitly "very hidden" (xlSheetVeryHidden = 2)
-          can still be unhidden using this approach unless protected.
-        - Caller must ensure ``excel.Quit()`` is eventually called.
+        - Requires Windows with Microsoft Excel installed.
+        - If the password is incorrect, some sheets may remain protected.
+        - Handles hidden and "very hidden" sheets when not blocked by protection.
+        - Workbook close is retried to handle intermittent COM issues.
     """
     def retry(call, attempts=5, delay=0.4):
         for _ in range(attempts):
@@ -188,59 +199,60 @@ def ensure_unprotected_visible(excel, file_path, password="workforce"):
 
 def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int = 5, debug: bool = False):
     """
-    Select and reorder columns from a messy Excel DataFrame using a canonical-to-variants
-    mapping, with tolerant header matching and optional debug output.
+    Select and reorder columns from a noisy Excel-derived DataFrame using a
+    canonical-to-variant header mapping.
 
-    This function is designed for partner-submitted Excel files where header labels may
-    vary across submissions (e.g., ``"First Name"``, ``"FirstName"``, ``"FName"``).
-    It normalizes the raw column headers (strip + lowercase), then matches them against
-    a set of variants for each canonical label in ``col_map``. For each canonical label:
+    This function is designed for partner-submitted Excel files where header
+    labels vary across submissions (e.g., "First Name", "FirstName", "FName").
+    It performs tolerant matching by normalizing column headers via:
 
-    * If a matching header is found, that column is selected.
-    * If no matching header is found, a column of ``NA`` is inserted.
-    * Columns are returned in the order of keys in ``col_map``.
+        str(header).strip().lower()
 
-    The result is:
-    * A DataFrame containing the selected/reordered columns, with **integer** column
-    labels (0..n-1) suitable for downstream relabeling.
-    * The list of canonical labels corresponding to those columns.
+    and comparing against normalized variants provided in ``col_map``.
+
+    For each canonical label (in order of ``col_map``):
+        - The first matching variant is selected ("first-match wins").
+        - If no match is found, a column of ``NA`` values is inserted.
+        - Output columns preserve the order of ``col_map``.
+
+    Matching behavior:
+        - Raw column names are normalized once and stored as a lookup map.
+        - If multiple raw columns normalize to the same key, only the first
+        occurrence is used (duplicates are optionally reported in debug mode).
 
     Args:
         raw_df (pd.DataFrame):
-            Raw DataFrame read from Excel. Column names are treated as-is and
-            normalized internally via ``str(c).strip().lower()``.
-        col_map (dict):
-            Mapping of canonical column labels to one or more possible header variants.
-            Example:
-
-            .. code-block:: python
-
-                col_map = {
-                    "First Name": ["First Name", "FirstName", "FName"],
-                    "Last Name":  ["Last Name", "Surname", "LName"],
-                }
-
+            Input DataFrame (e.g., from ``pd.read_excel``). Column names are
+            treated as-is and normalized internally.
+        col_map (dict[str, list[str] | str]):
+            Mapping of canonical labels to one or more header variants.
+            Variants are matched after normalization.
         preview_rows (int, optional):
-            Number of rows to show in the debug preview of ``raw_df``. Default is 5.
+            Number of rows to display in debug preview output. Default is 5.
         debug (bool, optional):
-            If True, prints detailed information about header normalization,
-            matches/misses, and NA-only columns. Default is True.
+            If True, prints diagnostic output including:
+                - raw and normalized headers
+                - duplicate header warnings
+                - match/miss decisions per column
+                - small data preview
+                - summary statistics
+            Default is False.
 
     Returns:
         tuple[pd.DataFrame, list[str]]:
             - df_no_headers:
-                DataFrame containing the selected columns in the order of ``col_map``.
-                Columns are relabeled to consecutive integers starting at 0.
+                DataFrame with selected columns, ordered by ``col_map``.
+                Columns are relabeled to integer indices (0..n-1).
             - canonical_labels:
-                List of canonical column labels corresponding to the columns in
-                ``df_no_headers``.
+                List of canonical labels aligned positionally with
+                ``df_no_headers.columns``.
 
     Notes:
-        - If no variant for a canonical label is found in ``raw_df``, the corresponding
-        column in ``df_no_headers`` will be entirely ``NA``.
-        - Duplicate normalized header names in ``raw_df`` are reported via debug
-        messages, but only the first occurrence is used.
+        - Missing canonical labels result in all-NA columns.
+        - Output column order strictly follows ``col_map`` key order.
         - This function does not mutate ``raw_df``.
+        - Positional alignment between returned DataFrame columns and
+        ``canonical_labels`` is intentional and required for downstream use.
     """
 
     if debug:
@@ -362,6 +374,63 @@ def clean_text(val):
 
 def find_sheet_by_headers(file_obj, config, max_header_row=4, min_match_ratio=0.5):
 
+    """
+    Heuristically identify the most likely worksheet and header row based on
+    overlap with expected column label variants.
+
+    This function scans all sheets in an Excel file and evaluates candidate
+    header rows by comparing their normalized cell values against a set of
+    expected header variants derived from ``config["labels"]``. The sheet/row
+    pair with the highest overlap score is selected, subject to a minimum
+    match threshold.
+
+    Matching logic:
+        - Cell values are normalized via ``str(x).strip().lower()``.
+        - Expected variants are constructed from all values in
+        ``config["labels"]``.
+        - For each sheet and candidate row (up to ``max_header_row``), a score
+        is computed as the count of overlapping normalized values.
+        - The (sheet, row) pair with the highest score is selected.
+
+    Args:
+        file_obj:
+            File-like object or path compatible with ``pandas.ExcelFile``.
+        config (dict):
+            Sheet configuration containing a ``"labels"`` mapping of canonical
+            column names to variant header strings.
+        max_header_row (int, optional):
+            Maximum number of top rows (per sheet) to evaluate as potential
+            header rows. Default is 4.
+        min_match_ratio (float, optional):
+            Minimum acceptable ratio of matched headers, defined as:
+
+                best_score / len(config["labels"])
+
+            If the best candidate falls below this threshold, an error is raised.
+            Default is 0.5.
+
+    Returns:
+        tuple[str, int]:
+            - best_sheet:
+                Name of the selected worksheet.
+            - best_row:
+                Zero-based row index identified as the header row.
+
+    Raises:
+        ValueError:
+            - If no candidate sheet/row pair achieves a positive match.
+            - If the best match does not meet ``min_match_ratio``.
+
+    Side Effects:
+        - Prints a warning indicating the selected sheet and header row.
+
+    Notes:
+        - This is a heuristic method and assumes that header rows contain a
+        sufficient number of recognizable label variants.
+        - Only the top ``max_header_row`` rows of each sheet are evaluated.
+        - In cases of ties, the first encountered maximum is selected.
+    """
+
     xl = pd.ExcelFile(file_obj, engine="openpyxl")
 
     expected_variants = {
@@ -417,21 +486,40 @@ def find_sheet_by_headers(file_obj, config, max_header_row=4, min_match_ratio=0.
 
 class WorkbookLoader:
     """
-        Loader for a single Excel workbook using a schema-driven sheet definition.
+    Loader for a single Excel workbook using a schema-driven sheet definition.
 
-        This class encapsulates all logic for:
-        * Preprocessing a workbook via Excel COM (unprotecting/unhiding sheets).
-        * Reading one or more sheets into pandas DataFrames using `sheet_defs`.
-        * Optionally performing dynamic, variant-aware header extraction.
-        * Adding row-level identifiers (via `KeyCreator`) and `row_number`.
-        * Filtering out rows with invalid or missing first/last name values.
+    This class handles the ingestion of partner-submitted Excel workbooks into
+    structured pandas DataFrames, with support for inconsistent schemas,
+    protected files, and transient file access issues.
 
-        It is designed to handle noisy, partner-submitted workbooks where:
-        * Headers may differ across submissions.
-        * Workbooks may arrive protected or with hidden sheets.
-        * Files may be intermittently locked (OneDrive, concurrent users, etc.).
-        """
-    def __init__(self, file_path, workbook_type, sheet_defs, starting_row = 0, dynamic=False, password="workforce", keycreator: KeyCreator = None, multi_sheet_mode: bool = True):
+    Core responsibilities:
+        - Optional preprocessing via Excel COM (unprotecting/unhiding sheets).
+        - Reading configured sheets using ``sheet_defs``.
+        - Resilient file access with indefinite retry on ``PermissionError``
+        (e.g., OneDrive or concurrent access locks).
+        - Fallback sheet detection using header matching when expected sheets
+        are missing.
+        - Optional dynamic, variant-aware header extraction.
+        - Assignment of canonical column labels.
+        - Optional row-level identifier generation via ``KeyCreator``.
+        - Addition of row-level metadata (e.g., row number).
+        - Basic row filtering based on name field validity.
+
+    The loader is designed for noisy, partner-provided workbooks where:
+        - Header names vary across submissions.
+        - Sheets may be missing or renamed.
+        - Files may be protected or partially inaccessible.
+        - Data quality is inconsistent.
+
+    Notes:
+        - Dynamic mode (``dynamic=True``) performs tolerant header matching via
+        :func:`extract_columns_noisy`.
+        - Static mode assumes column alignment with configured labels and does
+        not validate header correctness.
+        - Row filtering is applied only when both "First Name" and "Last Name"
+        columns are present, and retains rows where at least one field is valid.
+    """
+    def __init__(self, file_path, workbook_type, sheet_defs, starting_row = 0, dynamic=False, password="workforce", keycreator: KeyCreator = None, multi_sheet_mode: bool = True, api_source: bool = False):
         """
         Initialize a WorkbookLoader for a specific Excel file and schema.
 
@@ -439,35 +527,32 @@ class WorkbookLoader:
             file_path (str):
                 Path to the Excel workbook to load.
             workbook_type (str):
-                Key into `sheet_defs` indicating which workbook definition to use
+                Key into ``sheet_defs`` identifying the workbook configuration
                 (e.g., "training data").
             sheet_defs (dict):
-                Schema describing sheet-specific configuration. Typically of the form:
-
-                .. code-block:: python
-
-                    sheet_defs = {
-                        "training data": {
-                            "Report": {
-                                "starting_row": 1,
-                                "starting_column": 0,
-                                "labels": [...],
-                                "columns_used": [...],
-                            },
-                            ...
-                        }
-                    }
+                Schema describing sheet-specific configuration. Each workbook type
+                maps to one or more sheet definitions containing:
+                    - ``starting_row``
+                    - ``starting_column``
+                    - ``labels`` (canonical column names or mapping)
+                    - optional ``columns_used``
 
             dynamic (bool, optional):
-                If True, use `extract_columns_noisy` to match headers against
-                canonical labels. If False, assume headers align with `labels`
-                and use static positional slicing. Default is False.
+                If True, performs tolerant header matching using
+                :func:`extract_columns_noisy`. If False, assumes columns align
+                with ``labels`` and applies positional slicing. Default is False.
+
             password (str, optional):
-                Password used to unprotect the workbook and sheets. Default is
-                "workforce".
+                Password used for optional COM-based unprotect operations.
+                Default is "workforce".
+
             keycreator (KeyCreator, optional):
-                Optional key generator used to add an `id_key` column for each
-                row in multi-sheet mode.
+                Optional key generator used to add an ``id_key`` column when
+                ``multi_sheet_mode`` is enabled.
+
+            multi_sheet_mode (bool, optional):
+                If True, enables behaviors intended for multi-sheet ingestion,
+                including optional key creation. Default is True.
         """
 
 
@@ -479,28 +564,36 @@ class WorkbookLoader:
         self.dynamic = dynamic
         self.password = password
         self.multi_sheet_mode = multi_sheet_mode
+        self.api_source = api_source
 
         self.keycreator = keycreator
         
     def preprocess_excel(self):
         """
-        Unprotect and unhide the workbook using Excel COM automation.
+        Preprocess the workbook by attempting to remove protection and ensure
+        all worksheets are visible via Excel COM automation.
 
         This method:
-          * Initializes COM for the current thread.
-          * Creates an Excel Application instance via `win32.Dispatch`.
-          * Attempts to set `Visible=False` and `DisplayAlerts=False`.
-          * Calls :func:`ensure_unprotected_visible` to unprotect/unhide sheets.
-          * Cleans up the Excel instance and uninitializes COM in a `finally` block.
+            - Initializes COM for the current thread.
+            - Creates or attaches to an Excel Application instance via
+            ``win32.Dispatch("Excel.Application")``.
+            - Attempts to set ``Visible=False`` and ``DisplayAlerts=False``.
+            - Calls :func:`ensure_unprotected_visible` to unprotect and unhide sheets.
+            - Attempts to close the Excel instance and uninitialize COM in a
+            ``finally`` block.
 
-        It is robust against intermittent COM initialization issues and will retry
-        `Excel.Application` creation once after a short delay if the first attempt
-        fails. Errors during unprotect/unhide are logged but not re-raised.
+        Initialization behavior:
+            - If Excel COM initialization fails, a single retry is attempted
+            after a short delay.
+
+        Error handling:
+            - Errors during unprotect/unhide are caught and logged.
+            - Failures to initialize Excel after retry will propagate.
 
         Side Effects:
             - Modifies the workbook on disk (unprotects/unhides, then saves).
-            - Writes progress and warning messages to stdout.
-            - Starts and stops an Excel COM instance.
+            - Emits progress and warning messages to stdout.
+            - Starts (or attaches to) an Excel COM instance and attempts cleanup.
         """
 
         print(f"🔧 Preprocessing workbook: {self.file_path}")
@@ -541,45 +634,115 @@ class WorkbookLoader:
             except Exception:
                 pass
 
+    def build_link_column_names(
+        self,
+        linking_columns
+    ):
+
+        """
+        Creates standardized link key names.
+
+        Example:
+            ["First Name", "Last Name"]
+
+        becomes:
+            ["link_key_1", "link_key_2"]
+        """
+
+        return [
+            f"link_key_{i + 1}"
+            for i in range(len(linking_columns))
+        ]
+
+
+    def add_link_key_columns(
+        self,
+        df,
+        config
+    ):
+
+        """
+        Duplicates configured linking columns
+        into standardized link_key_n columns.
+        """
+
+        linking_columns = config.get(
+            "linking_columns",
+            []
+        )
+
+        if not linking_columns:
+            return df
+
+        link_key_columns = (
+            self.build_link_column_names(
+                linking_columns
+            )
+        )
+
+        for source_col, link_col in zip(
+            linking_columns,
+            link_key_columns
+        ):
+
+            if source_col in df.columns:
+
+                df[link_col] = df[source_col]
+
+            else:
+
+                df[link_col] = pd.NA
+
+        return df
+
     def load_sheets(self) -> dict[str, pd.DataFrame]:
         """
         Load all configured sheets from the workbook into pandas DataFrames.
 
         For each sheet defined in ``sheet_defs[self.workbook_type]`` this method:
 
-          1. Repeatedly attempts to read the sheet using `pandas.read_excel`:
-             - Retries indefinitely on ``PermissionError`` (e.g., OneDrive lock),
-               with a capped backoff.
-             - Logs non-permission errors and skips the sheet.
-          2. Applies one of two header strategies:
-             - **Dynamic mode** (`self.dynamic=True`): uses
-               :func:`extract_columns_noisy` to map messy headers to canonical labels.
-             - **Static mode**: slices columns starting at ``starting_column`` and
-               assigns labels from the configuration.
-          3. Adds a ``row_number`` column (1-based Excel-style row index, offset by 2
-             to account for header rows) to each sheet.
-          4. In multi-sheet mode, optionally adds an ``id_key`` column using
-             ``self.keycreator``.
-          5. Filters out rows where both "First Name" and "Last Name" fail strict
-             alphabetic normalization, if those columns exist.
+        1. Attempts to read the sheet using ``pandas.read_excel``:
+            - Retries indefinitely on ``PermissionError`` (e.g., OneDrive locks),
+            using a capped backoff.
+            - Logs non-permission errors and skips the sheet.
+            - If the specified sheet is not found, attempts to locate a suitable
+            fallback using :func:`find_sheet_by_headers`.
 
-        The result is a dictionary keyed by sheet name, ready to be passed into the
-        validation engine.
+        2. Applies one of two header strategies:
+            - **Dynamic mode** (``self.dynamic=True``):
+            Uses :func:`extract_columns_noisy` to map variant headers to
+            canonical labels.
+            - **Static mode**:
+            Slices columns starting at ``starting_column`` and assigns labels
+            directly from configuration (no validation of alignment).
+
+        3. Adds metadata columns:
+            - ``row_number_{sheet}``: derived from ``df.index + 2`` (approximate
+            Excel row reference, not strictly tied to ``starting_row``).
+            - ``id_key`` (optional): added via ``self.keycreator`` in multi-sheet mode.
+
+        4. Applies row-level filtering (per iteration):
+            - If both "First Name" and "Last Name" columns exist, removes rows
+            where both fail strict alphabetic normalization.
+
+        The result is a dictionary keyed by sheet name, suitable for downstream
+        validation.
 
         Returns:
             dict[str, pd.DataFrame]:
-                Mapping of sheet name → cleaned DataFrame for that sheet.
+                Mapping of sheet name → processed DataFrame.
 
         Side Effects:
-            - Populates/updates ``self.permission_denied_log`` with any load errors.
-            - Prints progress and error messages to stdout.
+            - Populates/updates ``self.permission_denied_log`` with load errors.
+            - Emits progress and diagnostic output to stdout.
 
         Notes:
-            - This method assumes `self.sheet_defs` is structured with
-              ``starting_row``, ``starting_column``, ``labels``, and optionally
-              ``columns_used`` for each sheet.
-            - The retry loop for `PermissionError` is intentional to deal with
-              transient sync/locking issues in shared OneDrive environments.
+            - Retry on ``PermissionError`` is unbounded by design to tolerate
+            transient file locks.
+            - Filtering is applied during iteration and may run multiple times
+            as sheets are accumulated.
+            - Assumes ``self.sheet_defs`` provides ``starting_row``,
+            ``starting_column``, ``labels``, and optionally ``columns_used``.
         """
         dfs_by_sheet = {}
         permission_denied_log = getattr(self, "permission_denied_log", [])
@@ -697,6 +860,13 @@ class WorkbookLoader:
 
                 df.columns = labels
 
+                if self.api_source:
+
+                    df = self.add_link_key_columns(
+                            df=df,
+                            config=config
+                        )
+
                 if self.multi_sheet_mode:
                     df = df.copy()
                     if self.keycreator is not None:
@@ -732,23 +902,35 @@ class WorkbookLoader:
 
 class MultiWorkbookLoader:
     """
-    Loader for concatenating multiple Excel workbooks into a unified
-    sheet-by-sheet structure according to a shared schema definition.
+    Loader for aggregating multiple Excel workbooks into a unified
+    sheet-by-sheet structure using a shared schema definition.
 
     This class wraps :class:`WorkbookLoader` to provide batch ingestion when
     partners submit multiple files for the same reporting period, program, or
-    location (e.g., separate New Haven / Bridgeport / Hartford spreadsheets).
+    location (e.g., separate regional spreadsheets).
 
-    It handles:
-        - Preprocessing all files via Excel COM (unprotect/hide/unlock).
-        - Loading each file’s sheets using the same `sheet_defs` configuration.
-        - Injecting an optional `id_key` via a shared `KeyCreator`.
-        - Preserving file-level provenance via a `source_file` column.
-        - Concatenating sheets across workbooks and applying final cleanup
-          (deduplication, index reset, etc.).
+    Core responsibilities:
+        - Iterating over multiple workbook paths and loading each via
+        :class:`WorkbookLoader`.
+        - Applying a shared ``sheet_defs`` configuration across all files.
+        - Preserving file-level provenance via a ``source_file`` column.
+        - Concatenating DataFrames by sheet name across workbooks.
+        - Performing simple final cleanup (row-wise deduplication, index reset).
 
-    Designed for noisy, inconsistent partner submissions that still follow a
-    common schema (labels, starting rows, required sheets).
+    Optional capabilities:
+        - Preprocessing workbooks via Excel COM (see :meth:`preprocess_all`).
+        - Injecting row-level identifiers via a shared ``KeyCreator``.
+
+    Behavioral notes:
+        - Ingestion is best-effort: missing sheets or partial failures in
+        individual workbooks do not prevent other files from loading.
+        - Sheet aggregation is dynamic; only sheets successfully loaded are
+        included in the final output.
+        - No strict validation is performed to ensure schema consistency
+        across files.
+
+    Designed for noisy, inconsistent partner submissions that broadly follow
+    a common schema but may vary in structure, naming, or completeness.
     """
     def __init__(self, file_paths, workbook_type, sheet_defs, starting_row = 0, dynamic=False, password="workforce", keycreator: KeyCreator = None, multi_sheet_mode: bool = True):
         """
@@ -786,29 +968,40 @@ class MultiWorkbookLoader:
 
     def preprocess_all(self):
         """
-        Unprotect and unhide all workbooks prior to loading, using a shared
-        Excel COM instance.
+        Preprocess all workbooks by attempting to remove protection and ensure
+        all worksheets are visible, using a shared Excel COM instance.
 
         This method:
             - Initializes COM for the current thread.
-            - Creates a single Excel application instance.
-            - Iterates over all files in `self.file_paths` and calls
-              :func:`ensure_unprotected_visible` on each.
-            - Ensures Excel is always quit and COM is uninitialized cleanly.
+            - Creates or attaches to a single Excel Application instance.
+            - Attempts to set ``Visible=False`` and ``DisplayAlerts=False``.
+            - Iterates over ``self.file_paths`` and calls
+            :func:`ensure_unprotected_visible` for each workbook.
+            - Attempts to close the Excel instance and uninitialize COM in a
+            ``finally`` block.
 
-        This reduces overhead compared to creating a new Excel instance per file,
-        and is robust against intermittent COM initialization failures.
+        Using a shared Excel instance reduces overhead compared to launching a
+        separate instance per file.
+
+        Initialization behavior:
+            - If Excel COM initialization fails, a single retry is attempted
+            after a short delay.
+
+        Error handling:
+            - Errors during individual workbook processing are handled within
+            :func:`ensure_unprotected_visible`.
+            - Failures to initialize Excel after retry will propagate.
 
         Side Effects:
-            - Modifies each workbook on disk (unprotect/unhide/save).
-            - Prints progress and warning messages to stdout.
-            - Starts a COM Excel instance and terminates it.
+            - Modifies each workbook on disk (unprotects/unhides, then saves).
+            - Emits progress and warning messages to stdout.
+            - Starts (or attaches to) an Excel COM instance and attempts cleanup.
 
         Notes:
-            - Assumes Windows + Microsoft Excel installed.
-            - If the password is incorrect for any workbook, sheets may remain
-              protected but loading may still succeed depending on how pandas
-              handles locked files.
+            - Requires Windows with Microsoft Excel installed.
+            - If the password is incorrect, some sheets may remain protected.
+            - Cleanup of the Excel instance is attempted but not guaranteed in
+            the presence of COM failures.
         """
         pythoncom.CoInitialize()
         """Unprotect/unhide all workbooks before loading."""
@@ -837,37 +1030,38 @@ class MultiWorkbookLoader:
 
     def load_all(self):
         """
-        Load and concatenate all workbooks in `self.file_paths`.
+        Load and concatenate all workbooks in ``self.file_paths`` into a unified
+        sheet-by-sheet structure.
 
         For each file:
             1. Logs which workbook is being processed.
-            2. Creates a :class:`WorkbookLoader` with the shared schema.
-            3. Calls `loader.load_sheets()` to obtain a dict of
-               {sheet_name: DataFrame}.
-            4. Adds a `source_file` column to track data provenance.
-            5. Concatenates each sheet across workbooks.
+            2. Instantiates a :class:`WorkbookLoader` with the shared schema.
+            3. Calls ``loader.load_sheets()`` to obtain a mapping of
+            ``{sheet_name: DataFrame}``.
+            4. Adds a ``source_file`` column to each DataFrame to preserve provenance.
+            5. Concatenates DataFrames by sheet name across all workbooks.
 
-        After loading all files, a final cleanup step:
-            - Drops duplicate rows within each combined sheet.
-            - Resets indexes for every sheet.
+        After all files are processed, a final cleanup step:
+            - Drops duplicate rows within each combined sheet (full-row comparison).
+            - Resets the index for each sheet.
 
         Returns:
             dict[str, pd.DataFrame]:
-                A mapping of sheet_name → concatenated DataFrame containing
-                rows from all provided workbooks.
+                Mapping of ``sheet_name → concatenated DataFrame`` containing rows
+                from all successfully loaded workbooks.
 
         Side Effects:
-            - Prints progress information to stdout.
-            - Uses :class:`WorkbookLoader`, which may create an Excel COM
-              instance if preprocessing is used.
-            - Adds a `source_file` column to each sheet’s DataFrame.
+            - Emits progress information to stdout.
+            - Adds a ``source_file`` column to each sheet’s DataFrame.
 
         Notes:
-            - Sheet names must match across files according to `sheet_defs`.
-            - This method does not call `preprocess_all()` automatically;
-              the caller should invoke it when required.
-            - Deduplication is simple (row-wise). Additional deconfliction rules
-              may be added depending on program requirements.
+            - Sheets are included on a best-effort basis; missing or failed sheets
+            in individual workbooks are skipped.
+            - Sheet names do not need to be identical across all files; only
+            observed sheets are included in the final output.
+            - This method does not perform preprocessing; callers should invoke
+            :meth:`preprocess_all` beforehand if required.
+            - Deduplication is row-wise and does not use keys or subset matching.
         """
         all_sheets = {}
 

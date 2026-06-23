@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+
+        {% block title %}
+
+            OWS Validation
+
+        {% endblock %}
+
+    </title>
+
+    <!-- ================================= -->
+    <!-- Global Styles -->
+    <!-- ================================= -->
+
+    <link
+        rel="stylesheet"
+        href="/static/styles/base.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/static/styles/layout.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/static/styles/forms.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/static/styles/components.css"
+    >
+
+    <!-- ================================= -->
+    <!-- Page-Specific Styles -->
+    <!-- ================================= -->
+
+    {% block extra_styles %}
+    {% endblock %}
+
+</head>
+
+<body>
+
+    <!-- ================================= -->
+    <!-- Global Error Banner -->
+    <!-- ================================= -->
+
+    {% if error %}
+
+        <div class="page-wrapper">
+
+            <div class="error-box">
+
+                {{ error }}
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+    <!-- ================================= -->
+    <!-- Main Content -->
+    <!-- ================================= -->
+
+    {% block content %}
+    {% endblock %}
+
+    <!-- ================================= -->
+    <!-- Page-Specific Scripts -->
+    <!-- ================================= -->
+
+    {% block scripts %}
+    {% endblock %}
+
+</body>
+
+</html>

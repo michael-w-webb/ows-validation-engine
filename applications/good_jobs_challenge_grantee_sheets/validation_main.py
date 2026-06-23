@@ -14,16 +14,15 @@ from applications.good_jobs_challenge_grantee_sheets.cross_rule_sets import COND
 workbook_definitions = workbook_definitions
 # Containers for results
 
-LOGGING = False
-LOG_DESCRIPTION = " 4/27 - Full run through to ensure we have at least one run with completed = 1 for each org/quarter combo"
-
+LOGGING = True
+LOG_DESCRIPTION = " 6/23 - Mark Check in "
 cross_rules = [
     ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 ]
 
-TARGET_ORGS = None#["WIB_HC"]
-TARGET_PERIODS = ["PY4 Q3"]
+TARGET_ORGS = ["TWP"]
+TARGET_PERIODS = ["PY4 Q4"]
 
 ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
 
@@ -157,7 +156,7 @@ for target_period in periods_to_run:                      #, "PY2 Q3", "PY2 Q4",
             mismatches["period"] = period
 
         all_mismatches.append(engine.mismatches)
-        all_normalized.append(engine.single_sheet)
+        all_normalized.append(engine.returnable_data)
 
 
     # --- Combine everything ---

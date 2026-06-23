@@ -1,0 +1,10 @@
+{
+    "person_count": 141,
+    "participant_count": 141,
+    "cvh_count": 9588,
+    "error_count": 1169,
+    "returnable_shape": [
+        141,
+        70
+    ]
+}

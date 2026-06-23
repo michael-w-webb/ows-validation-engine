@@ -3,32 +3,151 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-OWS Validation Documentation
-===================================
 
-These pages provide documentation for the various methods and classes that support the OWS validation process, 
-which aims to quickly transform disparate excel spreadsheets into a clean, usable dataset while also recording errors, 
-and producing an error log that can easily be used by data owners to remedy issues. 
+OWS Validation Engine
+=====================
 
-The implementation as it is presented here also includes SQL logging functionality to a SQLite database, connecting separate runs 
-to allow for fast cross-grant comparison and assessments of state change (over time) for a given grant. With multiple applications 
-implemented, the database can also be used to quickly identify the same participant across multiple programs. If you aren't interested
-in the SQL logging and just want the data consolidation and error log creation, this can be toggled when the validation engine 
-is called. 
+**Schema-driven validation framework for workforce-program reporting systems.**
 
-The system itself is dataset agnostic and could be re-implemented to manage data collection in any context where different 
-organizations are submitting formulaically structured datasets. 
+The OWS Validation Engine ingests highly variable Excel workbooks submitted by
+external organizations, normalizes their contents into standardized structures,
+evaluates cross-sheet logical dependencies, and optionally persists longitudinal
+audit data into SQLite-backed tracking systems.
 
-Certain critical objects (like the file directory) are omitted here for security reasons, but the code is otherwise intact.
+The framework is designed for environments where workbook formats, headers,
+data quality, and reporting practices vary substantially across providers.
 
-The general architecture of the project is laid out below: 
+The framework was originally developed to automate a largely manual
+workbook aggregation and validation process that had become a major
+operational bottleneck in workforce-program grant reporting.
 
-.. figure:: _static/images/concept_map.png
-   :alt: Validation engine architecture
+External providers submitted heterogeneous Excel workbooks with varying
+structures, inconsistent headers, differing validation practices, and
+frequent formatting irregularities. Manual reconciliation and validation
+required substantial staff time and made longitudinal reporting difficult
+to scale reliably across reporting periods.
+
+The validation engine was designed to standardize ingestion, automate
+cross-workbook validation, support participant-level reconciliation, and
+produce reproducible audit outputs suitable for large-scale reporting
+workflows.
+
+.. image:: _static/images/validation_workflow_no_title.png
+   :alt: OWS Validation Engine Architecture
    :align: center
+   :width: 100%
+
+
+
+
+.. raw:: html
+
+   <hr>
+
+Core Capabilities
+-----------------
+
+* **Resilient Workbook Ingestion**
+  
+  Handles hidden sheets, inconsistent headers, malformed exports,
+  workbook-format variation, and transient file-access issues.
+
+* **Schema-Driven Normalization**
+  
+  Applies reusable type-aware validators for dates, categorical fields,
+  identifiers, wage fields, ZIP codes, and workforce-specific code systems.
+
+* **Deterministic Participant Resolution**
+  
+  Uses configurable composite-key generation to support longitudinal
+  participant tracking across reporting periods and datasets.
+
+* **Recursive Cross-Sheet Validation**
+  
+  Evaluates declarative logical rule trees spanning multiple sheets,
+  columns, and conditional relationships.
+
+* **Structured Audit Logging**
+  
+  Optionally persists normalized values, validation violations,
+  participant presence, and run metadata into SQLite.
+
+
+The engine is configuration-driven and supports multiple program types
+through reusable workbook definitions, validation metadata, and rule
+configurations.
+
+Core Components
+---------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Component
+     - Responsibility
+
+   * - :doc:`validation_engine/workbook_loader`
+     - Workbook ingestion, preprocessing, sheet detection,
+       and schema alignment.
+
+   * - :doc:`validation_engine/validation_engine`
+     - Pipeline orchestration, normalization coordination,
+       validation execution, and report generation.
+
+   * - :doc:`validation_engine/column_types`
+     - Reusable type-aware normalization and validation classes.
+
+   * - :doc:`validation_engine/cross_rule_engine`
+     - Declarative cross-sheet rule evaluation.
+
+   * - :doc:`validation_engine/key_creator`
+     - Deterministic participant-key generation and identity support.
+
+   * - :doc:`validation_engine/db_logger`
+     - SQLite-backed audit logging and longitudinal tracking.
+
+Architecture
+------------
+
+The framework separates:
+
+- ingestion,
+- normalization,
+- validation,
+- identity reconciliation, and
+- persistence
+
+into modular subsystems that can be reused across multiple workforce
+programs and reporting workflows.
+
+Program-specific implementations define:
+
+- workbook schemas,
+- accepted label variants,
+- workbook formats,
+- validation metadata,
+- rule configurations, and
+- ingestion mappings.
+
+This allows the same validation engine to support heterogeneous reporting
+systems with minimal procedural customization.
+
+Audit Logging
+-------------
+
+The validation engine can optionally persist:
+
+- normalized values,
+- validation violations,
+- participant presence,
+- identity-resolution keys, and
+- validation-run metadata
+
+into SQLite-backed tracking systems for longitudinal auditing and
+cross-run analysis.
 
 .. toctree::
-   :maxdepth: 2
    :caption: Core Engine 
    :hidden:
 
@@ -44,27 +163,24 @@ The general architecture of the project is laid out below:
    validation_engine/cross_rule_engine
    validation_engine/cross_rule_classes
    validation_engine/cross_rule_descriptions
+   validation_engine/cross_rule_sets
+
 
 .. toctree::
    :maxdepth: 2
    :caption: SQL Logging
    :hidden:
 
-
+   database/init_sqlite_db
    validation_engine/key_creator
    validation_engine/db_logger
 
 .. toctree::
    :maxdepth: 2
-   :caption: Helpers and Normalizations
+   :caption: Application Configuration
    :hidden:
 
-   validation_engine/helpers
-   validation_engine/standard_normalizations
+   applications/workbook_definitions
+   applications/file_directory
+   applications/validation_main
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Database Initialization
-   :hidden:
-
-   database/init_sqlite_db

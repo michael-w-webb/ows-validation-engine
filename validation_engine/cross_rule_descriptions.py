@@ -7,23 +7,89 @@ def describe_compound(op, subdescs, extra=None):
     """
     Construct a natural-language description for a compound logical clause.
 
-    This function receives the operator (e.g., AND, OR, NOT, IF_THEN)
-    and pre-rendered descriptions of its subclauses, then produces a
-    readable English explanation matching the semantics of the rule.
+    This function combines already-rendered subclause descriptions into a
+    single human-readable logical expression.
 
-    Args:
-        op (str):
-            Logical operator name. Supports:
-            AND, OR, NOT, IF_THEN, IF_THEN_ELSE,
-            EQUIVALENT/IFF, XOR, ONE_OF, AT_LEAST.
-        subdescs (list[str]):
-            Human-readable descriptions of each sub-clause.
-        extra (int | None):
-            Optional numeric argument used by operators such as AT_LEAST.
+    Unlike ``describe_logic()``, this function does not recurse through
+    clause trees directly. Instead, it operates on pre-rendered textual
+    fragments representing descendant clauses.
 
-    Returns:
-        str:
-            A natural-language description of the combined logic.
+    Supported operators include:
+
+        - AND
+        - OR
+        - NOT
+        - IF_THEN
+        - IF_THEN_ELSE
+        - EQUIVALENT / IFF
+        - XOR
+        - ONE_OF
+        - AT_LEAST
+
+    Overview
+    --------
+    Compound logical operators combine multiple subclauses into larger
+    logical expressions.
+
+    Example:
+
+    >>> describe_compound(
+    ...     "AND",
+    ...     [
+    ...         "'Completed Date' must be filled",
+    ...         "'Employment Status' must be filled"
+    ...     ]
+    ... )
+
+    Produces:
+
+        "('Completed Date' must be filled) and
+        ('Employment Status' must be filled)"
+
+    Conditional Tone Rewriting
+    --------------------------
+    Conditional operators such as ``IF_THEN`` and ``IF_THEN_ELSE`` soften
+    the antecedent phrasing by rewriting:
+
+        "must"
+
+    to:
+
+        "is"
+
+    This produces more natural conditional language.
+
+    Example:
+
+        "If 'Completed Date' is filled, then
+        'Employment Status' must be filled"
+
+    rather than:
+
+        "If 'Completed Date' must be filled..."
+
+    Parameters
+    ----------
+    op : str
+        Compound logical operator name.
+
+    subdescs : list[str]
+        Pre-rendered natural-language descriptions of subclauses.
+
+    extra : int | None, optional
+        Additional operator metadata used by certain operators such as
+        ``AT_LEAST``.
+
+    Returns
+    -------
+    str
+        Human-readable logical description.
+
+    Notes
+    -----
+    Unknown operators fall back to a defensive generic rendering rather
+    than raising exceptions. This behavior helps preserve debuggability
+    during rule-authoring or grammar-extension workflows.
     """
 
     if op == "AND":

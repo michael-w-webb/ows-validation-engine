@@ -1,0 +1,170 @@
+.sheet-link {
+
+    display: block;
+
+    padding: 10px 12px;
+
+    margin-bottom: 8px;
+
+    border-radius: var(--radius-sm);
+
+    background: #374151;
+
+    color: white;
+
+    text-decoration: none;
+}
+
+.sheet-link:hover {
+
+    background: #4b5563;
+}
+
+.column-pill {
+
+    background-color: #eef2ff;
+
+    color: #3730a3;
+
+    padding: 6px 12px;
+
+    border-radius: 999px;
+
+    font-size: 13px;
+
+    font-weight: 500;
+}
+
+.error-box {
+
+    background-color: #fee2e2;
+
+    color: #991b1b;
+
+    padding: 16px;
+
+    border-radius: var(--radius-sm);
+
+    border: 1px solid #fecaca;
+}
+
+.badge {
+
+    display: inline-block;
+
+    padding: 4px 8px;
+
+    border-radius: 999px;
+
+    background: #e5e7eb;
+
+    font-size: 12px;
+}
+
+.section {
+
+    margin-bottom: 32px;
+}
+
+.card {
+
+    background-color: var(--bg-card);
+
+    border-radius: var(--radius-lg);
+
+    border: 1px solid #e5e7eb;
+
+    box-shadow: var(--shadow-sm);
+
+    transition: 0.15s ease;
+}
+
+.card:hover {
+
+    box-shadow: var(--shadow-md);
+}
+
+.sheet-card {
+
+    padding: 28px;
+
+    margin-bottom: 28px;
+}
+
+.field-card {
+
+    padding: 18px;
+
+    margin-bottom: 14px;
+}
+
+.metadata-box {
+
+    padding: 20px;
+
+    background: var(--bg-muted);
+}
+
+.preview-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+}
+
+.preview-table thead {
+
+    background: var(--bg-muted);
+}
+
+.preview-table th {
+
+    text-align: left;
+
+    padding: 16px;
+
+    font-size: 13px;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.03em;
+
+    color: var(--text-muted);
+
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.preview-table td {
+
+    padding: 18px 16px;
+
+    border-bottom: 1px solid #f3f4f6;
+
+    vertical-align: middle;
+}
+
+.preview-table tr:hover {
+
+    background: #fafafa;
+}
+
+/* ========================================
+   Success Banner
+======================================== */
+
+.success-banner {
+
+    background-color: #dff5e1;
+
+    border: 1px solid #8fd19e;
+
+    color: #256029;
+
+    padding: 16px;
+
+    border-radius: 8px;
+
+    margin-bottom: 24px;
+
+    font-weight: 600;
+}

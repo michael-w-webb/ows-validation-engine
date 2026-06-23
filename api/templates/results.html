@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Workbook Schema Builder</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+
+</head>
+
+<body>
+
+    <div class="page-wrapper">
+
+        <!-- ================================= -->
+        <!-- Top Bar -->
+        <!-- ================================= -->
+
+        <div class="top-bar">
+
+            <div>
+
+                <h1>Workbook Schema Builder</h1>
+
+                <p class="subtitle">
+                    Configure workbook column behavior for validation.
+                </p>
+
+            </div>
+
+            <a href="/" class="upload-link">
+                Upload New Workbook
+            </a>
+
+        </div>
+
+        {% if error %}
+
+            <div class="error-box">
+                {{ error }}
+            </div>
+
+        {% endif %}
+
+        <!-- ================================= -->
+        <!-- Sheet Cards -->
+        <!-- ================================= -->
+
+        {% for sheet_name, columns in workbook_structure.items() %}
+
+            <div class="sheet-card">
+
+                <!-- ============================= -->
+                <!-- Sheet Header -->
+                <!-- ============================= -->
+
+                <div class="sheet-header">
+
+                    <div>
+
+                        <h2>{{ sheet_name }}</h2>
+
+                        <p
+                            class="header-label"
+                            title="
+                            The row currently being used
+                            to detect workbook column headers.
+                            "
+                        >
+
+                            Current Header Row:
+                            {{ sheet_header_rows[sheet_name] }}
+
+                        </p>
+
+                    </div>
+
+                    <form
+                        action="/adjust-sheet-header"
+                        method="post"
+                        class="header-form"
+                    >
+
+                        <input
+                            type="hidden"
+                            name="resource_id"
+                            value="{{ resource_id }}"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="target_sheet"
+                            value="{{ sheet_name }}"
+                        >
+
+                        <input
+                            type="number"
+                            name="header_row"
+                            value="{{ sheet_header_rows[sheet_name] }}"
+                            min="1"
+                            class="header-input"
+                        >
+
+                        <button
+                            type="submit"
+                            title="
+                            Re-scan the worksheet using
+                            a different header row.
+                            "
+                        >
+                            Adjust Header
+                        </button>
+
+                    </form>
+
+                </div>
+
+                <!-- ============================= -->
+                <!-- Schema Table -->
+                <!-- ============================= -->
+
+                <div class="schema-table-wrapper">
+
+                    <table class="schema-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <!-- Source Column -->
+
+                                <th>
+
+                                    Source Column
+
+                                    <span
+                                        class="tooltip-icon"
+                                        title="
+                                        Original column name detected
+                                        from the uploaded workbook.
+                                        "
+                                    >
+                                        ⓘ
+                                    </span>
+
+                                </th>
+
+                                <!-- Canonical Name -->
+
+                                <th>
+
+                                    Canonical Name
+
+                                    <span
+                                        class="tooltip-icon"
+                                        title="
+                                        Standardized internal column name
+                                        used during validation and merging.
+                                        "
+                                    >
+                                        ⓘ
+                                    </span>
+
+                                </th>
+
+                                <!-- Data Type -->
+
+                                <th>
+
+                                    Data Type
+
+                                    <span
+                                        class="tooltip-icon"
+                                        title="
+                                        Expected value format for the column
+                                        such as text, numeric, date, or boolean.
+                                        "
+                                    >
+                                        ⓘ
+                                    </span>
+
+                                </th>
+
+                                <!-- Identity -->
+
+                                <th>
+
+                                    Identity
+
+                                    <span
+                                        class="tooltip-icon"
+                                        title="
+                                        Marks columns that may help identify
+                                        or match participants across datasets.
+                                        "
+                                    >
+                                        ⓘ
+                                    </span>
+
+                                </th>
+
+                                <!-- Required -->
+
+                                <th>
+
+                                    Required
+
+                                    <span
+                                        class="tooltip-icon"
+                                        title="
+                                        Indicates whether values are required
+                                        for valid workbook submission.
+                                        "
+                                    >
+                                        ⓘ
+                                    </span>
+
+                                </th>
+
+                                <!-- Cross Sheet -->
+
+                                <th>
+
+                                    Cross-Sheet
+
+                                    <span
+                                        class="tooltip-icon"
+                                        title="
+                                        Used for linking or validating
+                                        records across workbook sheets.
+                                        "
+                                    >
+                                        ⓘ
+                                    </span>
+
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for column in columns %}
+
+                                <tr>
+
+                                    <!-- Source Column -->
+
+                                    <td>
+
+                                        <div class="source-column">
+                                            {{ column }}
+                                        </div>
+
+                                    </td>
+
+                                    <!-- Canonical Name -->
+
+                                    <td>
+
+                                        <input
+                                            type="text"
+                                            value="{{ column }}"
+                                            class="table-input"
+                                        >
+
+                                    </td>
+
+                                    <!-- Data Type -->
+
+                                    <td>
+
+                                        <select class="table-select">
+
+                                            <option>text</option>
+                                            <option>numeric</option>
+                                            <option>date</option>
+                                            <option>boolean</option>
+                                            <option>wage</option>
+                                            <option>zipcode</option>
+                                            <option>categorical</option>
+
+                                        </select>
+
+                                    </td>
+
+                                    <!-- Identity -->
+
+                                    <td>
+
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox-input"
+                                        >
+
+                                    </td>
+
+                                    <!-- Required -->
+
+                                    <td>
+
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox-input"
+                                        >
+
+                                    </td>
+
+                                    <!-- Cross Sheet -->
+
+                                    <td>
+
+                                        <input
+                                            type="checkbox"
+                                            class="checkbox-input"
+                                        >
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+        <!-- ================================= -->
+        <!-- Footer Actions -->
+        <!-- ================================= -->
+
+        <div class="footer-actions">
+
+            <button class="primary-button">
+                Generate Workbook Definition
+            </button>
+
+        </div>
+
+    </div>
+
+</body>
+
+</html>

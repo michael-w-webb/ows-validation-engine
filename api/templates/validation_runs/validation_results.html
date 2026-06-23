@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Validation Results
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- ================================= -->
+    <!-- Header -->
+    <!-- ================================= -->
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Validation Results
+            </h1>
+
+            <p class="subtitle">
+
+                Validation completed
+                successfully.
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- ================================= -->
+    <!-- Validation Summary -->
+    <!-- ================================= -->
+
+    <section class="card">
+
+        <h2>
+            Validation Summary
+        </h2>
+
+        <div class="field-group">
+
+            <div class="field-row">
+
+                <div class="field-meta">
+
+                    <strong>
+                        Organization
+                    </strong>
+
+                    <small>
+                        {{ results.org }}
+                    </small>
+
+                </div>
+
+                <div class="field-meta">
+
+                    <strong>
+                        Reporting Period
+                    </strong>
+
+                    <small>
+                        {{ results.target_period }}
+                    </small>
+
+                </div>
+
+                <div class="field-meta">
+
+                    <strong>
+                        Runtime
+                    </strong>
+
+                    <small>
+                        {{
+                            results.runtime_seconds
+                        }} seconds
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================================= -->
+    <!-- Validation Metrics -->
+    <!-- ================================= -->
+
+    <section class="card">
+
+        <h2>
+            Validation Metrics
+        </h2>
+
+        <table class="preview-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Metric
+                    </th>
+
+                    <th>
+                        Value
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                <tr>
+
+                    <td>
+                        Sheets Processed
+                    </td>
+
+                    <td>
+                        {{
+                            results.sheet_count
+                        }}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td>
+                        Rows Normalized
+                    </td>
+
+                    <td>
+                        {{
+                            results.normalized_row_count
+                        }}
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td>
+                        Validation Errors
+                    </td>
+
+                    <td>
+
+                        {% if results.error_count > 0 %}
+
+                            <span
+                                class="status-badge
+                                status-unconfigured"
+                            >
+                                {{
+                                    results.error_count
+                                }}
+                            </span>
+
+                        {% else %}
+
+                            <span
+                                class="status-badge
+                                status-configured"
+                            >
+                                0
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                <tr>
+
+                    <td>
+                        Key Mismatches
+                    </td>
+
+                    <td>
+
+                        {% if results.mismatch_count > 0 %}
+
+                            <span
+                                class="status-badge
+                                status-unconfigured"
+                            >
+                                {{
+                                    results.mismatch_count
+                                }}
+                            </span>
+
+                        {% else %}
+
+                            <span
+                                class="status-badge
+                                status-configured"
+                            >
+                                0
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+            </tbody>
+
+        </table>
+
+    </section>
+
+    <!-- ================================= -->
+    <!-- Download -->
+    <!-- ================================= -->
+
+    <section class="card">
+
+        <h2>
+            Validation Report
+        </h2>
+
+        <p>
+
+            Download the generated
+            validation workbook report.
+
+        </p>
+
+        <div class="footer-actions">
+
+            <a
+                href="/validation-results/download?file_path={{ results.output_file }}"
+                class="primary-button"
+            >
+                Download Validation Report
+            </a>
+
+        </div>
+
+    </section>
+
+</div>
+
+{% endblock %}

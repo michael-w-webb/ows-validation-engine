@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Excel Workbook Loader</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Excel Workbook Loader</h1>
+
+        <form
+            action="/upload"
+            method="post"
+            enctype="multipart/form-data"
+        >
+
+            <div class="form-group">
+
+                <label>Select Excel File</label>
+
+                <input
+                    type="file"
+                    name="file"
+                    accept=".xlsx,.xls"
+                    required
+                >
+
+            </div>
+
+            <div class="form-group">
+
+                <label>Header Row Number</label>
+
+                <input
+                    type="number"
+                    name="header_row"
+                    value="1"
+                    min="1"
+                    required
+                >
+
+            </div>
+
+            <button type="submit">
+                Upload Workbook
+            </button>
+
+        </form>
+
+    </div>
+
+</body>
+
+</html>

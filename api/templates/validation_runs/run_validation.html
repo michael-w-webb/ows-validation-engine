@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Run Validation
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <!-- ================================= -->
+    <!-- Page Header -->
+    <!-- ================================= -->
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Run Validation
+            </h1>
+
+            <p class="subtitle">
+
+                Upload a workbook and run
+                validation against the
+                selected workbook definition.
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <!-- ================================= -->
+    <!-- Workbook Definition Summary -->
+    <!-- ================================= -->
+
+    <section class="card">
+
+        <h2>
+            Workbook Definition
+        </h2>
+
+        <div class="field-group">
+
+            <div class="field-row">
+
+                <div class="field-meta">
+
+                    <strong>
+                        Workbook
+                    </strong>
+
+                    <small>
+                        {{
+                            definition.workbook_name
+                        }}
+                    </small>
+
+                </div>
+
+                <div class="field-meta">
+
+                    <strong>
+                        Format
+                    </strong>
+
+                    <small>
+                        {{
+                            definition.format_name
+                        }}
+                    </small>
+
+                </div>
+
+                <div class="field-meta">
+
+                    <strong>
+                        Version
+                    </strong>
+
+                    <small>
+                        v{{
+                            definition.version
+                        }}
+                    </small>
+
+                </div>
+
+                <div class="field-meta">
+
+                    <strong>
+                        Created
+                    </strong>
+
+                    <small>
+                        {{
+                            definition.created_at
+                        }}
+                    </small>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================================= -->
+    <!-- Validation Form -->
+    <!-- ================================= -->
+
+    <section class="card">
+
+        <h2>
+            Validation Inputs
+        </h2>
+
+        <form
+            action="/validate/{{ definition.workbook_definition_id }}"
+            method="post"
+            enctype="multipart/form-data"
+        >
+
+            <!-- ========================= -->
+            <!-- Organization -->
+            <!-- ========================= -->
+
+            <div class="form-group">
+
+                <label for="org">
+
+                    Organization
+
+                </label>
+
+                <input
+                    type="text"
+                    id="org"
+                    name="org"
+                    required
+                >
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Reporting Period -->
+            <!-- ========================= -->
+
+            <div class="form-group">
+
+                <label for="target_period">
+
+                    Reporting Period
+
+                </label>
+
+                <input
+                    type="text"
+                    id="target_period"
+                    name="target_period"
+                    placeholder="Example: PY4 Q2"
+                    required
+                >
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Workbook Upload -->
+            <!-- ========================= -->
+
+            <div class="form-group">
+
+                <label for="uploaded_file">
+
+                    Upload Workbook
+
+                </label>
+
+                <input
+                    type="file"
+                    id="uploaded_file"
+                    name="uploaded_file"
+                    accept=".xlsx,.xls"
+                    required
+                >
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Submit -->
+            <!-- ========================= -->
+
+            <div class="footer-actions">
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Run Validation
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+</div>
+
+{% endblock %}

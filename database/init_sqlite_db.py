@@ -1,8 +1,92 @@
+"""
+SQLite Schema Initialization
+============================
+
+This module defines and initializes the core SQLite schema used by the
+OWS validation engine. The database supports:
+
+- participant identity resolution,
+- longitudinal validation tracking,
+- normalized cell-value history,
+- rule-based validation auditing,
+- participant presence monitoring across runs, and
+- cross-run change detection.
+
+Overview
+--------
+The schema is designed to support reproducible, auditable validation of
+externally submitted Excel workbooks (e.g., CareerConneCT and Good Jobs
+Challenge datasets). Rather than treating each workbook as an isolated
+file, the database preserves historical validation context across runs.
+
+Core Tables
+-----------
+person
+    Canonical identity table representing the "golden record" for an
+    individual participant. Stores deterministic matching keys used for
+    participant resolution across submissions.
+
+participant
+    Dataset-specific participant instance linked to a canonical person.
+    Allows the same individual to appear across organizations, datasets,
+    and reporting periods.
+
+validation_run
+    Metadata describing a single validation execution, including dataset,
+    organization, quarter, timestamp, and completion status.
+
+participant_presence_log
+    Tracks whether participants were present or missing during a given
+    validation run. Supports longitudinal monitoring and disappearance
+    detection across submissions.
+
+dataset_column
+    Registry of normalized dataset columns used for historical value
+    tracking and rule evaluation.
+
+cell_value_history
+    Stores raw and normalized cell values over time for each participant
+    and column combination. Enables change detection and audit tracing.
+
+validation_rule
+    Registry of configured validation rules and associated metadata.
+
+validation_violation
+    Stores rule violations generated during validation runs.
+
+participant_key_mismatch
+    Tracks identifier inconsistencies and duplicate-key issues detected
+    across sheets or workbooks.
+
+Design Notes
+------------
+The schema emphasizes:
+
+- auditability over minimal storage,
+- deterministic participant tracking,
+- support for cross-run comparisons,
+- normalized relational structure, and
+- compatibility with SQLite-based local workflows.
+
+Indexes are included for the most common validation-engine access
+patterns, including:
+
+- participant presence lookups,
+- historical value retrieval,
+- run-based reporting, and
+- rule violation analysis.
+
+Functions
+---------
+init_db()
+    Creates all tables and indexes defined in ``SCHEMA_SQL`` if they do
+    not already exist.
+"""
 import sqlite3
 from pathlib import Path
 from config import DB_PATH
 
-SCHEMA_SQL = """
+VALIDATION_SCHEMA_SQL = """
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS person (
@@ -133,9 +217,23 @@ CREATE INDEX IF NOT EXISTS idx_vv_run_rule ON validation_violation(run_id, rule_
 """
 
 def init_db():
+
+    """
+    Initialize the SQLite validation database.
+
+    Creates all tables, indexes, and constraints defined in
+    ``VALIDATION_SCHEMA_SQL`` if they do not already exist.
+
+    Foreign-key enforcement is enabled prior to schema creation.
+
+    Returns
+    -------
+    None
+    """
+
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA foreign_keys = ON;")
-    conn.executescript(SCHEMA_SQL)
+    conn.executescript(VALIDATION_SCHEMA_SQL)
     conn.commit()
     conn.close()
     print(f"✅ SQLite DB initialized at: {DB_PATH}")

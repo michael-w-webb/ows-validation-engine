@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Select Sheets
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Select Relevant Sheets
+            </h1>
+
+            <p class="subtitle">
+                Choose the workbook sheets that should
+                participate in the validation schema.
+            </p>
+
+        </div>
+
+    </div>
+
+    <section class="section">
+
+        <div class="card metadata-box">
+
+            <p>
+                <strong>Workbook:</strong>
+                {{ session.workbook_name }}
+            </p>
+
+            <p>
+                <strong>Format:</strong>
+                {{ session.format_name }}
+            </p>
+
+        </div>
+
+    </section>
+
+    {% for sheet_name, columns
+        in session.workbook_structure.items()
+    %}
+
+        <section class="card sheet-card"
+            id="sheet-{{ sheet_name|replace(' ','-') }}">
+
+            <!-- ========================= -->
+            <!-- Sheet Header -->
+            <!-- ========================= -->
+
+            <div class="sheet-header">
+
+                <div>
+
+                    <label>
+
+                        <input
+                            form="sheet-selection-form"
+                            type="checkbox"
+                            class="checkbox-input"
+                            name="selected_sheets"
+                            value="{{ sheet_name }}"
+
+                            {% if sheet_name in session.selected_sheets %}
+                                checked
+                            {% endif %}
+                        >
+
+                        <strong>
+                            Sheet Found: {{ sheet_name }}
+                        </strong>
+
+                    </label>
+
+                    <p class="header-label">
+
+                        {{ columns | length }}
+                        detected columns
+
+                    </p>
+
+                </div>
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Header Row Adjustment -->
+            <!-- ========================= -->
+
+            <div class="header-adjust-section">
+
+                <form
+                    action="/adjust-sheet-header"
+                    method="post"
+                    style="
+                        display:flex;
+                        gap:10px;
+                        align-items:center;
+                        margin-bottom:15px;
+                    "
+                >
+
+                    <input
+                        type="hidden"
+                        name="resource_id"
+                        value="{{ session.resource_id }}"
+                    >
+
+                    <input
+                        type="hidden"
+                        name="target_sheet"
+                        value="{{ sheet_name }}"
+                    >
+
+                    <label>
+                        Header Row:
+                    </label>
+
+                    <input
+                        type="number"
+                        name="header_row"
+                        min="1"
+                        value="{{ session.sheet_header_rows.get(sheet_name, 1) }}"
+                        style="width:80px;"
+                    >
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Re-scan Columns
+                    </button>
+
+                </form>
+
+            </div>
+
+            <!-- ========================= -->
+            <!-- Column Preview -->
+            <!-- ========================= -->
+
+            <div class="columns-section">
+
+                <label class="dropdown-label">
+                    Detected Columns
+                </label>
+
+                <div class="column-grid">
+
+                    {% for column in columns %}
+
+                        <span class="column-pill">
+
+                            {{ column }}
+
+                        </span>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        </section>
+
+    {% endfor %}
+
+    <!-- ========================= -->
+    <!-- Sheet Selection Form -->
+    <!-- ========================= -->
+
+    <form
+        id="sheet-selection-form"
+        action="/draft/{{ session.resource_id }}/sheets"
+        method="post"
+    >
+
+        <div class="footer-actions">
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Save Selected Sheets
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% if active_sheet %}
+
+<script>
+
+window.addEventListener(
+    "load",
+    function() {
+
+        const target = document.getElementById(
+            "sheet-{{ active_sheet|replace(' ','-') }}"
+        );
+
+        if (target) {
+
+            target.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+
+        }
+
+    }
+);
+
+</script>
+
+{% endif %}
+
+{% endblock %}
+```

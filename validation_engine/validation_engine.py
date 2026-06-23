@@ -1,110 +1,160 @@
 """
-cc_validation_engine.py
+validation_engine.py
 =======================
 
 Core validation engine for schema-based normalization, cross-sheet rule
-evaluation, and optional SQL-backed audit logging. This module defines the
-`ValidationEngine` class, which orchestrates end-to-end validation of
-workbooks submitted by external organizations (e.g., CareerConneCT,
-Good Jobs Challenge).
+evaluation, dataset reconciliation, and optional SQL-backed audit logging.
+
+This module defines the `ValidationEngine` class, which orchestrates
+end-to-end validation of multi-sheet workbooks submitted by external
+organizations (e.g., CareerConneCT, Good Jobs Challenge).
 
 Overview
 --------
 The engine performs the following high-level steps:
 
-1. **Sheet-by-sheet column-type normalization**
-   Uses column-type classes (e.g., `categoricalColumn`, `dateTimeColumn`,
-   `identifierColumn`) to coerce raw spreadsheet values into a consistent,
-   validated format. Column-type classes also generate column-level errors.
+1. **Sheet-level normalization**
+   • Applies column-type validator classes (e.g., `categoricalColumn`,
+     `dateTimeColumn`, `identifierColumn`) to coerce raw spreadsheet values
+     into consistent formats.
+   • Produces both raw and normalized versions of each column.
+   • Generates column-level validation errors.
 
-2. **Identity resolution and participant tracking (optional)**
+2. **Identity construction**
+   • Establishes an `id_key` per record:
+       - simple format: constructed from name fields
+       - multi-sheet format: expected from identity sheet
+   • Used as the primary key for cross-sheet alignment.
+
+3. **Duplicate and mismatch handling**
+   • Detects duplicate `id_key` values within sheets.
+   • Removes duplicated keys globally prior to merging.
+   • Identifies cross-sheet inconsistencies:
+       - missing_in_sheet
+       - extra_in_sheet
+       - duplicate_in_sheet
+
+4. **Cross-sheet merging**
+   • Inner-joins all sheets on `id_key`.
+   • Retains only participants present in all sheets.
+   • Encodes sheet provenance in column names using the delimiter `_|_|_`.
+
+5. **Cross-sheet rule evaluation**
+   • Delegates rule execution to `CrossRuleEngine`.
+   • Rules operate on the merged dataset (`single_sheet`), not individual sheets.
+
+6. **Error aggregation**
+   • Combines normalization errors and cross-sheet rule violations.
+   • Accessible via `engine.errors` or `engine.get_all_errors()`.
+
+7. **Optional database logging**
    When `logging=True`, the engine:
-   - creates multiple spreadsheet-specific key variants via `KeyCreator`,
-   - resolves or creates global `person_id` values based on keys,
-   - assigns `participant_id` values for each dataset instance, and
-   - logs normalized cell values and participant presence to the database.
-
-3. **Cross-sheet rule evaluation**
-   Delegates rule execution to `CrossRuleEngine`, applying rule sets such as
-   connected presence, conditional blanks, conditional requirements, and
-   date-based conditional requirements.
-
-4. **Error aggregation**
-   All normalization errors and cross-sheet violations are collected into
-   DataFrames, accessible via `engine.errors` or `engine.get_all_errors()`.
+   • creates validation runs (`run_id`)
+   • resolves `person_id` and `participant_id`
+   • logs normalized values and presence tracking
+   • persists validation violations and mismatch events
 
 Inputs
 ------
 The engine requires:
     - ``workbook_definitions`` (dict):
-        Schema describing sheets, expected columns, column types, and
-        accepted responses.
+        Schema describing sheets, expected columns, column types,
+        and accepted responses.
+
     - ``cross_rules`` (list[tuple], optional):
-        Rule sets to apply during cross-sheet validation. If not provided,
-        the caller is expected to supply rule sets externally.
+        Rule sets applied during cross-sheet validation, structured as:
+        [(label, ruleset), ...]
+
     - ``logging`` (bool):
         Enables write-back to the SQL logging database via
         ``ValidationDBLogger``.
 
 Within `validate_workbook`, the caller must supply:
     - ``file`` (str):
-        Identifier in ``org|period`` format.
+        Identifier in the form ``org|period`` or
+        ``org|period|filename``. Only the first two segments are used.
+
     - ``workbook_type`` (str):
         Dataset name (e.g., "training data").
+
     - ``workbook_format`` (str):
         Workbook layout ("simple format" or "four sheet format").
+
     - ``dfs_by_sheet`` (dict[str, pandas.DataFrame]):
         Raw data from each sheet after loading.
-    - ``keycreators`` (list of (KeyCreator, str)):
-        Pairs of key generators and output column names for identity matching.
+
+    - ``passed_identity_sheet`` (str):
+        Required for multi-sheet formats. Ignored for simple format.
+
+    - ``keycreators`` (list of (KeyCreator, str), optional):
+        Used when logging is enabled to generate additional identity keys.
 
 Outputs
 -------
 Attributes populated during validation:
+
     - ``normalized_data`` (dict[str → DataFrame]):
-        Cleaned, normalized DataFrames for each sheet.
+        Per-sheet normalized DataFrames (raw + normalized columns).
+
+    - ``single_sheet`` (DataFrame):
+        Fully merged dataset across sheets using `id_key`.
+
+    - ``returnable_data`` (DataFrame):
+        Reduced dataset containing only normalized columns,
+        with suffixes removed for downstream use.
+
     - ``errors`` (list[DataFrame]):
         Column-level and cross-sheet validation error frames.
+
     - ``column_error_index`` (dict[(sheet, column) → set[int]]):
         Tracks row indices associated with column-level errors.
+
+    - ``mismatches`` (list[dict]):
+        Records of cross-sheet key inconsistencies.
 
 Methods:
     - ``validate_workbook``:
         Main entry point for executing the full validation workflow.
+
     - ``get_all_errors``:
         Returns a single concatenated DataFrame of all errors.
-    - ``make_entry_key``:
-        Generates a deterministic hashed ID for record tracking.
 
 Assumptions and Constraints
 ---------------------------
 - ``workbook_definitions`` fully describe all sheets and expected columns.
-- Each sheet includes a ``row_number`` column corresponding to the original
-  Excel row numbers.
-- ``identity_sheet`` must exist ("Report" for simple format, "Personal
-  Information" for multi-sheet format).
-- Column normalization must precede cross-sheet rule evaluation.
-- KeyCreator fields must match post-normalization column names.
-- Database schema must be initialized before enabling logging.
+- Row tracking relies on sheet-specific columns (e.g., `row_number_{sheet}`),
+  generated by the workbook loader.
+- Identity resolution depends on workbook format:
+    - simple format: inferred
+    - multi-sheet format: explicitly provided
+- Cross-sheet merging uses an inner join on `id_key`, which may drop records.
+- Column provenance in merged outputs is encoded using `_|_|_`.
 
 Side Effects
 ------------
 - When ``logging=True``, this module writes:
-    - run metadata,
-    - normalized cell values,
-    - person/participant resolution events,
-    - presence logs,
+    - run metadata
+    - normalized cell values
+    - person/participant resolution events
+    - presence logs
+    - mismatch records
     - validation rule violations
   to the SQL logging database via ``ValidationDBLogger``.
 
 Security / PII Notes
 --------------------
-- This engine processes sensitive PII including names, DOB, ZIP code, and
-  state ID values.
+- This engine processes sensitive PII including names, DOB, ZIP code,
+  and state ID values.
 - Identity keys are generated using SHA-256, but raw PII exists in memory
   during normalization and logging.
 - Database logs may contain raw and normalized values; appropriate access
   controls must be enforced externally.
+
+Notes
+-----
+- Inner joins across sheets will remove participants not present in all sheets.
+- Duplicate `id_key` values are removed before merging.
+- Logging mode performs row-wise operations and may be slow for large datasets.
 
 This module is intended to be imported by higher-level orchestration scripts
 (e.g., `cc_validation_main.py`) and is not designed for direct command-line
@@ -115,11 +165,21 @@ import pandas as pd
 from validation_engine.validation_column_types import *
 from validation_engine.cross_rule_engine import CrossRuleEngine
 
+from validation_engine.column_names import (
+    add_sheet_suffix,
+    strip_normalized_suffixes,
+    assert_sheet_provenance
+)
+
 ### SQL Logging Related Imports 
 from validation_engine.db_logger import ValidationDBLogger
 from hashlib import sha256
 from datetime import datetime
 import warnings
+
+
+### this mapping relates to the 'validation_column_types', classes designed to capture normalization 
+### routines for different data types. 
 
 COLUMN_CLASS_MAP = {
     "categorical": categoricalColumn,
@@ -169,7 +229,8 @@ class ValidationEngine:
         file (str or None):
             Identifier used when generating error reports (“org|quarter|filename”).
     """
-    def __init__(self, workbook_definitions, cross_rules=None, logging = False, log_description = None, mismatch_check = True):
+    
+    def __init__(self, workbook_definitions, cross_rules=None, logging = False, log_description = None, mismatch_check = True, db_path = None):
         
         ## file meta data navigation 
         self.workbook_definitions = workbook_definitions
@@ -190,8 +251,8 @@ class ValidationEngine:
         self.single_sheet = []
         self.db_logger = None
         self.run_id = None
-        self.cleaned_dfs = None
         self.returnable_data = None
+        self.db_path = db_path
 
         if self.logging:
 
@@ -199,7 +260,7 @@ class ValidationEngine:
 
                 raise ValueError("Engine call must include a log_description argument if Logging is True")
 
-            self.db_logger = ValidationDBLogger()
+            self.db_logger = ValidationDBLogger(db_path)
             
 
     def _validate_sheet(self, df, sheet_name, accepted_responses, row_offset=1):
@@ -207,20 +268,21 @@ class ValidationEngine:
         """
         Validate and normalize all columns for a single sheet.
 
-        This method applies the column-type classes defined in
-        `COLUMN_CLASS_MAP` to each column described in `accepted_responses`,
-        producing both a normalized DataFrame and a structured error DataFrame.
+        This method applies column-type validator classes (defined in
+        `COLUMN_CLASS_MAP`) to each column specified in `accepted_responses`.
+        It produces a normalized DataFrame alongside a structured error DataFrame.
 
         Args:
             df (pd.DataFrame):
                 Raw sheet data as loaded by the WorkbookLoader.
             sheet_name (str):
-                Name of the sheet being validated. Used for error metadata.
+                Name of the sheet being validated. Used for column naming
+                and error metadata.
             accepted_responses (dict):
                 Column-level schema for this sheet, e.g.:
 
                     {
-                        "Date Entered Training": {"type": "date", "required": True},
+                        "Date Entered Training": {"type": "dateTime", "required": True},
                         "County": {
                             "type": "categorical",
                             "accepted_responses": ["Hartford", "New Haven", ...]
@@ -228,9 +290,6 @@ class ValidationEngine:
                         ...
                     }
 
-            file (str, optional):
-                Full workbook identifier (`"org|quarterd"`). Propagated
-                into error logs for data lineage.
             row_offset (int, optional):
                 Excel row offset used when translating DataFrame indices
                 back into user-visible spreadsheet row numbers.
@@ -240,34 +299,42 @@ class ValidationEngine:
                 (normalized_df, errors_df)
 
                 • normalized_df (pd.DataFrame):
-                    All columns normalized, reindexed (after dropping fully blank rows),
-                    and containing `id_key`/`row_number` if present.
-                
+                    DataFrame containing:
+                        - original raw columns
+                        - corresponding `{column}_normalized` columns
+                        - `id_key` (if present in input)
+                        - `row_number_{sheet_name}` (if present in input)
+                        - `source_file` (if present)
+
+                    Rows where all non-identity columns are null are removed.
+
                 • errors_df (pd.DataFrame):
                     Structured validation errors with columns:
-                    ["file","sheet","row_number","column","rule","severity", "raw_value","normalized"]
+                        ["file", "sheet", f"row_number_{sheet_name}",
+                        "column", "rule", "severity", "raw_value", "normalized"]
 
-                    Empty if no errors detected.
+                    Empty if no errors are detected.
 
         Behavior:
-            • Applies type-specific normalizers (date, integer, categorical, ZIP, etc.).
-            • Handles file-specific categorical fields (e.g., responses vary by CBO).
-            • Records per-column errors via each validator’s `errors_df()` method.
-            • Drops rows that are blank for all non-identity columns.
-            • Preserves `id_key` and `row_number`.
-            • Updates `self.column_error_index` for cross-sheet rules.
+            • Applies type-specific normalization and formatting using validator classes.
+            • For each column `X`, produces:
+                - `X` (raw values)
+                - `X_normalized` (validated / formatted values)
+            • Records validation errors via each validator’s `errors_df()` method.
+            • Drops rows that are entirely null across all non-identity columns.
+            • Builds `self.column_error_index` mapping (sheet, column) → failing row indices.
 
         Side Effects:
-            • Mutates `self.column_error_index` (used later by cross-rule engine).
+            • Mutates `self.column_error_index`.
             • Sets `self._validated = True`.
-            • Prints warnings for missing/undefined columns.
+            • Prints a message for any expected column not found in the input DataFrame.
 
         Notes:
-            • Validation order is column-by-column; errors do not prevent processing.
-            • Validators may coerce values (string normalization, padding, casefolding).
-            • Row removal logic ensures that blank spreadsheet rows do not generate
-              false positive validation errors.
-
+            • Validation is column-wise; errors in one column do not halt processing.
+            • Validators may coerce values (e.g., trimming, case normalization, type casting).
+            • Row removal is based on post-normalization null checks.
+            • Error row references depend on `row_number_{sheet_name}`; if this column
+            is missing, downstream row tracking may be inconsistent.
         """
         normalized_cols = {}
         all_errors = []
@@ -368,266 +435,121 @@ class ValidationEngine:
         self._validated = True
 
         return normalized_df, errors_df
-    
-    def _set_org(self): 
-
-        if isinstance(self.file, str):
-            parts = self.file.split("|")
-
-            if len(parts) == 2:
-                self.org = parts[0] 
-                if(len(parts[0])==0):
-                    warnings.warn("Potential Problem - Org is empty string.")
-        else:
-            raise ValueError("Cannot set org: file must be a string structured as {org}|{quarter}")
-
-    def _set_quarter(self): 
-
-        if isinstance(self.file, str):
-            parts = self.file.split("|")
-
-            if len(parts) == 2:
-                self.quarter = parts[1] 
-                if(len(parts[1])==0):
-                    warnings.warn("Potential Problem - Quarter is empty string.")
-        else:
-            raise ValueError("Cannot set quarter: file must be a string structured as {org}|{quarter}")
-
-    def set_file(self, file):
-        
-        self.file = file
-        self._set_org()
-        self._set_quarter()
-
-    def _assert_file_context_ready(self) -> None:
-        if self.file is None:
-            raise RuntimeError("Engine is not ready: file/org/quarter have not been set. Call set_file().")
-        if self.org is None:
-            raise RuntimeError("Engine is not ready: file/org/quarter have not been set. Call set_file().")
-        if self.quarter is None: 
-            raise RuntimeError("Engine is not ready: file/org/quarter have not been set. Call set_file().")
-        
-    def _set_workbook_format(self, workbook_format):
-        
-        if workbook_format not in self.workbook_definitions[self.workbook_type]:
-            raise ValueError(f"Workbook format '{workbook_format}' is not defined for workbook type '{self.workbook_type}'.")
-        self.workbook_format = workbook_format
-        
-    def _set_workbook_definitions_context(self, workbook_type, workbook_format):
-
-        if workbook_type not in self.workbook_definitions:
-            raise ValueError(f"Workbook type '{workbook_type}' is not defined.")
-        self.workbook_type = workbook_type
-
-        self._set_workbook_format(workbook_format)
-
-    def _set_workbook_definitions_location(self, sheet_name):
-
-        working_location = self.workbook_definitions[self.workbook_type][self.workbook_format]
-
-        if sheet_name not in working_location:
-            raise ValueError(f"Sheet name '{sheet_name}' is not defined for workbook type '{self.workbook_type}' and format '{self.workbook_format}'.")
-        
-        self.workbook_definitions_location = self.workbook_definitions[self.workbook_type][self.workbook_format][sheet_name]
-
-    def _get_file_metadata(self, item:str):
-
-        if self.workbook_definitions_location is None: 
-            raise ValueError("workbook_definitions_location is not set. Call set_workbook_definitions_location first.")
-        
-        return self.workbook_definitions_location[item]
-
-    ## normalize_data
-    def normalize_data(self, workbook_type, workbook_format, dfs_by_sheet):
-
-        ### confirm that the file, org, and quarter values have been set correctly.
-        self._assert_file_context_ready()
-
-        ### make sure the provided workbook type and format vavlues are valid and pass them to the engine's self.values
-        self._set_workbook_definitions_context(workbook_type, workbook_format)
-
-        ### declare the run level column_error_index value that is going to be used across validate_sheet calls 
-        self.column_error_index = {}
-
-        ### if logging is enabled, create a new run entry in the database and pass the run id to the engine for later use
-        if self.logging and self.run_id is None:
-            ## create a unique id connected to the information passed in the run table 
-            self.run_id =  self.db_logger.start_run(self.workbook_type, self.org, self.quarter, triggered_by="mwebb", run_desription = self.run_description)
-
-        # ============================================================
-        # 1️⃣ Sheet-by-sheet validation
-        # ============================================================
-        
-        ### using the dfs_by_sheet dictionary generated by the workbook loader loop through validate_sheet calls and generate a normalized data dictionary and an errors list
-        for sheet_name, df in dfs_by_sheet.items():
-
-            ### using the workbook type and format values set earlier, set the workbook definitions location for the current sheet
-            self._set_workbook_definitions_location(sheet_name)
-
-            ### grab the accepted response dictionary for the current sheet
-            accepted_responses = self._get_file_metadata("accepted_responses")
-
-            norm_df, errs = self._validate_sheet(df, sheet_name, accepted_responses)
-
-            cols_to_check = [c for c in norm_df.columns if c not in ["id_key", f"row_number_{sheet_name}"]]
-            norm_df = norm_df.dropna(subset=cols_to_check, how="all")
-
-            ### pass the cleaned data to the engine attribute for normalized data
-            self.normalized_data[sheet_name] = norm_df
-
-            ### pass the errors to the existing engine level error list 
-            if not errs.empty:
-                self.errors.append(errs)
-
-    #### identify canonical entries and log to the databse if logging 
-
-    def ensure_normalized_data(self, normalized_data: dict) -> None:
-        if normalized_data is None:
-            raise ValueError("normalized_data is None")
-
-        if not isinstance(normalized_data, dict) or not normalized_data:
-            raise ValueError("normalized_data must be a non-empty dict")  
-
-    def build_id_key(self,
-        df: pd.DataFrame,
-        columns: list[str],
-        *,
-        normalize: bool = True,
-        sep: str = "|",
-        null_token: str = ""
-    ) -> pd.Series:
-        """
-        Build a deterministic ID key from an arbitrary list of columns.
-        """
-
-        if not columns:
-            raise ValueError("columns must contain at least one column name")
-
-        missing = [c for c in columns if c not in df.columns]
-        if missing:
-            raise KeyError(f"Missing columns for id_key: {missing}")
-
-        parts = []
-
-        for col in columns:
-            s = df[col].astype(str)
-
-            if normalize:
-                s = (
-                    s.str.strip()
-                    .str.lower()
-                    .replace({"nan": null_token, "none": null_token})
-                )
-
-            parts.append(s.fillna(null_token))
-
-        return pd.Series(
-            sep.join(values) for values in zip(*parts)
-        )
-
-    def attach_identity_key(self,
-        normalized_data: dict,
-        identity_sheet: str,
-        id_columns: list[str],
-        id_col_name: str = "id_key"
-    ) -> None:
-        
-        self.ensure_normalized_data(normalized_data)
-
-        if identity_sheet not in normalized_data:
-            raise KeyError(f"Identity sheet '{identity_sheet}' not found")
-
-        df = normalized_data[identity_sheet]
-
-        df[id_col_name] = self.build_id_key(
-            df,
-            id_columns,
-            normalize=True
-        )
-
-        normalized_data[identity_sheet] = df
 
     ## main function, the one implementing the other functions 
     def validate_workbook(self, file, workbook_type, workbook_format, dfs_by_sheet, passed_identity_sheet, keycreators = None):
         """
-        Validate an entire workbook, generate normalized per-sheet data, resolve
-        participant identity, apply cross-sheet rules, and optionally log all
-        results to the validation database.
+        Validate an entire workbook, normalize sheet data, reconcile participant
+        identity across sheets, construct merged outputs, apply cross-sheet rules,
+        and optionally persist results to a validation database.
 
-        This method orchestrates the entire validation lifecycle:
+        This method orchestrates the full validation pipeline:
 
         1. **Sheet-level validation**
-           • Each sheet listed in `dfs_by_sheet` is validated using column-type
-             validators defined in `workbook_definitions`.
-           • Invalid values generate row-level error records.
-           • Blank records (all-NA except id_key/row_number) are removed.
-           • Normalized DataFrames are stored in `self.normalized_data`.
+        • Each sheet in `dfs_by_sheet` is processed via `_validate_sheet`.
+        • Produces:
+            - normalized per-sheet DataFrames (`self.normalized_data`)
+            - column-level validation errors (`self.errors`)
+        • Rows that are entirely null across non-identity columns are removed.
 
-        2. **Identity resolution**
-           • Determines the canonical identity sheet:
-               - `"Report"` for simple-format workbooks
-               - `"Personal Information"` for four-sheet format
-           • Ensures `id_key` exists (auto-generated for simple format).
-           • If database logging is enabled:
-               - Applies all configured `KeyCreator` instances.
-               - Resolves or creates `person` records in the `person` table.
-               - Creates or updates `participant` records for the dataset.
+        2. **Identity construction**
+        • Establishes an `id_key` per row:
+            - simple format: constructed from `"First Name" | "Last Name"`
+            - multi-sheet format: expected to already exist in the identity sheet
+        • Determines identity sheet:
+            - simple format: inferred from processed sheets (caller must ensure correctness)
+            - four-sheet format: provided via `passed_identity_sheet`
 
-        3. **Logging normalized cell values**
-           • When logging is enabled, all normalized values for all sheets
-             are written to the database via `ValidationDBLogger`.
+        3. **Duplicate and mismatch handling**
+        • Detects duplicate `id_key` values within sheets.
+        • Removes all duplicated keys globally before merging.
+        • Records mismatch events:
+            - `"duplicate_in_sheet"`
+            - `"missing_in_sheet"`
+            - `"extra_in_sheet"`
+        • Mismatches are stored in `self.mismatches` and optionally logged.
 
-        4. **Participant presence tracking**
-           • Marks participants as `"present"` or `"missing"` for the run,
-             enabling longitudinal participant tracking across reporting cycles.
+        4. **Cross-sheet merging**
+        • All sheets are inner-joined on `id_key`.
+        • Only participants present in *all* sheets are retained.
+        • Column names are suffixed with `_|_|_{sheet_name}` to preserve provenance.
+        • Result stored as:
+            - `self.single_sheet` (fully merged dataset)
 
-        5. **Cross-sheet rule enforcement**
-           • Delegates to `_apply_cross_rules()` which uses `CrossRuleEngine`
-             to evaluate rules such as:
-               - connected presence
-               - conditional required fields
-               - conditional blank-unless
-               - date comparison rules
-           • Any violations are appended to the error collection.
+        5. **Returnable dataset construction**
+        • A reduced dataset (`self.returnable_data`) is created:
+            - includes only normalized columns
+            - removes `_normalized` suffix
+            - excludes raw columns
+            - retains only rows surviving the inner join
 
-        6. **Violation persistence**
-           • If logging is enabled, attaches `participant_id` to each error row
-             using `id_key` matching.
-           • Persists each rule violation into the `validation_violation` table.
+        6. **Database logging (optional)**
+        If `logging=True`:
+        • Starts a validation run (`run_id`)
+        • Applies `KeyCreator` instances to generate additional identity keys
+        • Resolves or creates:
+            - `person_id`
+            - `participant_id`
+        • Logs:
+            - normalized cell values
+            - participant presence (present / missing)
+            - key mismatches
+            - validation rule violations
+
+        7. **Cross-sheet rule enforcement**
+        • Executes `_apply_cross_rules()` using the merged dataset (`self.single_sheet`)
+        • Appends any violations to `self.errors`
+
+        8. **Violation persistence (optional)**
+        • Maps `id_key → participant_id`
+        • Persists each violation to the database
 
         Args:
             file (str):
-                Identifier for the workbook, typically of the form
-                `"org|quarter|filename"`. Used for logging and lineage.
+                Workbook identifier, typically `"org|quarter"` or
+                `"org|quarter|filename"`. Only the first two segments are used
+                to derive `org` and `quarter`.
+
             workbook_type (str):
                 Dataset category (e.g., `"CareerConneCT"`).
+
             workbook_format (str):
                 Layout style defined in `workbook_definitions`
                 (e.g., `"simple format"`, `"four sheet format"`).
-            dfs_by_sheet (dict[str, pandas.DataFrame]):
-                Raw DataFrames produced by the loader, keyed by sheet name.
+
+            dfs_by_sheet (dict[str, pd.DataFrame]):
+                Raw DataFrames keyed by sheet name.
+
+            passed_identity_sheet (str):
+                Required for multi-sheet formats. Ignored for simple format.
+
             keycreators (list[tuple], optional):
                 List of `(KeyCreator, column_name)` pairs used to generate
-                additional hashed or unhashed identity keys.
+                additional identity keys when logging is enabled.
 
         Returns:
             None
-                All normalized data, errors, and logging output are stored in:
-                • `self.normalized_data`
-                • `self.errors`
-                • database tables (if logging enabled)
+
+            Results are stored on the instance:
+                • `self.normalized_data`  → per-sheet normalized DataFrames
+                • `self.single_sheet`     → merged cross-sheet dataset
+                • `self.returnable_data`  → normalized-only dataset for downstream use
+                • `self.errors`           → all validation errors
+                • database tables         → if logging is enabled
 
         Raises:
             ValueError:
-                If the required identity sheet is missing.
+                If the identity sheet is missing.
+
             KeyError:
-                If workbook definitions are incomplete for the given
-                workbook type or format.
+                If workbook definitions are incomplete or a sheet schema is missing.
 
         Notes:
-            • This method must be called before any cross-rule checks or data export.
-            • `self.errors` collects sheet-level and cross-sheet violations.
-            • Calling code may retrieve all errors via `get_all_errors()`.
+            • The inner join across sheets will drop participants not present in all sheets.
+            • Duplicate `id_key` values are removed prior to merging, which may reduce row counts.
+            • Column provenance is encoded using the delimiter `_|_|_`.
+            • Logging mode performs row-wise operations and may be slow for large datasets.
+            • This method mutates internal state and should be called once per workbook.
         """
         self.file = file
         self.column_error_index = {}
@@ -639,6 +561,14 @@ class ValidationEngine:
             ## create a unique id connected to the information passed in the run table 
             self.run_id =  self.db_logger.start_run(workbook_type, self.org, self.quarter, triggered_by="mwebb", run_description = self.log_description)
             self.db_logger.raw_data_points = dfs_by_sheet
+            
+            if keycreators:
+            
+                self.db_logger.keycreators = keycreators
+
+            else: 
+
+                raise ValueError("Keycreators must not be none if logging is enabled.")
     
         # ============================================================
         # 1️⃣ Sheet-by-sheet validation
@@ -712,14 +642,34 @@ class ValidationEngine:
 
         # --- Step 3: do matching/missing/extra on the cleaned data ---
         base_name, base_df = cleaned_dfs[0]
-        base_df = base_df.rename(columns=lambda c: f"{c}_|_|_{base_name}" if c != "id_key" else c)
 
+        base_df = add_sheet_suffix(
+            base_df,
+            base_name,
+            omitted_columns={"id_key"}
+        )
+
+        assert_sheet_provenance(
+            base_df,
+            omitted_columns={"id_key"}
+        )
         merged = base_df.copy()
         _, returnable_data = cleaned_dfs[0]
 
         for sheet_name, df in cleaned_dfs[1:]:
+
+            if df.columns.duplicated().any():
+
+                dupes = df.columns[df.columns.duplicated()].tolist()
+
+                raise ValueError(
+                    f"Duplicate columns detected in '{sheet_name}': {dupes}"
+                )
+            
             if "id_key" not in df.columns:
-                continue
+                raise ValueError(
+                    f"Sheet '{sheet_name}' does not contain id_key."
+                )
 
             base_keys = set(merged["id_key"])
             sheet_keys = set(df["id_key"])
@@ -732,32 +682,55 @@ class ValidationEngine:
             if extra_in_sheet:
                 record_mismatches(extra_in_sheet, self.org, self.quarter, sheet_name, "extra_in_sheet")
 
-            dedup_cols = ["First Name", "First Name_normalized", "Last Name", "Last Name_normalized", "source_file"]
+            dedup_cols = ["First Name", "First Name_normalized", "Middle Name", "Middle Name_normalized", "Last Name", "Last Name_normalized", "source_file"]
             mask = df.columns.isin(dedup_cols)
         
             df = df.loc[:, ~mask].copy()
 
             returnable_data = returnable_data.merge(df, on="id_key", how="inner")
 
-            df = df.rename(columns=lambda c: f"{c}_|_|_{sheet_name}" if c != "id_key" else c)
+            df = add_sheet_suffix(
+                df,
+                sheet_name,
+                omitted_columns={"id_key"}
+            )
 
+            if df.columns.duplicated().any():
+
+                dupes = df.columns[df.columns.duplicated()].tolist()
+
+                raise ValueError(
+                    f"Duplicate columns detected in '{sheet_name}': {dupes}"
+                )
+            
+
+            assert_sheet_provenance(
+                df,
+                omitted_columns={"id_key"}
+            )
+
+            left_cols = set(merged.columns) - {"id_key"}
+            right_cols = set(df.columns) - {"id_key"}
+
+            collisions = left_cols & right_cols
+
+            if collisions:
+
+                formatted = "\n".join(
+                    f"    - {c}"
+                    for c in sorted(collisions)
+                )
+
+                raise ValueError(
+                    "Column collision detected before merge.\n\n"
+                    "Columns should already contain sheet provenance.\n\n"
+                    "Conflicting columns:\n"
+                    f"{formatted}"
+                )
+            
             ### inner merge is catching any stray single participant entries and removing from the dataset that will be processed
-            merged = merged.merge(df, on="id_key", how="inner", suffixes=("", f"_|_|_{sheet_name}"))
-            
+            merged = merged.merge(df, on="id_key", how="inner", validate = "one_to_one")
         
-        DELIM = "_|_|_"
-
-        def split_col(col):
-            col = col.replace("_normalized", "")
-            
-            if DELIM in col:
-                base, sheet = col.split(DELIM, 1)
-            else:
-                base, sheet = col, "combined"
-
-            return base, sheet
-
-
         valid_id_keys = set(merged["id_key"])
 
         id_df_valid = id_df[id_df["id_key"].isin(valid_id_keys)].copy()
@@ -794,26 +767,20 @@ class ValidationEngine:
         normalized_combined["org"] = self.org
         normalized_combined["period"] = self.quarter
 
-        returnable_data["org"] = self.org
-        returnable_data["period"] = self.quarter
 
-        mask = returnable_data.columns 
-
+    
         returnable_data = returnable_data.loc[
             :, returnable_data.columns.str.contains("normalized")
         ]
 
-        returnable_data.columns = (
-            returnable_data.columns.astype(str)
-            .str.replace("_normalized", "", regex=False)
-        )
-
         returnable_data["org"] = self.org
         returnable_data["period"] = self.quarter
 
+        returnable_data = strip_normalized_suffixes(
+            returnable_data
+        )
+
         self.single_sheet = normalized_combined
-
-
 
         self.returnable_data = returnable_data
 
@@ -840,7 +807,7 @@ class ValidationEngine:
             participant_ids = []
 
             self.db_logger.load_participant_map(workbook_type, self.org)
-
+ 
             for _, row in self.single_sheet.iterrows():
                 pid = row["person_id"]
 
@@ -871,6 +838,7 @@ class ValidationEngine:
                 """,
                 (workbook_type, self.org)
             )
+            
             prior_count = cur.fetchone()[0]
             is_first_run = prior_count == 0
             
@@ -921,6 +889,7 @@ class ValidationEngine:
                 self.db_logger.flush_participant_presence()
 
         if self.mismatches:
+            
             filtered = [
                 m for m in self.mismatches
                 if m.get("id_key") is not None
@@ -1015,48 +984,67 @@ class ValidationEngine:
 
                 ## remove sheet name delimiter before passing back 
 
-
     def _apply_cross_rules(self, workbook_type, workbook_format, file=None, row_offset=1):
         
         """
         Apply all configured cross-sheet and cross-column validation rules.
 
-        This method delegates enforcement to `CrossRuleEngine`, which evaluates
-        rule objects defined in `self.cross_rules`. Cross-sheet rules compare
-        values across multiple sheets (e.g., connected presence, conditional
-        requirements, date comparisons, etc.) and generate violations when
-        inconsistencies or unmet conditions are detected.
+        This method delegates rule evaluation to `CrossRuleEngine`, operating on the
+        fully merged dataset (`self.single_sheet`) produced during
+        `validate_workbook`. Rules compare values across columns and sheets to detect
+        logical inconsistencies, missing dependencies, or invalid combinations.
 
         Args:
             workbook_type (str):
                 Dataset family (e.g., "CareerConneCT", "Participant Data").
+
             workbook_format (str):
                 Layout format (e.g., "simple format", "four sheet format").
+
             file (str, optional):
-                Workbook identifier ("org|quarter|filename") used for error lineage.
+                Workbook identifier. If not provided, `self.file` is used.
+
             row_offset (int, optional):
                 Offset applied when converting DataFrame indices to Excel row numbers.
-                Passed to the rule engine but typically remains at the default.
+                Passed through to the rule engine but typically unused here.
 
         Returns:
             pd.DataFrame:
-                Combined DataFrame of all cross-sheet rule violations with columns:
-                ["file", "sheet", "row_number", "column", "rule", "severity", "raw_value", "normalized"].
+                Combined DataFrame of all cross-rule violations with columns:
+                    ["file", "sheet", "row_number", "column",
+                    "rule", "severity", "raw_value", "normalized"]
+
                 Returns an empty DataFrame with the same schema if no violations occur.
 
         Behavior:
-            • Initializes a `CrossRuleEngine` using the already-normalized sheet data.
-            • Iterates through each rule group in `self.cross_rules`
-              (e.g., connected presence, conditional blank, conditional required).
-            • Executes each rule set and collects all violation DataFrames.
+            • Initializes a `CrossRuleEngine` using:
+                - `self.single_sheet` (merged dataset across sheets)
+                - `self.workbook_definitions` (normalization schema)
+                - `self.file` (for error lineage)
+
+            • Iterates through `self.cross_rules`, expected as:
+                [(label, ruleset), ...]
+
+            • For each ruleset:
+                - Executes all rules via `engine.run_all_rules()`
+                - Collects resulting violation DataFrames
+
             • Concatenates all violations into a single DataFrame.
-            • Marks the engine state as `_cross_checked = True`.
+
+            • Assigns `"severity" = "Cross"` to all returned violations.
+
+            • Sets `self._cross_checked = True`.
 
         Notes:
-            • Cross rules depend on `self.normalized_data`, which must already be
-              produced by `_validate_sheet()` calls in `validate_workbook()`.
-            • Missing or empty rule sets are silently skipped.
-            • Downstream code (e.g., the logger) attaches `participant_id` after this step.
+            • Rules operate on the merged dataset (`self.single_sheet`), not on
+            individual per-sheet DataFrames.
+            • Column names may include sheet provenance suffixes using the delimiter
+            `_|_|_` (e.g., `"First Name_|_|_Training"`).
+            • Missing or empty rule sets are skipped silently.
+            • Row numbering in outputs depends on upstream normalization and may
+            reflect sheet-specific row number columns.
+            • Downstream processes (e.g., logging) are responsible for attaching
+            `participant_id` to violations.
         """
 
         # 1️⃣ Initialize the engine
@@ -1094,8 +1082,6 @@ class ValidationEngine:
 
         self._cross_checked = True
         return combined
-
-    
 
     def get_all_errors(self):
         """

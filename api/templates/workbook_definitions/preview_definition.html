@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Workbook Definition Preview
+            </h1>
+
+            <p class="subtitle">
+
+                Compiled validation-engine-native
+                workbook definition.
+
+            </p>
+
+        </div>
+
+    </div>
+
+    {% for dataset_name, formats in workbook_definition.items() %}
+
+        {% for format_name, sheets in formats.items() %}
+
+            <div class="card">
+
+                <h2>
+                    {{ dataset_name }}
+                </h2>
+
+                <p>
+                    Format:
+                    {{ format_name }}
+                </p>
+
+            </div>
+
+            {% for sheet_name, sheet_definition in sheets.items() %}
+
+                <div class="card">
+
+                    <h3>
+                        {{ sheet_name }}
+                    </h3>
+
+                    <p>
+
+                        Linking Columns:
+                        {{
+                            sheet_definition.linking_columns
+                            | join(", ")
+                        }}
+
+                    </p>
+
+                    <table class="preview-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Canonical Name
+                                </th>
+
+                                <th>
+                                    Source Columns
+                                </th>
+
+                                <th>
+                                    Type
+                                </th>
+
+                                <th>
+                                    Required
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {% for canonical_name, variants in sheet_definition.labels.items() %}
+
+                                <tr>
+
+                                    <td>
+                                        {{ canonical_name }}
+                                    </td>
+
+                                    <td>
+                                        {{
+                                            variants
+                                            | join(", ")
+                                        }}
+                                    </td>
+
+                                    <td>
+                                        {{
+                                            sheet_definition
+                                            .accepted_responses[
+                                                canonical_name
+                                            ].type
+                                        }}
+                                    </td>
+
+                                    <td>
+
+                                        {% if (
+                                            sheet_definition
+                                            .accepted_responses[
+                                                canonical_name
+                                            ].required
+                                        ) %}
+
+                                            ✓
+
+                                        {% else %}
+
+                                            —
+
+                                        {% endif %}
+
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% endfor %}
+
+            <!-- ================================= -->
+            <!-- Finalize Workbook Definition -->
+            <!-- ================================= -->
+
+            <div class="footer-actions">
+
+                <form
+                    action="/draft/{{ session.resource_id }}/finalize"
+                    method="post"
+                >
+
+                    <button
+                        type="submit"
+                        class="primary-button"
+                    >
+                        Finalize Workbook Definition
+                    </button>
+
+                </form>
+
+            </div>
+
+        {% endfor %}
+
+    {% endfor %}
+
+</div>
+
+{% endblock %}

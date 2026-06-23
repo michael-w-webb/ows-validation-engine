@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Field Editor
+{% endblock %}
+
+{% block extra_styles %}
+
+<link
+    rel="stylesheet"
+    href="/static/styles/field_editor.css"
+>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <div class="top-bar">
+
+        <div>
+
+            <h1>
+                Field Configuration
+            </h1>
+
+            <p class="subtitle">
+                Configure validation behavior and
+                metadata for this field.
+            </p>
+
+        </div>
+
+    </div>
+
+    <form
+        action="/draft/{{ session.resource_id }}/fields_overview/{{ field_id }}"
+        method="post"
+    >
+
+        <!-- ================================= -->
+        <!-- Metadata -->
+        <!-- ================================= -->
+
+        <section class="section">
+
+            <div class="card metadata-box">
+
+                <p>
+
+                    <strong>Sheet:</strong>
+
+                    {{ field.sheet_name }}
+
+                </p>
+
+                <p>
+
+                    <strong>Workbook Column:</strong>
+
+                    {{ field.column_name }}
+
+                </p>
+
+            </div>
+
+        </section>
+
+        <!-- ================================= -->
+        <!-- General Settings -->
+        <!-- ================================= -->
+
+        <section class="section">
+
+            <h2>
+                General Settings
+            </h2>
+
+            <div class="form-grid">
+
+                <div class="form-group">
+
+                    <label>
+                        Canonical Name
+                    </label>
+
+                    <input
+                        type="text"
+                        name="canonical_name"
+                        value="{{ field.canonical_name }}"
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Column Type
+                    </label>
+
+                    <select
+                        id="column-type-select"
+                        name="column_type"
+                    >
+
+                        {% for type_name in field_types %}
+
+                            <option
+                                value="{{ type_name }}"
+                                {% if (
+                                    field.column_type
+                                    or field.data_type
+                                ) == type_name %}
+                                    selected
+                                {% endif %}
+                            >
+                                {{ type_name }}
+                            </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Required
+                    </label>
+
+                    <input
+                        type="checkbox"
+                        class="checkbox-input"
+                        name="required"
+                        {% if field.required %}
+                            checked
+                        {% endif %}
+                    >
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Included
+                    </label>
+
+                    <input
+                        type="checkbox"
+                        class="checkbox-input"
+                        name="included"
+                        {% if field.included %}
+                            checked
+                        {% endif %}
+                    >
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ================================= -->
+        <!-- Accepted Responses -->
+        <!-- ================================= -->
+
+            <section
+                id="accepted-responses-section"
+                class="section"
+                {% if (
+                    field.column_type
+                    or field.data_type
+                ) not in [
+                    "categorical",
+                    "fileSpecificCategorical"
+                ] %}
+                    style="display: none;"
+                {% endif %}
+            >
+
+                <h2>
+                    Accepted Responses
+                </h2>
+
+                <p class="subtitle">
+                    Enter one accepted response per line.
+                </p>
+
+                <textarea
+                    name="accepted_responses"
+                >{% if field.accepted_responses %}{{ field.accepted_responses | join('\n') }}{% endif %}</textarea>
+
+            </section>
+
+        <!-- ================================= -->
+        <!-- Actions -->
+        <!-- ================================= -->
+
+        <div class="button-row">
+
+            <button
+                type="submit"
+                class="primary-button"
+            >
+                Save Field
+            </button>
+
+            <a
+                class="secondary-button"
+                href="/draft/{{ session.resource_id }}/fields_overview?sheet={{field.sheet_name}}"
+            >
+                Back to Fields
+            </a>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+
+    const columnTypeSelect =
+        document.getElementById(
+            "column-type-select"
+        );
+
+    const acceptedResponsesSection =
+        document.getElementById(
+            "accepted-responses-section"
+        );
+
+    function updateAcceptedResponsesVisibility() {
+
+        const selectedType =
+            columnTypeSelect.value;
+
+        const shouldShow =
+            selectedType === "categorical"
+            ||
+            selectedType === "fileSpecificCategorical";
+
+        acceptedResponsesSection.style.display =
+            shouldShow
+                ? "block"
+                : "none";
+
+    }
+
+    columnTypeSelect.addEventListener(
+        "change",
+        updateAcceptedResponsesVisibility
+    );
+
+    updateAcceptedResponsesVisibility();
+
+</script>
+
+{% endblock %}

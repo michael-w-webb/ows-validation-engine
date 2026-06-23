@@ -1,0 +1,234 @@
+.field-group {
+
+    margin-bottom: 40px;
+}
+
+/* ================================= */
+/* Shared Grid Layout */
+/* ================================= */
+
+.fields-table-header,
+.field-row-card {
+
+    display: grid;
+
+    grid-template-columns:
+        2fr
+        2fr
+        1.5fr
+        1fr
+        1fr
+        1fr
+        1.5fr
+        160px;
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    align-items: center;
+}
+
+/* ================================= */
+/* Header */
+/* ================================= */
+
+.fields-table-header {
+
+    padding: 20px 28px;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    color: var(--text-muted);
+
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* ================================= */
+/* Rows */
+/* ================================= */
+
+.field-row-card {
+
+    padding: 20px 28px;
+
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.field-row-card:last-child {
+
+    border-bottom: none;
+}
+
+/* ================================= */
+/* Cells */
+/* ================================= */
+
+.field-cell {
+
+    display: flex;
+
+    align-items: center;
+
+    min-width: 0;
+}
+
+.field-cell--actions {
+
+    justify-content: center;
+}
+
+/* ================================= */
+/* Field Text */
+/* ================================= */
+
+.field-name {
+
+    font-weight: 600;
+}
+
+.field-meta {
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+.field-meta small {
+
+    color: var(--text-muted);
+}
+
+/* ================================= */
+/* Buttons */
+/* ================================= */
+
+.primary-button,
+.locked-button {
+
+    width: 120px;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+}
+
+.locked-button {
+
+    cursor: default;
+
+    pointer-events: none;
+}
+
+/* ================================= */
+/* Sheet Layout */
+/* ================================= */
+
+.sheet-fields {
+
+    padding-bottom: 16px;
+}
+
+.sheet-summary {
+
+    list-style: none;
+
+    cursor: pointer;
+
+    padding: 28px;
+
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.sheet-summary::-webkit-details-marker {
+
+    display: none;
+}
+
+.sheet-summary-left {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 16px;
+}
+
+.sheet-footer {
+
+    padding: 20px 28px;
+
+    text-align: center;
+
+    color: var(--text-muted);
+
+    font-size: 14px;
+}
+
+/* ================================= */
+/* Status Badges */
+/* ================================= */
+
+.status-badge {
+
+    display: inline-block;
+
+    padding: 6px 10px;
+
+    border-radius: 999px;
+
+    font-size: 13px;
+
+    font-weight: 600;
+}
+
+.status-configured {
+
+    background: #dcfce7;
+
+    color: #166534;
+}
+
+.status-unconfigured {
+
+    background: #fee2e2;
+
+    color: #991b1b;
+}
+
+/* ================================= */
+/* Sidebar */
+/* ================================= */
+
+.sidebar {
+
+    position: sticky;
+
+    top: 0;
+
+    height: 100vh;
+
+    overflow-y: auto;
+}
+
+/* ================================= */
+/* Accordion Arrow */
+/* ================================= */
+
+.sheet-arrow {
+
+    display: inline-block;
+
+    transition: transform 0.15s ease;
+}
+
+.sheet-details[open] .sheet-arrow {
+
+    transform: rotate(90deg);
+}

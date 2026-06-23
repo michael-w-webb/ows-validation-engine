@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Field Definitions
+{% endblock %}
+
+{% block extra_styles %}
+
+<link
+    rel="stylesheet"
+    href="/static/styles/fields_overview.css"
+>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="layout">
+
+    <!-- ================================= -->
+    <!-- Sidebar -->
+    <!-- ================================= -->
+
+    <aside class="sidebar">
+
+        <h2>
+            Sheets
+        </h2>
+
+        {% for sheet_name in session.selected_sheets %}
+
+            <a
+                class="sheet-link"
+                href="#"
+                data-sheet-target="sheet-{{ loop.index0 }}"
+            >
+                {{ sheet_name }}
+            </a>
+
+        {% endfor %}
+
+    </aside>
+
+    <!-- ================================= -->
+    <!-- Main Content -->
+    <!-- ================================= -->
+
+    <main class="main-content">
+
+        <!-- ================================= -->
+        <!-- Page Header -->
+        <!-- ================================= -->
+
+        <div class="top-bar">
+
+            <div>
+
+                <h1>
+                    Field Definitions
+                </h1>
+
+                <p class="subtitle">
+                    Review workbook fields and configure
+                    validation behavior.
+                </p>
+
+            </div>
+
+            <a
+                class="primary-button"
+                href="/draft/{{ session.resource_id }}/preview"
+            >
+                Preview Definition
+            </a>
+
+        </div>
+
+        <!-- ================================= -->
+        <!-- Sheet Sections -->
+        <!-- ================================= -->
+
+        {% for sheet_name in session.selected_sheets %}
+
+            {% set sheet_fields =
+                session.canonical_definitions
+                | selectattr(
+                    "sheet_name",
+                    "equalto",
+                    sheet_name
+                )
+                | list
+            %}
+
+            <details
+                class="sheet-details card"
+                id="sheet-{{ loop.index0 }}"
+                {% if (
+                    active_sheet == sheet_name
+                ) or (
+                    not active_sheet and loop.first
+                ) %}
+                    open
+                {% endif %}
+            >
+
+                <!-- ================================= -->
+                <!-- Sheet Header -->
+                <!-- ================================= -->
+
+                <summary class="sheet-summary">
+
+                    <div class="sheet-summary-left">
+
+                        <span class="sheet-arrow">
+                            ▶
+                        </span>
+
+                        <h2>
+                            {{ sheet_name }}
+                        </h2>
+
+                        <span class="badge">
+                            {{ sheet_fields | length }} fields
+                        </span>
+
+                    </div>
+
+                </summary>
+
+                <!-- ================================= -->
+                <!-- Table Header -->
+                <!-- ================================= -->
+
+                <div class="fields-table-header">
+
+                    <div>
+                        Canonical Name
+                    </div>
+
+                    <div>
+                        Source Column
+                    </div>
+
+                    <div>
+                        Column Type
+                    </div>
+
+                    <div>
+                        Linking Key
+                    </div>
+
+                    <div>
+                        Required
+                    </div>
+
+                    <div>
+                        Included
+                    </div>
+
+                    <div>
+                        Status
+                    </div>
+
+                    <div>
+                        Configure
+                    </div>
+
+                </div>
+
+                <!-- ================================= -->
+                <!-- Field Rows -->
+                <!-- ================================= -->
+
+                <div class="sheet-fields">
+
+                    {% for field in sheet_fields %}
+
+                        <div class="field-row-card">
+
+                            <!-- ========================= -->
+                            <!-- Canonical Name -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell field-name">
+
+                                {{ field.canonical_name }}
+
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- Source Column -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell">
+
+                                <span class="column-pill">
+
+                                    {{ field.column_name }}
+
+                                </span>
+
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- Column Type -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell">
+
+                                <span class="badge">
+
+                                    {% if (
+                                        field.column_type
+                                        or field.data_type
+                                    ) == "string" %}
+
+                                        unspecified
+
+                                    {% else %}
+
+                                        {{
+                                            field.column_type
+                                            or field.data_type
+                                        }}
+
+                                    {% endif %}
+
+                                </span>
+
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- Linking Key -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell">
+
+                                {% if field.linking_key %}
+
+                                    ✓
+
+                                {% else %}
+
+                                    —
+
+                                {% endif %}
+
+                            </div>
+
+
+                            <!-- ========================= -->
+                            <!-- Required -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell">
+
+                                {% if field.required %}
+
+                                    ✓
+
+                                {% else %}
+
+                                    —
+
+                                {% endif %}
+
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- Included -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell">
+
+                                {% if field.included %}
+
+                                    ✓
+
+                                {% else %}
+
+                                    —
+
+                                {% endif %}
+
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- Status -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell">
+
+                                {% if field.status == "configured" %}
+
+                                    <span
+                                        class="
+                                            status-badge
+                                            status-configured
+                                        "
+                                    >
+                                        configured
+                                    </span>
+
+                                {% else %}
+
+                                    <span
+                                        class="
+                                            status-badge
+                                            status-unconfigured
+                                        "
+                                    >
+                                        unconfigured
+                                    </span>
+
+                                {% endif %}
+
+                            </div>
+
+                            <!-- ========================= -->
+                            <!-- Configure -->
+                            <!-- ========================= -->
+
+                            <div class="field-cell field-cell--actions">
+
+                                {% if field.linking_key %}
+
+                                    <span
+                                        class="
+                                            primary-button locked-button
+                                        "
+                                        title="
+                                            Linking key configuration is locked.
+                                        "
+                                    >
+                                        Locked
+                                    </span>
+
+                                {% else %}
+
+                                    <a
+                                        class="primary-button"
+                                        href="/draft/{{ session.resource_id }}/fields_overview/{{ field.field_id }}"
+                                    >
+                                        Configure
+                                    </a>
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+                <!-- ================================= -->
+                <!-- Sheet Footer -->
+                <!-- ================================= -->
+
+                <div class="sheet-footer">
+
+                    Showing
+                    {{ sheet_fields | length }}
+                    fields in this sheet
+
+                </div>
+
+            </details>
+
+        {% endfor %}
+
+    </main>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
+
+        const sheetLinks = document.querySelectorAll(
+            ".sheet-link"
+        );
+
+        const sheetDetails = document.querySelectorAll(
+            ".sheet-details"
+        );
+
+        sheetLinks.forEach(
+            (link) => {
+
+                link.addEventListener(
+                    "click",
+                    (event) => {
+
+                        event.preventDefault();
+
+                        const targetId =
+                            link.dataset.sheetTarget;
+
+                        const target =
+                            document.getElementById(
+                                targetId
+                            );
+
+                        if (!target) {
+                            return;
+                        }
+
+                        // =====================
+                        // Collapse all others
+                        // =====================
+
+                        sheetDetails.forEach(
+                            (details) => {
+
+                                if (
+                                    details !== target
+                                ) {
+
+                                    details.open = false;
+                                }
+                            }
+                        );
+
+                        // =====================
+                        // Expand selected
+                        // =====================
+
+                        target.open = true;
+
+                        // =====================
+                        // Smooth scroll
+                        // =====================
+
+                        target.scrollIntoView({
+
+                            behavior: "smooth",
+
+                            block: "start"
+                        });
+                    }
+                );
+            }
+        );
+    }
+);
+
+</script>
+
+{% endblock %}
+

@@ -189,6 +189,235 @@ class BaseColumn:
                 Normalized column values. Values that cannot be meaningfully
                 interpreted should generally be represented as `pd.NA`.
         """
+
+class multiCategoricalColumn(BaseColumn):
+    """
+    Validator for multi-select categorical fields (e.g., Race/Ethnicity).
+
+    Improvements over baseline:
+      • Vectorized one‑hot via str.get_dummies(sep=';')
+      • Token-level fuzzy cache to avoid repeated RapidFuzz calls
+
+    New built-in conveniences:
+      • normalize_to_indicators(...) -> DataFrame of binary columns
+      • to_indicators(...) -> participant_id + binary columns
+      • to_sql_indicators(...) -> write one-hot to SQL directly
+
+    New behavior:
+      • If multi_label is set (e.g., "Multi-Racial"), normalized cells with
+        more than one canonical selection are collapsed to that single label.
+    """
+
+    name: str = "multiCategorical"
+
+    def __init__(self,
+                 accepted_responses,
+                 required: bool = False,
+                 fuzzy: bool = True,
+                 min_score: int = 90,
+                 delimiters: str = r",",
+                 row_numbers=None,
+                 protected_phrases: list[str] | None = None,
+                 multi_label: str | None = "Multi-Racial",
+                 unknown_label: str | None = "Unknown"):  # <-- todo: make multi_label default more flexible or optional. Ex: Make default Unknown only IF required = False, otherwise default should be pd.NA for required col logic
+        self.required = required
+        self.fuzzy = fuzzy
+        self.min_score = min_score
+        self._splitter = re.compile(delimiters)
+        self._whitespace = re.compile(r"\s+")
+        self.row_numbers = row_numbers
+        self.multi_label = multi_label  # <-- todo: see above comment
+        self.unknown_label = unknown_label # todo: add this default to blank cells ONLY if the col is not marked as required. 
+
+        # Build normalized variant → canonical lookup and canonical set
+        self.accepted: dict[str, str] = {}
+        self.canonicals: set[str] = set()
+
+        
+        if self.unknown_label:
+            # ensure Unknown is a canonical option too
+            self.canonicals.add(self.unknown_label)
+            self.accepted[self._clean(self.unknown_label)] = self.unknown_label
+
+
+        if isinstance(accepted_responses, dict):
+            for canonical, variants in accepted_responses.items():
+                self.canonicals.add(canonical)
+                for v in [canonical] + list(variants):
+                    self.accepted[self._clean(v)] = canonical
+        else:
+            for r in accepted_responses:
+                self.canonicals.add(r)
+                self.accepted[self._clean(r)] = r
+
+        # Ensure the multi_label itself is part of the canonical set so
+        # indicators include a column for it even if no variants are provided.
+        if self.multi_label:
+            self.canonicals.add(self.multi_label)
+            self.accepted[self._clean(self.multi_label)] = self.multi_label
+
+        # Cache keys for fuzzy
+        self._keys = list(self.accepted.keys())
+
+        # Optional protected phrases handled pre-split
+        self.protected_phrases = set()
+        if protected_phrases:
+            self.protected_phrases = {self._clean(p) for p in protected_phrases}
+
+        # Fuzzy cache: cleaned token -> canonical or None
+        self._fuzzy_cache: dict[str, str | None] = {}
+
+    # --- internals ------------------------------------------------------------
+
+    def _clean(self, text: str) -> str:
+        if text is None or pd.isna(text):
+            return ""
+        if re.fullmatch(r"0+", str(text)):
+            return ""
+        return self._whitespace.sub(" ", str(text)).strip().casefold()
+
+    def _protected_hits(self, cleaned_cell: str) -> set[str]:
+        hits = set()
+        for phrase in self.protected_phrases:
+            if phrase and phrase in cleaned_cell:
+                canon = self.accepted.get(phrase)
+                if canon:
+                    hits.add(canon)
+        return hits
+
+    def _fuzzy_resolve(self, key: str) -> str | None:
+        if key in self._fuzzy_cache:
+            return self._fuzzy_cache[key]
+        match = process.extractOne(key, self._keys, scorer=fuzz.token_sort_ratio)
+        if match and match[1] >= self.min_score:
+            canon = self.accepted.get(match[0])
+        else:
+            canon = None
+        self._fuzzy_cache[key] = canon
+        return canon
+
+    # --- normalize ------------------------------------------------------------
+
+    def normalize(self, s: pd.Series) -> pd.Series:
+        """
+        Normalize a multi-select categorical column.
+
+        Returns:
+          • a single canonical (e.g., "Black"), or
+          • the multi_label (e.g., "Multi-Racial") if >1 canonicals found, or
+          • pd.NA if nothing valid was found.
+        """
+        s = self.base_clean(s).astype("string").str.strip()
+
+        def norm_cell(val: str):
+            # if pd.isna(val) or val == "":
+            #     return pd.NA
+            if pd.isna(val) or val == "":
+                if not self.required and self.unknown_label:
+                    return self.unknown_label
+                return pd.NA
+
+
+            cleaned_cell = self._clean(val)
+            found: list[str] = []
+
+            # 1) Protected phrases before splitting (optional)
+            if self.protected_phrases:
+                found.extend(self._protected_hits(cleaned_cell))
+
+            # 2) Split tokens
+            tokens = [t.strip() for t in self._splitter.split(val) if t.strip()]
+
+            for tok in tokens:
+                key = self._clean(tok)
+                if not key:
+                    continue
+
+                # exact
+                canon = self.accepted.get(key)
+
+                # fuzzy fallback (if enabled)
+                if canon is None and self.fuzzy:
+                    canon = self._fuzzy_resolve(key)
+
+                if canon:
+                    found.append(canon)
+
+            # Dedup preserving order
+            seen = set()
+            unique = [c for c in found if not (c in seen or seen.add(c))]
+
+            if not unique:
+                return pd.NA
+            if self.multi_label and len(unique) > 1:
+                # Collapse any multi-selection to the aggregate label
+                return self.multi_label
+            # Single canonical selection
+            return unique[0]
+
+        return s.map(norm_cell)
+
+    # --- format ---------------------------------------------------------------
+
+    def format(self, s_norm: pd.Series) -> pd.Series:
+        # Now simply returns a single label (or Multi-Racial) per cell
+        return s_norm
+
+    # --- indicator expansion --------------------------------------------------
+
+    def indicators(self, s_fmt: pd.Series, dtype: str = "Int64") -> pd.DataFrame:
+        """
+        Create a one‑hot DataFrame with one column per canonical.
+
+        Because normalize() collapses multi-selections to `multi_label`,
+        vectorized get_dummies produces 1-of-N indicators.
+        """
+        prefix = s_fmt.name
+        dummies = s_fmt.fillna("").str.get_dummies(sep=";").astype(dtype)
+
+        # Ensure all canonicals (including multi_label) are present
+        canon_sorted = sorted(self.canonicals)
+        indicators = dummies.reindex(columns=canon_sorted, fill_value=0)
+        indicators.columns = [f"{prefix}_{c}" for c in canon_sorted]
+        return indicators
+    
+    # --- errors ---------------------------------------------------------------
+
+    def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
+                  file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+
+        masks = {
+            "Required but missing": (
+                s_norm.isna() if self.required else pd.Series(False, index=s_norm.index)
+            ),
+            "Invalid Value, not in accepted responses": (
+                raw.notna() & s_norm.isna()
+            ),
+        }
+
+        frames = []
+        for rule, mask in masks.items():
+            idx = raw.index[mask.fillna(False)]
+            if len(idx) == 0:
+                continue
+            frames.append(pd.DataFrame({
+                "file": file,
+                "sheet": sheet,
+                "row_number": (
+                    self.row_numbers.loc[idx].values
+                    if self.row_numbers is not None
+                    else idx.to_series().add(row_offset).values
+                ),
+                "column": col,
+                "rule": rule,
+                "raw_value": raw.loc[idx].astype("string").values,
+                "normalized": s_norm.loc[idx].astype("string").values,
+            }, index=idx))
+
+        return pd.concat(frames) if frames else pd.DataFrame(
+            columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
+        )
+    
 class categoricalColumn(BaseColumn):
 
     """
@@ -999,6 +1228,36 @@ class dateTimeColumn(BaseColumn):
         cleaned = re.sub(r"[\/\-\.]{2,}", "/", cleaned).strip(" /-.,")
 
         cleaned = re.sub(r"^[^\d]+(?=\d)", "", cleaned)
+
+        # 5b) handle compact 8-digit numbers without separators
+        # Only consider if the entire cleaned string is exactly 8 digits,
+        # to avoid matching arbitrary 8-digit chunks within other text.
+        m8 = re.fullmatch(r"(\d{8})", cleaned)
+        if m8:
+            digits = m8.group(1)
+
+            def is_valid_date(y, mo, da):
+                try:
+                    pd.Timestamp(year=y, month=mo, day=da)
+                    return True
+                except (ValueError, TypeError):
+                    return False
+
+            # first check if MMDDYYYY is plausible
+            mo_us = int(digits[0:2])
+            da_us = int(digits[2:4])
+            y_us  = int(digits[4:8])
+
+            if is_valid_date(y_us, mo_us, da_us):
+                return f"{y_us:04d}-{mo_us:02d}-{da_us:02d}"
+
+            # Fallback: try YYYYMMDD if MMDDYYYY isn't valid
+            y_iso  = int(digits[0:4])
+            mo_iso = int(digits[4:6])
+            da_iso = int(digits[6:8])
+
+            if is_valid_date(y_iso, mo_iso, da_iso):
+                return f"{y_iso:04d}-{mo_iso:02d}-{da_iso:02d}"
 
         # 6) ISO first (no \b anchors)
         m = re.search(r"(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})", cleaned)
@@ -1908,8 +2167,8 @@ class hourlyWageColumn(BaseColumn):
 
     def __init__(self, required: bool = False, min_wage: float = 5.0, max_wage: float = 45.0, row_numbers = None):
         self.required = required
-        self.min_wage = min_wage
-        self.max_wage = max_wage
+        self.min_wage = 5.0 if min_wage is None else min_wage
+        self.max_wage = 45.0 if max_wage is None else max_wage
         self._pattern_strip = re.compile(r"[^0-9\.]")  # strip everything except digits and dot
         self._range_pattern = re.compile(r"\d+\s*[-/]\s*\d+|\d+\s+to\s+\d+", re.IGNORECASE)
         self.row_numbers = row_numbers
@@ -2350,4 +2609,3 @@ class NAICSCodeColumn(BaseColumn):
         return pd.concat(frames) if frames else pd.DataFrame(
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
-

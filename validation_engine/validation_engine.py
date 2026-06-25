@@ -182,6 +182,7 @@ import warnings
 ### routines for different data types. 
 
 COLUMN_CLASS_MAP = {
+    "multiCategorical": multiCategoricalColumn,
     "categorical": categoricalColumn,
     "fileSpecificCategorical":fileSpecificCategoricalColumn,
     "identifier": identifierColumn,
@@ -361,22 +362,44 @@ class ValidationEngine:
             cls = COLUMN_CLASS_MAP[col_type]
             if col_type == "categorical":
                 accepted = spec.get("accepted_responses", [])
-                validator = cls(accepted_responses=accepted,
-                required=spec.get("required", False), 
-                row_numbers = df[f"row_number_{sheet_name}"])
-            elif col_type == "fileSpecificCategorical":
-                accepted = spec.get("accepted_responses",[])
-                validator = cls(accepted_responses = accepted, 
-                required = spec.get("required", False),
-                file = self.file.split("|")[0],
-                row_numbers = df[f"row_number_{sheet_name}"]
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
                 )
+
+            elif col_type == "multiCategorical":
+                accepted = spec.get("accepted_responses", [])
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
+            elif col_type == "fileSpecificCategorical":
+                accepted = spec.get("accepted_responses", [])
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    file=self.file.split("|")[0],
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
             elif col_type == "hourlyWage":
                 max_wage = spec.get("max_wage", 45)
                 min_wage = spec.get("min_wage", 0)
-                validator = cls(max_wage=max_wage, min_wage=min_wage, required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
+                validator = cls(
+                    max_wage=max_wage,
+                    min_wage=min_wage,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
             else:
-                validator = cls(required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
+                validator = cls(
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
 
             raw = df[col]
             s_norm = validator.normalize(raw)
@@ -394,6 +417,24 @@ class ValidationEngine:
 
             normalized_cols[col] = raw
             normalized_cols[f"{col}_normalized"] = s_fmt
+
+            # --- MultiCategorical: add indicator columns ---
+            if col_type == "multiCategorical":
+                s_ohe = validator.indicators(s_fmt)
+                num_indicators = s_ohe.shape[1]
+                num_accepted_values = len(validator.canonicals)
+
+                # sanity check (same as version 1)
+                if num_indicators != num_accepted_values:
+                    warnings.warn(
+                        f"Number of indicator columns ({num_indicators}) does not match "
+                        f"number of accepted values ({num_accepted_values}) for column "
+                        f"'{col}' in sheet '{sheet_name}'."
+                    )
+
+                # add each OHE column
+                for i, ohe_col in enumerate(s_ohe.columns):
+                    normalized_cols[f"{ohe_col}"] = s_ohe.iloc[:, i]
 
         normalized_df = pd.DataFrame(normalized_cols, index=df.index)
 

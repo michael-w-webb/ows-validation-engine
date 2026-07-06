@@ -1,3 +1,5 @@
+import token
+
 import pandas as pd 
 from rapidfuzz import process, fuzz
 import re
@@ -151,6 +153,229 @@ class BaseColumn:
                 that cannot be meaningfully interpreted should be represented as
                 `pd.NA`.
         """
+
+class multiCategoricalColumn(BaseColumn):
+    """
+    Multi-select categorical validator.
+
+    This class normalizes cells that may contain one or many categorical
+    values (e.g., "Black, Hispanic") and maps each token to one of several
+    canonical labels using:
+        • exact matching
+        • optional fuzzy matching (RapidFuzz)
+        • protected phrase overrides
+
+    The normalized output is a semicolon‑delimited string of every matched
+    canonical category (e.g., "Race, Black;Ethnicity, Hispanic").
+
+    No collapsing to a “Multi‑Racial” meta‑label is performed.
+
+    Indicator (one‑hot) columns can be generated via `.indicators()`.
+
+    -----------------------------------------------------------------------
+    Example
+    -----------------------------------------------------------------------
+    accepted = {
+        "Race, Black": ["Black", "African American"],
+        "Race, White": ["White"],
+        "Ethnicity, Hispanic": ["Hispanic", "Latino"]
+    }
+
+    col = multiCategoricalColumn(accepted_responses=accepted)
+
+    Raw cell:              "Black, Latino"
+    Normalized:            "Race, Black;Ethnicity, Hispanic"
+    One‑hot indicators:    race_black = 1
+                           race_white = 0
+                           ethnicity_hispanic = 1
+    -----------------------------------------------------------------------
+    """
+
+    def __init__(
+        self,
+        accepted_responses,
+        required: bool = False,
+        fuzzy: bool = True,
+        min_score: int = 90,
+        delimiters: str = r",",
+        row_numbers=None,
+        protected_phrases: list[str] | None = None,
+        unknown_label: str | None = "Unknown"
+    ):
+        self.required = required
+        self.fuzzy = fuzzy
+        self.min_score = min_score
+        self.row_numbers = row_numbers
+        self.unknown_label = unknown_label
+        self._splitter = re.compile(delimiters)
+        self._whitespace = re.compile(r"\s+")
+
+        # Canonical → accepted variant lookup
+        self.accepted = {}
+        self.canonicals = set()
+
+        # Add Unknown if allowed
+        if unknown_label:
+            self.canonicals.add(unknown_label)
+            self.accepted[self._clean(unknown_label)] = unknown_label
+
+        # Build canonical lookup table
+        if isinstance(accepted_responses, dict):
+            for canonical, variants in accepted_responses.items():
+                self.canonicals.add(canonical)
+                for v in [canonical] + list(variants):
+                    self.accepted[self._clean(v)] = canonical
+        else:
+            for r in accepted_responses:
+                self.canonicals.add(r)
+                self.accepted[self._clean(r)] = r
+
+        # Fuzzy matching keys
+        self._keys = list(self.accepted.keys())
+
+        # Protected phrases
+        self.protected_phrases = (
+            {self._clean(p) for p in protected_phrases}
+            if protected_phrases else set()
+        )
+
+        # Cache for fuzzy matches (big speed boost)
+        self._fuzzy_cache = {}
+
+    # ------------------------------------------------------------------
+    # Cleaning helpers
+    # ------------------------------------------------------------------
+    def _clean(self, text: str) -> str:
+        """Normalize tokens for comparison."""
+        if text is None or pd.isna(text):
+            return ""
+        if re.fullmatch(r"0+", str(text)):
+            return ""
+        return self._whitespace.sub(" ", str(text)).strip().casefold()
+
+    def _protected_hits(self, cleaned_cell: str) -> list[str]:
+        """Return canonicals triggered by protected phrases."""
+        return [
+            self.accepted[p]
+            for p in self.protected_phrases
+            if p and p in cleaned_cell and p in self.accepted
+        ]
+
+    def _fuzzy_resolve(self, key: str) -> str | None:
+        """Fuzzy match token → canonical."""
+        if key in self._fuzzy_cache:
+            return self._fuzzy_cache[key]
+        match = process.extractOne(key, self._keys, scorer=fuzz.token_sort_ratio)
+        if match and match[1] >= self.min_score:
+            canon = self.accepted.get(match[0])
+        else:
+            canon = None
+            print(f"Warning: '{key}' not found in accepted responses. Recommendation: add value to the accepted_responses under the appropriate canonical value")
+        self._fuzzy_cache[key] = canon
+        return canon
+
+    # ------------------------------------------------------------------
+    # Normalization
+    # ------------------------------------------------------------------
+    def normalize(self, s: pd.Series) -> pd.Series:
+        """
+        Normalize each cell and return all matched canonical categories
+        separated by semicolons.
+        """
+        s = self.base_clean(s).astype("string").str.strip()
+
+        def normalize_cell(val: str):
+            if pd.isna(val) or val == "":
+                return self.unknown_label if (not self.required and self.unknown_label) else pd.NA
+
+            found = []
+
+            cleaned = self._clean(val)
+
+            # Protected phrases first
+            found.extend(self._protected_hits(cleaned))
+
+            # Split user input into tokens
+            tokens = [t.strip() for t in self._splitter.split(val) if t.strip()]
+
+            for token in tokens:
+                key = self._clean(token)
+
+                if not key:
+                    continue
+
+                canon = self.accepted.get(key)
+                if canon is None and self.fuzzy:
+                    canon = self._fuzzy_resolve(key)
+
+                if canon:
+                    found.append(canon)
+
+            # de-duplicate while preserving order
+            seen = set()
+            unique = [c for c in found if not (c in seen or seen.add(c))]
+
+            return ";".join(unique) if unique else pd.NA
+
+        return s.map(normalize_cell)
+
+        
+    # --- format ---------------------------------------------------------------
+    def format(self, s_norm: pd.Series) -> pd.Series:
+        """Normalized values already final."""
+        return s_norm
+
+
+    # ------------------------------------------------------------------
+    # One-hot encoding
+    # ------------------------------------------------------------------
+    def indicators(self, s_norm: pd.Series, dtype: str = "Int64") -> pd.DataFrame:
+        """
+        Expand normalized multi-select values into one-hot indicator columns.
+        """
+        dummies = s_norm.fillna("").str.get_dummies(sep=";").astype(dtype)
+
+        # Ensure all canonical columns appear
+        all_cols = sorted(self.canonicals)
+        dummies = dummies.reindex(columns=all_cols, fill_value=0)
+
+        dummies.columns = [f"{c}" for c in all_cols]
+        return dummies
+
+    # ------------------------------------------------------------------
+    # Error reporting
+    # ------------------------------------------------------------------
+    def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
+                  file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
+        """Standardized error reporting."""
+        masks = {
+            "Required but missing": s_norm.isna() if self.required else pd.Series(False, index=s_norm.index),
+            "Invalid Value, not in accepted responses": raw.notna() & s_norm.isna(),
+        }
+
+        frames = []
+        for rule, mask in masks.items():
+            idx = mask[mask].index
+            if not len(idx):
+                continue
+
+            frames.append(pd.DataFrame({
+                "file": file,
+                "sheet": sheet,
+                "row_number": (
+                    self.row_numbers.loc[idx].values if self.row_numbers is not None
+                    else idx.to_series().add(row_offset).values
+                ),
+                "column": col,
+                "rule": rule,
+                "raw_value": raw.loc[idx].astype("string").values,
+                "normalized": s_norm.loc[idx].astype("string").values,
+            }, index=idx))
+
+        return pd.concat(frames) if frames else pd.DataFrame(
+            columns=["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"]
+        )
+
 
 class categoricalColumn(BaseColumn):
 
@@ -848,6 +1073,36 @@ class dateTimeColumn(BaseColumn):
         cleaned = re.sub(r"[\/\-\.]{2,}", "/", cleaned).strip(" /-.,")
 
         cleaned = re.sub(r"^[^\d]+(?=\d)", "", cleaned)
+
+        # 5b) handle compact 8-digit numbers without separators
+        # Only consider if the entire cleaned string is exactly 8 digits,
+        # to avoid matching arbitrary 8-digit chunks within other text.
+        m8 = re.fullmatch(r"(\d{8})", cleaned)
+        if m8:
+            digits = m8.group(1)
+
+            def is_valid_date(y, mo, da):
+                try:
+                    pd.Timestamp(year=y, month=mo, day=da)
+                    return True
+                except (ValueError, TypeError):
+                    return False
+
+            # first check if MMDDYYYY is plausible
+            mo_us = int(digits[0:2])
+            da_us = int(digits[2:4])
+            y_us  = int(digits[4:8])
+
+            if is_valid_date(y_us, mo_us, da_us):
+                return f"{y_us:04d}-{mo_us:02d}-{da_us:02d}"
+
+            # Fallback: try YYYYMMDD if MMDDYYYY isn't valid
+            y_iso  = int(digits[0:4])
+            mo_iso = int(digits[4:6])
+            da_iso = int(digits[6:8])
+
+            if is_valid_date(y_iso, mo_iso, da_iso):
+                return f"{y_iso:04d}-{mo_iso:02d}-{da_iso:02d}"
 
         # 6) ISO first (no \b anchors)
         m = re.search(r"(\d{4})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})", cleaned)
@@ -1819,8 +2074,8 @@ class hourlyWageColumn(BaseColumn):
 
     def __init__(self, required: bool = False, min_wage: float = 5.0, max_wage: float = 45.0, row_numbers = None):
         self.required = required
-        self.min_wage = min_wage
-        self.max_wage = max_wage
+        self.min_wage = 5.0 if min_wage is None else min_wage
+        self.max_wage = 45.0 if max_wage is None else max_wage
         self._pattern_strip = re.compile(r"[^0-9\.]")  # strip everything except digits and dot
         self._range_pattern = re.compile(r"\d+\s*[-/]\s*\d+|\d+\s+to\s+\d+", re.IGNORECASE)
         self.row_numbers = row_numbers
@@ -2233,4 +2488,3 @@ class NAICSCodeColumn(BaseColumn):
         return pd.concat(frames) if frames else pd.DataFrame(
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
-

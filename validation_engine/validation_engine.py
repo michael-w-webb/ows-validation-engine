@@ -122,6 +122,7 @@ from datetime import datetime
 import warnings
 
 COLUMN_CLASS_MAP = {
+    "multiCategorical": multiCategoricalColumn,
     "categorical": categoricalColumn,
     "fileSpecificCategorical":fileSpecificCategoricalColumn,
     "identifier": identifierColumn,
@@ -190,8 +191,6 @@ class ValidationEngine:
         self.single_sheet = []
         self.db_logger = None
         self.run_id = None
-        self.cleaned_dfs = None
-        self.returnable_data = None
 
         if self.logging:
 
@@ -294,22 +293,77 @@ class ValidationEngine:
             cls = COLUMN_CLASS_MAP[col_type]
             if col_type == "categorical":
                 accepted = spec.get("accepted_responses", [])
-                validator = cls(accepted_responses=accepted,
-                required=spec.get("required", False), 
-                row_numbers = df[f"row_number_{sheet_name}"])
-            elif col_type == "fileSpecificCategorical":
-                accepted = spec.get("accepted_responses",[])
-                validator = cls(accepted_responses = accepted, 
-                required = spec.get("required", False),
-                file = self.file.split("|")[0],
-                row_numbers = df[f"row_number_{sheet_name}"]
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
                 )
+
+            elif col_type == "multiCategorical":
+                accepted = spec.get("accepted_responses", [])
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+                
+                # Case 1: this multiCategorical maps to multiple raw columns
+                if "columns" in spec:
+                    source_cols = spec["columns"]
+
+                    # Validate presence but do NOT skip the whole group
+                    missing = [c for c in source_cols if c not in df.columns]
+                    present = [c for c in source_cols if c in df.columns]
+
+                    if missing:
+                        print(
+                            f"Warning: missing columns for '{col}': {missing}. "
+                            f"Processing will continue using the present columns: {present}."
+                        )
+
+                    # If NO columns are present at all → skip
+                    if not present:
+                        print(f"Skipping '{col}' because none of the expected columns exist.")
+                        continue
+
+
+                    # Combine values in multicategorical cols (row-wise) into a single Series
+                    df[col] = (
+                        df[present]
+                        .astype("string")
+                        .apply(lambda row: ",".join(
+                            [v for v in row if pd.notna(v) and str(v).strip() != ""]
+                        ), axis=1)
+                    )
+
+                    # Case 2: normal (single-column) multiCategorical -> simply proceed.
+                
+
+
+            elif col_type == "fileSpecificCategorical":
+                accepted = spec.get("accepted_responses", [])
+                validator = cls(
+                    accepted_responses=accepted,
+                    required=spec.get("required", False),
+                    file=self.file.split("|")[0],
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
             elif col_type == "hourlyWage":
                 max_wage = spec.get("max_wage", 45)
                 min_wage = spec.get("min_wage", 0)
-                validator = cls(max_wage=max_wage, min_wage=min_wage, required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
+                validator = cls(
+                    max_wage=max_wage,
+                    min_wage=min_wage,
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
+
             else:
-                validator = cls(required=spec.get("required", False), row_numbers = df[f"row_number_{sheet_name}"])
+                validator = cls(
+                    required=spec.get("required", False),
+                    row_numbers=df[f"row_number_{sheet_name}"]
+                )
 
             raw = df[col]
             s_norm = validator.normalize(raw)
@@ -327,6 +381,47 @@ class ValidationEngine:
 
             normalized_cols[col] = raw
             normalized_cols[f"{col}_normalized"] = s_fmt
+
+            # --- MultiCategorical: add indicator columns ---
+            if col_type == "multiCategorical":
+                s_ohe = validator.indicators(s_fmt)
+                num_indicators = s_ohe.shape[1]
+                num_accepted_values = len(validator.canonicals)
+
+                # sanity check
+                if num_indicators != num_accepted_values:
+                    warnings.warn(
+                        f"Number of indicator columns ({num_indicators}) does not match "
+                        f"number of accepted values ({num_accepted_values}) for column "
+                        f"'{col}' in sheet '{sheet_name}'."
+                    )
+
+                # --- MultiCategorical: add or merge indicator columns ---
+                for i, ohe_col in enumerate(s_ohe.columns):
+
+                    new_vals = s_ohe.iloc[:, i].astype("Int64")
+
+                    if ohe_col in normalized_cols:
+                        existing = normalized_cols[ohe_col].astype("Int64")
+
+                        def merge_vals(a, b):
+                            a_is_1 = pd.notna(a) and int(a) == 1
+                            b_is_1 = pd.notna(b) and int(b) == 1
+
+                            if a_is_1 or b_is_1:
+                                return 1
+
+                            # prefer non-missing value
+                            if pd.notna(a):
+                                return a
+                            return b  # may be NA
+
+                        merged = existing.combine(new_vals, merge_vals)
+                        normalized_cols[ohe_col] = merged.astype("Int64")
+
+                    else:
+
+                        normalized_cols[ohe_col] = new_vals.astype("Int64")
 
         normalized_df = pd.DataFrame(normalized_cols, index=df.index)
 
@@ -366,7 +461,6 @@ class ValidationEngine:
             errors_df = errors_df[~errors_df["row_number"].isin(dropped_row_numbers)]
 
         self._validated = True
-
         return normalized_df, errors_df
     
     def _set_org(self): 
@@ -666,7 +760,7 @@ class ValidationEngine:
             identity_sheet = sheet_name
             id_df = self.normalized_data.get(identity_sheet)
             id_df["id_key"] = (id_df["First Name"].fillna("") + "|" + id_df["Last Name"].fillna(""))
-            
+             
             raw_data = dfs_by_sheet.get(identity_sheet)
             if raw_data is None:
                 raise KeyError(f"Identity sheet '{identity_sheet}' not found")
@@ -708,14 +802,11 @@ class ValidationEngine:
                 df = df[~df["id_key"].isin(all_dup_keys)].copy()
             cleaned_dfs.append((sheet_name, df))
 
-        
-
         # --- Step 3: do matching/missing/extra on the cleaned data ---
         base_name, base_df = cleaned_dfs[0]
         base_df = base_df.rename(columns=lambda c: f"{c}_|_|_{base_name}" if c != "id_key" else c)
 
         merged = base_df.copy()
-        _, returnable_data = cleaned_dfs[0]
 
         for sheet_name, df in cleaned_dfs[1:]:
             if "id_key" not in df.columns:
@@ -732,18 +823,11 @@ class ValidationEngine:
             if extra_in_sheet:
                 record_mismatches(extra_in_sheet, self.org, self.quarter, sheet_name, "extra_in_sheet")
 
-            dedup_cols = ["First Name", "First Name_normalized", "Last Name", "Last Name_normalized", "source_file"]
-            mask = df.columns.isin(dedup_cols)
-        
-            df = df.loc[:, ~mask].copy()
-
-            returnable_data = returnable_data.merge(df, on="id_key", how="inner")
-
             df = df.rename(columns=lambda c: f"{c}_|_|_{sheet_name}" if c != "id_key" else c)
 
             ### inner merge is catching any stray single participant entries and removing from the dataset that will be processed
             merged = merged.merge(df, on="id_key", how="inner", suffixes=("", f"_|_|_{sheet_name}"))
-            
+
         
         DELIM = "_|_|_"
 
@@ -791,31 +875,13 @@ class ValidationEngine:
 
         normalized_combined = merged
 
+        dedup_cols = ["id_key", "First Name", "Last Name", "source_file"]
+        mask = normalized_combined.columns.duplicated() & normalized_combined.columns.isin(dedup_cols)
+        normalized_combined = normalized_combined.loc[:, ~mask]
+
         normalized_combined["org"] = self.org
         normalized_combined["period"] = self.quarter
-
-        returnable_data["org"] = self.org
-        returnable_data["period"] = self.quarter
-
-        mask = returnable_data.columns 
-
-        returnable_data = returnable_data.loc[
-            :, returnable_data.columns.str.contains("normalized")
-        ]
-
-        returnable_data.columns = (
-            returnable_data.columns.astype(str)
-            .str.replace("_normalized", "", regex=False)
-        )
-
-        returnable_data["org"] = self.org
-        returnable_data["period"] = self.quarter
-
         self.single_sheet = normalized_combined
-
-
-
-        self.returnable_data = returnable_data
 
         if self.logging:
 
@@ -917,7 +983,7 @@ class ValidationEngine:
                         sheet_name=identity_sheet,
                         quarter=self.quarter
                     )
-                    
+
                 self.db_logger.flush_participant_presence()
 
         if self.mismatches:
@@ -1013,9 +1079,6 @@ class ValidationEngine:
 
             self.db_logger.complete_run(self.run_id)
 
-                ## remove sheet name delimiter before passing back 
-
-
     def _apply_cross_rules(self, workbook_type, workbook_format, file=None, row_offset=1):
         
         """
@@ -1079,8 +1142,13 @@ class ValidationEngine:
 
             violations = engine.run_all_rules(ruleset)
 
+
             if violations is not None and not violations.empty:
-                violations["severity"] = "Cross" # label violation as Cross
+                if label == "Helper Rules": 
+                    for column in violations["column"].unique(): # iterate through each unique rule in the violations DataFrame
+                        violations.loc[violations["column"] == column, "severity"] = f"Helper:{column}" # label violation as Helper
+                else:
+                    violations["severity"] = "Cross" # label violation as Cross
                 all_violations.append(violations)
 
         # 3️⃣ Combine all violation DataFrames

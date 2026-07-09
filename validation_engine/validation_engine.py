@@ -307,6 +307,37 @@ class ValidationEngine:
                     row_numbers=df[f"row_number_{sheet_name}"]
                 )
 
+                # If this multiCategorical column maps to multiple raw columns
+                if "columns" in spec:
+                    source_cols = spec["columns"]
+
+                    # Validate presence but do NOT skip the whole group
+                    missing = [c for c in source_cols if c not in df.columns]
+                    present = [c for c in source_cols if c in df.columns]
+
+                    if missing:
+                        print(
+                            f"Warning: missing columns for '{col}': {missing}. "
+                            f"Processing will continue using the present columns: {present}."
+                        )
+
+                    # If NO columns are present at all → skip
+                    if not present:
+                        print(f"Skipping '{col}' because none of the expected columns exist.")
+                        continue
+
+
+                    # Combine values in multicategorical cols (row-wise) into a single Series
+                    df[col] = (
+                        df[present]
+                        .astype("string")
+                        .apply(lambda row: ",".join(
+                            [v for v in row if pd.notna(v) and str(v).strip() != ""]
+                        ), axis=1)
+                    )
+
+                    # Case 2: normal (single-column) multiCategorical -> simply proceed.
+
             elif col_type == "fileSpecificCategorical":
                 accepted = spec.get("accepted_responses", [])
                 validator = cls(
@@ -363,9 +394,32 @@ class ValidationEngine:
                         f"'{col}' in sheet '{sheet_name}'."
                     )
 
-                # add each OHE column
+                 # --- MultiCategorical: add or merge indicator columns ---
                 for i, ohe_col in enumerate(s_ohe.columns):
-                    normalized_cols[f"{ohe_col}"] = s_ohe.iloc[:, i]
+
+                    new_vals = s_ohe.iloc[:, i].astype("Int64")
+
+                    if ohe_col in normalized_cols:
+                        existing = normalized_cols[ohe_col].astype("Int64")
+
+                        def merge_vals(a, b):
+                            a_is_1 = pd.notna(a) and int(a) == 1
+                            b_is_1 = pd.notna(b) and int(b) == 1
+
+                            if a_is_1 or b_is_1:
+                                return 1
+
+                            # prefer non-missing value
+                            if pd.notna(a):
+                                return a
+                            return b  # may be NA
+
+                        merged = existing.combine(new_vals, merge_vals)
+                        normalized_cols[ohe_col] = merged.astype("Int64")
+
+                    else:
+
+                        normalized_cols[ohe_col] = new_vals.astype("Int64")
 
         normalized_df = pd.DataFrame(normalized_cols, index=df.index)
 

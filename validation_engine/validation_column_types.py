@@ -154,54 +154,70 @@ class BaseColumn:
 
 class multiCategoricalColumn(BaseColumn):
     """
-    Validator for multi-select categorical fields (e.g., Race/Ethnicity).
+    Multi-select categorical validator.
 
-    Improvements over baseline:
-      • Vectorized one‑hot via str.get_dummies(sep=';')
-      • Token-level fuzzy cache to avoid repeated RapidFuzz calls
+    This class normalizes cells that may contain one or many categorical
+    values (e.g., "Black, Hispanic") and maps each token to one of several
+    canonical labels using:
+        • exact matching
+        • optional fuzzy matching (RapidFuzz)
+        • protected phrase overrides
 
-    New built-in conveniences:
-      • normalize_to_indicators(...) -> DataFrame of binary columns
-      • to_indicators(...) -> participant_id + binary columns
-      • to_sql_indicators(...) -> write one-hot to SQL directly
+    The normalized output is a semicolon‑delimited string of every matched
+    canonical category (e.g., "Race, Black;Ethnicity, Hispanic").
 
-    New behavior:
-      • If multi_label is set (e.g., "Multi-Racial"), normalized cells with
-        more than one canonical selection are collapsed to that single label.
+    No collapsing to a “Multi‑Racial” meta‑label is performed.
+
+    Indicator (one‑hot) columns can be generated via `.indicators()`.
+
+    -----------------------------------------------------------------------
+    Example
+    -----------------------------------------------------------------------
+    accepted = {
+        "Race, Black": ["Black", "African American"],
+        "Race, White": ["White"],
+        "Ethnicity, Hispanic": ["Hispanic", "Latino"]
+    }
+
+    col = multiCategoricalColumn(accepted_responses=accepted)
+
+    Raw cell:              "Black, Latino"
+    Normalized:            "Race, Black;Ethnicity, Hispanic"
+    One‑hot indicators:    race_black = 1
+                           race_white = 0
+                           ethnicity_hispanic = 1
+    -----------------------------------------------------------------------
     """
 
-    name: str = "multiCategorical"
-
-    def __init__(self,
-                 accepted_responses,
-                 required: bool = False,
-                 fuzzy: bool = True,
-                 min_score: int = 90,
-                 delimiters: str = r",",
-                 row_numbers=None,
-                 protected_phrases: list[str] | None = None,
-                 multi_label: str | None = "Multi-Racial",
-                 unknown_label: str | None = "Unknown"):  # <-- todo: make multi_label default more flexible or optional. Ex: Make default Unknown only IF required = False, otherwise default should be pd.NA for required col logic
+    def __init__(
+        self,
+        accepted_responses,
+        required: bool = False,
+        fuzzy: bool = True,
+        min_score: int = 90,
+        delimiters: str = r",",
+        row_numbers=None,
+        protected_phrases: list[str] | None = None,
+        unknown_label: str | None = "Unknown"
+    ):
         self.required = required
         self.fuzzy = fuzzy
         self.min_score = min_score
+        self.row_numbers = row_numbers
+        self.unknown_label = unknown_label
         self._splitter = re.compile(delimiters)
         self._whitespace = re.compile(r"\s+")
-        self.row_numbers = row_numbers
-        self.multi_label = multi_label  # <-- todo: see above comment
-        self.unknown_label = unknown_label # todo: add this default to blank cells ONLY if the col is not marked as required. 
 
-        # Build normalized variant → canonical lookup and canonical set
-        self.accepted: dict[str, str] = {}
-        self.canonicals: set[str] = set()
+        # Canonical → accepted variant lookup
+        self.accepted = {}
+        self.canonicals = set()
 
-        
-        if self.unknown_label:
-            # ensure Unknown is a canonical option too
-            self.canonicals.add(self.unknown_label)
-            self.accepted[self._clean(self.unknown_label)] = self.unknown_label
+        # Add Unknown if allowed
+        if unknown_label:
+            self.canonicals.add(unknown_label)
+            self.accepted[self._clean(unknown_label)] = unknown_label
 
-
+        # Build canonical lookup table
         if isinstance(accepted_responses, dict):
             for canonical, variants in accepted_responses.items():
                 self.canonicals.add(canonical)
@@ -212,42 +228,39 @@ class multiCategoricalColumn(BaseColumn):
                 self.canonicals.add(r)
                 self.accepted[self._clean(r)] = r
 
-        # Ensure the multi_label itself is part of the canonical set so
-        # indicators include a column for it even if no variants are provided.
-        if self.multi_label:
-            self.canonicals.add(self.multi_label)
-            self.accepted[self._clean(self.multi_label)] = self.multi_label
-
-        # Cache keys for fuzzy
+        # Fuzzy matching keys
         self._keys = list(self.accepted.keys())
 
-        # Optional protected phrases handled pre-split
-        self.protected_phrases = set()
-        if protected_phrases:
-            self.protected_phrases = {self._clean(p) for p in protected_phrases}
+        # Protected phrases
+        self.protected_phrases = (
+            {self._clean(p) for p in protected_phrases}
+            if protected_phrases else set()
+        )
 
-        # Fuzzy cache: cleaned token -> canonical or None
-        self._fuzzy_cache: dict[str, str | None] = {}
+        # Cache for fuzzy matches (big speed boost)
+        self._fuzzy_cache = {}
 
-    # --- internals ------------------------------------------------------------
-
+    # ------------------------------------------------------------------
+    # Cleaning helpers
+    # ------------------------------------------------------------------
     def _clean(self, text: str) -> str:
+        """Normalize tokens for comparison."""
         if text is None or pd.isna(text):
             return ""
         if re.fullmatch(r"0+", str(text)):
             return ""
         return self._whitespace.sub(" ", str(text)).strip().casefold()
 
-    def _protected_hits(self, cleaned_cell: str) -> set[str]:
-        hits = set()
-        for phrase in self.protected_phrases:
-            if phrase and phrase in cleaned_cell:
-                canon = self.accepted.get(phrase)
-                if canon:
-                    hits.add(canon)
-        return hits
+    def _protected_hits(self, cleaned_cell: str) -> list[str]:
+        """Return canonicals triggered by protected phrases."""
+        return [
+            self.accepted[p]
+            for p in self.protected_phrases
+            if p and p in cleaned_cell and p in self.accepted
+        ]
 
     def _fuzzy_resolve(self, key: str) -> str | None:
+        """Fuzzy match token → canonical."""
         if key in self._fuzzy_cache:
             return self._fuzzy_cache[key]
         match = process.extractOne(key, self._keys, scorer=fuzz.token_sort_ratio)
@@ -255,119 +268,100 @@ class multiCategoricalColumn(BaseColumn):
             canon = self.accepted.get(match[0])
         else:
             canon = None
+            print(f"Warning: '{key}' not found in accepted responses. Recommendation: add value to the accepted_responses under the appropriate canonical value")
         self._fuzzy_cache[key] = canon
         return canon
 
-    # --- normalize ------------------------------------------------------------
-
+    # ------------------------------------------------------------------
+    # Normalization
+    # ------------------------------------------------------------------
     def normalize(self, s: pd.Series) -> pd.Series:
         """
-        Normalize a multi-select categorical column.
-
-        Returns:
-          • a single canonical (e.g., "Black"), or
-          • the multi_label (e.g., "Multi-Racial") if >1 canonicals found, or
-          • pd.NA if nothing valid was found.
+        Normalize each cell and return all matched canonical categories
+        separated by semicolons.
         """
         s = self.base_clean(s).astype("string").str.strip()
 
-        def norm_cell(val: str):
-            # if pd.isna(val) or val == "":
-            #     return pd.NA
+        def normalize_cell(val: str):
             if pd.isna(val) or val == "":
-                if not self.required and self.unknown_label:
-                    return self.unknown_label
-                return pd.NA
+                return self.unknown_label if (not self.required and self.unknown_label) else pd.NA
 
+            found = []
 
-            cleaned_cell = self._clean(val)
-            found: list[str] = []
+            cleaned = self._clean(val)
 
-            # 1) Protected phrases before splitting (optional)
-            if self.protected_phrases:
-                found.extend(self._protected_hits(cleaned_cell))
+            # Protected phrases first
+            found.extend(self._protected_hits(cleaned))
 
-            # 2) Split tokens
+            # Split user input into tokens
             tokens = [t.strip() for t in self._splitter.split(val) if t.strip()]
 
-            for tok in tokens:
-                key = self._clean(tok)
+            for token in tokens:
+                key = self._clean(token)
+
                 if not key:
                     continue
 
-                # exact
                 canon = self.accepted.get(key)
-
-                # fuzzy fallback (if enabled)
                 if canon is None and self.fuzzy:
                     canon = self._fuzzy_resolve(key)
 
                 if canon:
                     found.append(canon)
 
-            # Dedup preserving order
+            # de-duplicate while preserving order
             seen = set()
             unique = [c for c in found if not (c in seen or seen.add(c))]
 
-            if not unique:
-                return pd.NA
-            if self.multi_label and len(unique) > 1:
-                # Collapse any multi-selection to the aggregate label
-                return self.multi_label
-            # Single canonical selection
-            return unique[0]
+            return ";".join(unique) if unique else pd.NA
 
-        return s.map(norm_cell)
+        return s.map(normalize_cell)
 
+        
     # --- format ---------------------------------------------------------------
-
     def format(self, s_norm: pd.Series) -> pd.Series:
-        # Now simply returns a single label (or Multi-Racial) per cell
+        """Normalized values already final."""
         return s_norm
 
-    # --- indicator expansion --------------------------------------------------
 
-    def indicators(self, s_fmt: pd.Series, dtype: str = "Int64") -> pd.DataFrame:
+    # ------------------------------------------------------------------
+    # One-hot encoding
+    # ------------------------------------------------------------------
+    def indicators(self, s_norm: pd.Series, dtype: str = "Int64") -> pd.DataFrame:
         """
-        Create a one‑hot DataFrame with one column per canonical.
-
-        Because normalize() collapses multi-selections to `multi_label`,
-        vectorized get_dummies produces 1-of-N indicators.
+        Expand normalized multi-select values into one-hot indicator columns.
         """
-        prefix = s_fmt.name
-        dummies = s_fmt.fillna("").str.get_dummies(sep=";").astype(dtype)
+        dummies = s_norm.fillna("").str.get_dummies(sep=";").astype(dtype)
 
-        # Ensure all canonicals (including multi_label) are present
-        canon_sorted = sorted(self.canonicals)
-        indicators = dummies.reindex(columns=canon_sorted, fill_value=0)
-        indicators.columns = [f"{prefix}_{c}" for c in canon_sorted]
-        return indicators
-    
-    # --- errors ---------------------------------------------------------------
+        # Ensure all canonical columns appear
+        all_cols = sorted(self.canonicals)
+        dummies = dummies.reindex(columns=all_cols, fill_value=0)
 
+        dummies.columns = [f"{c}" for c in all_cols]
+        return dummies
+
+    # ------------------------------------------------------------------
+    # Error reporting
+    # ------------------------------------------------------------------
     def errors_df(self, col: str, raw: pd.Series, s_norm: pd.Series,
                   file=None, sheet=None, row_offset: int = 1) -> pd.DataFrame:
-
+        """Standardized error reporting."""
         masks = {
-            "Required but missing": (
-                s_norm.isna() if self.required else pd.Series(False, index=s_norm.index)
-            ),
-            "Invalid Value, not in accepted responses": (
-                raw.notna() & s_norm.isna()
-            ),
+            "Required but missing": s_norm.isna() if self.required else pd.Series(False, index=s_norm.index),
+            "Invalid Value, not in accepted responses": raw.notna() & s_norm.isna(),
         }
 
         frames = []
         for rule, mask in masks.items():
-            idx = raw.index[mask.fillna(False)]
-            if len(idx) == 0:
+            idx = mask[mask].index
+            if not len(idx):
                 continue
+
             frames.append(pd.DataFrame({
                 "file": file,
                 "sheet": sheet,
                 "row_number": (
-                    self.row_numbers.loc[idx].values
-                    if self.row_numbers is not None
+                    self.row_numbers.loc[idx].values if self.row_numbers is not None
                     else idx.to_series().add(row_offset).values
                 ),
                 "column": col,
@@ -377,7 +371,7 @@ class multiCategoricalColumn(BaseColumn):
             }, index=idx))
 
         return pd.concat(frames) if frames else pd.DataFrame(
-            columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
+            columns=["file", "sheet", "row_number", "column", "rule", "raw_value", "normalized"]
         )
     
 class categoricalColumn(BaseColumn):

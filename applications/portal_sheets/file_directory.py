@@ -78,42 +78,14 @@ from config import FILE_DIRECTORY_ROOT
 
 # Auto-generated results module
 file_directory = {
-  None: {
+  "FutureFit": {
     "portal data": {
-      "PY2 Q2":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY2 Q3":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },  
-      "PY2 Q4":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q1":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q2":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q3":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
       "PY3 Q4":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
           "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
           "format": "simple format"
       },
-      "PY4 Q1":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY4 Q2":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
+      "PY4 Q3":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
+          "file path": FILE_DIRECTORY_ROOT / "Portal" / "portal_report.xlsx",
           "format": "simple format"
       }
     }

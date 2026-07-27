@@ -15,16 +15,16 @@ workbook_definitions = workbook_definitions
 # Containers for results
 
 LOGGING = True
-LOG_DESCRIPTION = " 6/23 - Mark Check in "
+LOG_DESCRIPTION = " 7/13 - EWIB submisison check"
 cross_rules = [
     ("Conditionally Required", CONDITIONALLY_REQUIRED_RULES),
     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 ]
 
-TARGET_ORGS = ["TWP"]
+TARGET_ORGS = None
 TARGET_PERIODS = ["PY4 Q4"]
 
-ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
+ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3","PY4 Q4"]
 
 periods_to_run = TARGET_PERIODS if TARGET_PERIODS else ALL_PERIODS
 
@@ -125,7 +125,7 @@ for target_period in periods_to_run:                      #, "PY2 Q3", "PY2 Q4",
             multi_sheet_mode= multi_sheet_mode
         )
 
-        loader.preprocess_excel()
+        # loader.preprocess_excel()
         dfs_by_sheet = loader.load_sheets()
         engine = ValidationEngine(workbook_definitions, cross_rules= cross_rules, logging = LOGGING, log_description = LOG_DESCRIPTION)
         

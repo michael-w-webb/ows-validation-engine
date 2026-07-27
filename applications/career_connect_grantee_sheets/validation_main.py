@@ -92,10 +92,10 @@ cross_rules = [
 
 GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "5/4 Testing"
+LOG_DESCRIPTION = "Regenerating All Data" 
 
-TARGET_ORGS = "Charter Oak State College Foundation"
-TARGET_PERIODS = ["PY4 Q2"]
+TARGET_ORGS = None
+TARGET_PERIODS = None
 
 ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
 
@@ -242,7 +242,7 @@ def run_validation():
                     keycreator=sheetlink_keycreator,
                     multi_sheet_mode=multi_sheet_mode
                 )
-                loader.preprocess_all()
+                #loader.preprocess_all()
                 dfs_by_sheet = loader.load_all()  # dict[sheet_name] = combined_df
 
             else:
@@ -256,7 +256,7 @@ def run_validation():
                     keycreator=sheetlink_keycreator,
                     multi_sheet_mode=multi_sheet_mode
                 )
-                loader.preprocess_excel()
+                #loader.preprocess_excel()
                 dfs_by_sheet = loader.load_sheets()
 
             print(f"{org} {file_type} - Finishing File Load @ {datetime.now()}")

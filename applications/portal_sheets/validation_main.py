@@ -62,12 +62,12 @@ from applications.portal_sheets.cross_rule_sets import CONNECTED_PRESENCE_RULES,
 #     ]
 
 GRAB_LATEST = True
-LOGGING = True
-LOG_DESCRIPTION = "Testing Multicategorical Column"
+LOGGING = False
+LOG_DESCRIPTION = "Running Recent Portal Data"
 
 # TARGET_ORGS = ["Charter Oak State College Foundation"]
 TARGET_ORGS = None
-TARGET_PERIODS = ["PY4 Q2"]
+TARGET_PERIODS = ["PY4 Q3"]
 
 ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
 
@@ -287,7 +287,7 @@ for target_period in periods_to_run:
             mismatches["period"] = target_period
 
         all_mismatches.append(engine.mismatches)
-        all_normalized.append(engine.single_sheet)
+        all_normalized.append(engine.returnable_data)
         ##### End - Key Evaluation #####
 
     ###### Start - Print Out ###### 

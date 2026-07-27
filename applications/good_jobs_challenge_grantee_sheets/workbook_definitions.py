@@ -847,7 +847,8 @@ program_enrollment_accepted_responses_w_types = {
                 "strive connecticut - career resources, inc."
             ],
             "JobWorks": ["jobworks"],
-            "DCI Resources": ["dci resources"]
+            "DCI Resources": ["dci resources"],
+            "Oak Hill": ["oak hill"]
         },
         "EWIB_MFG": {
             "Bacon Academy": ["bacon academy"],
@@ -897,7 +898,9 @@ program_enrollment_accepted_responses_w_types = {
             "Tourtellotte Memorial High School": ["tourtellotte memorial high school"],
             "Woodstock Academy": ["woodstock academy"],
             "RHAM High School": ["rham high school", "RHAM"],
-            "Plainfield High School": ["plainfield high school"]
+            "Plainfield High School": ["plainfield high school"],
+            "Putnam High School": ["putnam high school"]
+
         },
         "GNHCC": {
             "Connecticut Center for Arts and Technology": [
@@ -1013,7 +1016,8 @@ program_enrollment_accepted_responses_w_types = {
             "Cloud Tech Specialist": ["cloud tech specialist"],
             "Cybersecurity Specialist": ["cybersecurity specialist"],
             "Full Stack Developer": ["full stack developer"],
-            "Help Desk Analyst": ["help desk analyst"]
+            "Help Desk Analyst": ["help desk analyst"],
+            "On-the-job Training": ["on-the-job training"]
         },
         "EWIB_MFG": {
             "YMPI": ["ympi"],
@@ -1060,7 +1064,8 @@ program_enrollment_accepted_responses_w_types = {
                                      "cna training program (8 week)",
                                      "cna training program (11 week)",
                                      "certified nursing assistant course (8 week)",
-                                     "certified nursing assistant course"],
+                                     "certified nursing assistant course",
+                                     "certified nursing assistant Course (full time)"]
         },
         "TWP": {
             "Generative AI": ["generative ai"],
@@ -1992,14 +1997,14 @@ employment_accepted_responses_w_types = {
         "type": "identifier",
         "accepted_responses": []
     },
-    "Training Provider": {
-        "type": "identifier",
-        "accepted_responses": []
-    },
-    "Training Program": {
-        "type": "identifier",
-        "accepted_responses": []
-    },
+    # "Training Provider": {
+    #     "type": "identifier",
+    #     "accepted_responses": []
+    # },
+    # "Training Program": {
+    #     "type": "identifier",
+    #     "accepted_responses": []
+    # },
     "School Status at Exit": {
         "type": "categorical",
         "accepted_responses": [

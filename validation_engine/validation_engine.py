@@ -801,7 +801,6 @@ class ValidationEngine:
         #                 suffixes=("", f"_{sheet_name}")
         #             )
 
-        print(f"{self.org} {workbook_type} - Starting Logging @ {datetime.now()}")
 
         normalized_combined = merged
 
@@ -826,6 +825,9 @@ class ValidationEngine:
         self.returnable_data = returnable_data
 
         if self.logging:
+
+            print(f"{self.org} {workbook_type} - Starting Logging @ {datetime.now()}")
+
 
             for kc, colname in keycreators:
                 self.single_sheet[colname] = self.single_sheet.apply(kc.create_key_from_row, axis=1)

@@ -17,7 +17,7 @@ cross_rules = []
 #     ("Conditionally Required by Date", CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES)
 # ]
 
-for target_period in ["PY4 Q3"]:
+for target_period in ["PY4 Q4"]:
                       #, "PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1"]:   ### specify period for file selection here. Could be adjusted to loop through all periods if desired.
 
     all_normalized = []
@@ -144,7 +144,7 @@ for target_period in ["PY4 Q3"]:
             mismatches["period"] = period
 
         all_mismatches.append(engine.mismatches)
-        all_normalized.append(engine.single_sheet)
+        all_normalized.append(engine.returnable_data)
 
 
     # --- Combine everything ---

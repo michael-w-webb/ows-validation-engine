@@ -38,6 +38,10 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q3" / "NRWIB_HC_TPI_03-31-26_final.xlsm",
             "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q4" / "NRWIB_HC_TPI_06-30-26.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -73,8 +77,8 @@ file_directory = {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q2" / "NRWIB_HC_SSI_ 12_31_25_final.xlsm",
             "format": "standard"
         },
-        "PY4 Q3":{
-            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q3" / "NRWIB_MFG_TPI_03-31-26_final.xlsm",
+        "PY4 Q4":{
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q4" / "NRWIB_HC_SSI_ 06-30-26.xlsm",
             "format": "standard"
         }
     }
@@ -122,6 +126,10 @@ file_directory = {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q3" / "NRWIB_MFG_TPI_03-31-26_final.xlsm",
             "format": "standard"
         },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q4" / "NRWIB_MFG_TPI_06-30-26.xlsm",
+            "format": "standard"
+        },
     },
     "SSI": {
         "PY2 Q2": {
@@ -164,6 +172,10 @@ file_directory = {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q3" / "NRWIB_MFG_SSI_03_31_26_final.xlsm",
             "format": "standard"
         },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "NRWIB" / "PY4 Q3" / "NRWIB_MFG_SSI_06-30-26.xlsm",
+            "format": "standard"
+        }
     }
 },
     "EWIB_HC": {
@@ -206,6 +218,10 @@ file_directory = {
         },
         "PY4 Q3":{
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "EWIB" / "PY4 Q3" / "EWIB_HC_TPI_3-31-26.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q4":{
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "EWIB" / "PY4 Q4" / "EWIB_HC_TPI_6-30-26.xlsm",
             "format": "standard"
         }
     }
@@ -253,6 +269,11 @@ file_directory = {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "EWIB" / "PY4 Q3" / "EWIB_MAN_TPI_3-31-26.xlsm",
             "format": "standard"
         }
+        ,
+        "PY4 Q4":{
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "EWIB" / "PY4 Q4" / "EWIB_MAN_TPI_6-30-26.xlsm",
+            "format": "standard"
+        }
     }
 },
     "CWP": {
@@ -286,6 +307,10 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "CWP" / "PY4 Q3" / "2026-04-08_CWP_TPI.xlsm",
             "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "CWP" / "PY4 Q4" / "2026-07-01_CWP_TPI.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -312,6 +337,10 @@ file_directory = {
         },
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "CWP" / "PY4 Q3" / "2026-04-08_CWP_SSW.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "CWP" / "PY4 Q4" / "2026-07-01_CWP_SSW.xlsm",
             "format": "standard"
         }
     }},
@@ -389,6 +418,10 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "WA" / "PY4 Q3" / "2026-03-31_WA_TPI_Updated.xlsm",
             "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "WA" / "PY4 Q4" / "2026-03-31_WA_TPI_Updated (1).xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -414,6 +447,10 @@ file_directory = {
         },
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "WA" / "PY4 Q3" / "Copy of OWS SSPI Supportive Services Workbook for April 2026.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Workforce Development Boards (WDBs)" / "WA" / "PY4 Q4" / "Copy of OWS SSPI Supportive Services Workbook for July 2026.xlsm",
             "format": "standard"
         }
     }
@@ -448,6 +485,10 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "GNHCC" / "PY4 Q3" / "GNHCC_TPI_Updated March 2026 Submission.xlsm",
             "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "GNHCC" / "PY4 Q4" / "GNHCC_TPI_Updated June 2026 Submission.xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -473,6 +514,10 @@ file_directory = {
         },
         "PY4 Q3":{
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "GNHCC" / "PY4 Q3" / "GNHCC_TPI_Updated March 2026 Submission.xlsm",
+            "format": "standard"
+        },
+        "PY4 Q4":{
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "GNHCC" / "PY4 Q4" / "OWS SSPI Supportive Services Workbook June 2026.xlsm",
             "format": "standard"
         }
     }
@@ -503,6 +548,10 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "BRBC" / "PY4 Q3" / "2026-Mar_31_BRBC_OWS SSPI Training Provider Instrument - Q1 Submission.xlsm",
             "format": "standard"
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "BRBC" / "PY4 Q4" / "2026-Jun_30_BRBC_OWS SSPI Training Provider Instrument - Q2 Submission (1).xlsm",
+            "format": "standard"
         }
     },
     "SSI": {
@@ -529,7 +578,11 @@ file_directory = {
         "PY4 Q3": {
             "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "BRBC" / "PY4 Q3" / "2026_Mar_31_BRBC_OWS_SSPI Supportive Services Workbook.xlsm",
             "format": "standard"
-    }
+        },
+        "PY4 Q4": {
+            "file path": FILE_DIRECTORY_ROOT / "Good_Jobs_Challenge" / "Economic Development Organizations (EDOs)" / "BRBC" / "PY4 Q4" / "2026_June_30_BRBC_OWS_SSPI Supportive Services Workbook Q2 Submission.xlsm",
+            "format": "standard"
+        }
 }
 
 }

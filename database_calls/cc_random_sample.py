@@ -44,8 +44,8 @@ eligible_participants AS (
     INNER JOIN dataset_column dc
         ON cvh.column_id = dc.column_id
 
-    -- WHERE p.dataset_name = 'training data'
-    WHERE p.dataset_name = 'TPI'
+    WHERE p.dataset_name = 'training data'
+    -- WHERE p.dataset_name = 'TPI'
 
         -- Nonblank names
         AND pe.first_name IS NOT NULL
@@ -60,9 +60,9 @@ eligible_participants AS (
 
         AND DATE(cvh.value_normalized) >= DATE('2025-07-01')
 
-        -- Training filter
-        -- AND dc.column_name = 'Date Entered Training'
-        -- AND cvh.value_normalized IS NOT NULL
+        Training filter
+        AND dc.column_name = 'Date Entered Training'
+        AND cvh.value_normalized IS NOT NULL
 ),
 
 ranked_participants AS (
@@ -120,7 +120,7 @@ conn.close()
 
 # Create output directory if needed
 sample_dir = (
-    OUTPUT_DIRECTORY / "gjc_random_samples_3"
+    OUTPUT_DIRECTORY / "cc_random_samples_4"
 )
 
 sample_dir.mkdir(

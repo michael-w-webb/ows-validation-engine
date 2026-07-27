@@ -153,7 +153,7 @@ simple_format_portal_data_labels = {  "First Name": [
       "Zip/Postal Code"
     ],
     "Client Date of Birth": [
-      "Client_Date_Of_Birth_Modified" # Simple Excel macro combining DOB columns and reformatting to consistent date format.
+      "Date of birth (MM/DD/YYYY)" 
     ],
     # "If you are currently working, what is your hourly wage?": [ # How to handly multiple columns?
     #   "If you are currently working, what is your hourly wage?"

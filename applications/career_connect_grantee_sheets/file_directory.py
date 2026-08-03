@@ -119,68 +119,82 @@ file_directory = {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "Y4Q3" / "CareerConneCT Import 4.10.26 (3).xlsx",
         "format": "simple format",
         "starting row": 3
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "Y4Q4 FINAL" / "Marrakech CareerConneCT Deliverables 7.9.26 (3).xlsx",
+        "format": "simple format",
+        "starting row": 3
       }
     }
   },
   "Career Resources We Rise": {
     "training data": {
       "PY2 Q1": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q1" / "2023-10-10_CRI_WeRise_Participants.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY2 Q1" / "2023-10-10_CRI_WeRise_Participants.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q2": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q2" / "CRI. WE RISE. CareerConneCT Client Data Entry Spreadsheet Y2.Q2..xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY2 Q2" / "CRI. WE RISE. CareerConneCT Client Data Entry Spreadsheet Y2.Q2..xlsx",
         "format": "four sheet format"
       },
       "PY2 Q3": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q3" / "CRI. Y2. Q3. WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY2 Q3" / "CRI. Y2. Q3. WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY2 Q4": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY2 Q4" / "Y2 Q4 CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY2 Q4" / "Y2 Q4 CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },      
       "PY3 Q1": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3 Q1" / "CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY3 Q1" / "CRI WE RISE CareerConneCT Client Data Entry Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q2": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3Q2" / "Y3Q2 Staggered Spreadsheet CRI WR.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY3Q2" / "Y3Q2 Staggered Spreadsheet CRI WR.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q3": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3Q3" / "Y3Q3 Data Entry Spreadsheet CRI WR.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY3Q3" / "Y3Q3 Data Entry Spreadsheet CRI WR.xlsx",
         "format": "four sheet format"
       },
       "PY3 Q4": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "PY3Q4" / "Career_Resources_We_Rise_WERISE_Y3Q4__Data_Spreadsheet.xlsx",
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "PY3Q4" / "Career_Resources_We_Rise_WERISE_Y3Q4__Data_Spreadsheet.xlsx",
         "format": "four sheet format"
       },
       "PY4 Q1": {
         ## this is currently missing transfers, need to talk to Dave about how he formats these.  
-        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q1" / "Y4.Q1. CRI We Rise. Hartford Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q1" / "Y4.Q1. CRI We Rise. Waterbury Client Data Entry Sheetsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q1" / "Y4.Q1. CRI WR New Haven - Data Entry Spreadsheet Updated.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q1" / "Y4.Q1. CRI WR New London - Data Entry Spreadsheet Updated.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q1" / "Y4Q1. CRI We Rise. Bridgeport. Client Data Entry Spreadsheet.xlsm"],
+        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q1" / "Y4.Q1. CRI WeRise. Hartford Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q1" / "Y4.Q1. CRI WeRise. Waterbury Client Data Entry Sheetsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q1" / "Y4.Q1. CRI WR New Haven - Data Entry Spreadsheet Updated.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q1" / "Y4.Q1. CRI WR New London - Data Entry Spreadsheet Updated.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q1" / "Y4Q1. CRI WeRise. Bridgeport. Client Data Entry Spreadsheet.xlsm"],
         "format": "four sheet format"
       },
       "PY4 Q2": {
         ## this is currently missing transfers, need to talk to Dave about how he formats these.  
-        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. Bridgeport Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. Hartford Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. New Haven Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. New London Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q2" / "To OWS. Waterbury Client Data Entry Sheet.xlsm"],
+        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q2" / "To OWS. Bridgeport Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q2" / "To OWS. Hartford Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q2" / "To OWS. New Haven Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q2" / "To OWS. New London Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q2" / "To OWS. Waterbury Client Data Entry Sheet.xlsm"],
         "format": "four sheet format"
       },
       "PY4 Q3": {
         ## this is currently missing transfers, need to talk to Dave about how he formats these.  
-        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q3" / "4.15.26. Refinement. Bridgeport Client Data Entry Sheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q3" / "4.15.26. Refinement. Hartford Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q3" / "4.15.26. Refinement. New Haven Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q3" / "4.15.26. Adjust and Refinement. New London Client Data Entry Spreadsheet.xlsm",
-                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources We Rise" / "Y4Q3" / "4.15.26. Refinement. Waterbury Client Data Entry Sheet.xlsm"],
+        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q3" / "4.15.26. Refinement. Bridgeport Client Data Entry Sheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q3" / "4.15.26. Refinement. Hartford Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q3" / "4.15.26. Refinement. New Haven Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q3" / "4.15.26. Adjust and Refinement. New London Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q3" / "4.15.26. Refinement. Waterbury Client Data Entry Sheet.xlsm"],
+        "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        ## this is currently missing transfers, need to talk to Dave about how he formats these.  
+        "file path": [FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q4 FINAL" / "Close Out. Y4.Q4. Waterbury Client Data Entry Sheet 7.7.26.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q4 FINAL" / "Close Out. Y4.Q4. New London Client Data Entry Spreadsheet.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q4 FINAL" / "Close Out. Y4.Q4. Hartford Client Data Entry Spreadsheet 7.6.26.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q4 FINAL" / "Close Out. Y4.Q4. Bridgeport Client Data Entry Sheet 7.17.26.xlsm",
+                      FILE_DIRECTORY_ROOT / "Career Connect"  / "Career Resources WeRise" / "Y4Q4 FINAL" / "Close Out. Y4.Q4 New Haven Client Data Entry Spreadsheet.xlsm"],
         "format": "four sheet format"
       }
     }
@@ -274,6 +288,10 @@ file_directory = {
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y4Q3" / "PY4Q3 CWP CDL Data 20260410.xlsx",
         "format": "simple format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners CDL" / "Y4Q4 FINAL" / "PY4Q4 CWP CDL Data 20260707.xlsx",
+        "format": "simple format"
       }
     }
   },
@@ -321,6 +339,10 @@ file_directory = {
       },
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y4Q3" / "PY4Q3 CWP IT Data 20260410.xlsx",
+        "format": "simple format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Capital Workforce Partners" / "Capital Workforce Partners IT" / "Y4Q4 FINAL" / "PY4Q4 CWP IT Data 20260707.xlsx",
         "format": "simple format"
       }
     }
@@ -370,6 +392,10 @@ file_directory = {
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Eastern Workforce Investment Board" / "Y4Q3" / "EWIB - Data Entry Spreadsheet Updated (3).xlsm",
         "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Eastern Workforce Investment Board" / "Y4Q4 FINAL" / "EWIB - Data Entry Spreadsheet Updated (4).xlsm",
+        "format": "four sheet format"
       }
     }
   },
@@ -413,6 +439,10 @@ file_directory = {
       },
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Health CareeRx" / "Y4Q2" / "Y4Q2 - CareerConneCT Data Entry Spreadsheet (1).xlsx",
+        "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Health CareeRx" / "Y4Q4 FINAL" / "Y4Q4- CareerConneCT Data Entry Spreadsheet  (3).xlsx",
         "format": "four sheet format"
       }
     }
@@ -505,6 +535,10 @@ file_directory = {
       },
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y4Q3" / "CareerConneCT Staggered Data Entry Spreadsheet Charter Oak State College FoundationApril152026FINAL.xlsx",
+        "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Charter Oak State College Foundation" / "Y4Q4 FINAL" / "CareerConneCT Staggered Data Entry Spreadsheet Charter Oak State College FoundationJuly2026FINAL.xlsx",
         "format": "four sheet format"
       }
     }
@@ -690,6 +724,10 @@ file_directory = {
       },
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "ReadyCT" / "Y4Q3" / "ReadyCT - Student 5.0 SDE w Macros (04_15_2026) (1).xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "ReadyCT" / "Y4Q4 FINAL" / "ReadyCT - Student 5.0 SDE w Macros (07_30_2026) (2).xlsm",
         "format": "four sheet format"
       }
     }

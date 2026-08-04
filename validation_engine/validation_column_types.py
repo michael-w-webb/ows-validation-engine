@@ -2492,4 +2492,3 @@ class NAICSCodeColumn(BaseColumn):
         return pd.concat(frames) if frames else pd.DataFrame(
             columns=["file","sheet","row_number","column","rule","raw_value","normalized"]
         )
-

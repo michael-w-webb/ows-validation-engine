@@ -322,7 +322,7 @@ class ValidationDBLogger:
         return cur.fetchone()
 
     def insert_person(self, first, last, dob, zip_code,
-                    strict_key, med_name_dob_key, med_name_zip_key, weak_key):
+                    strict_key, med_name_dob_key, med_name_zip_key, weak_key, gender, race, ethnicity): 
 
         """
         Insert a new person record into the database.
@@ -348,6 +348,12 @@ class ValidationDBLogger:
             Medium identity hash (name + ZIP).
         weak_key : str
             Weak identity hash (name only).
+        gender : str
+            Gender
+        race : str
+            Race
+        ethnicity : str
+            Ethnicity
 
         Returns
         -------
@@ -368,15 +374,21 @@ class ValidationDBLogger:
                 id_key_medium_name_dob,
                 id_key_medium_name_zip,
                 id_key_weak_name,
+                gender,
+                race,
+                ethnicity,
                 created_timestamp, updated_timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
         """, (
             person_id,
             clean(first), clean(last), clean(dob), clean(zip_code),
             clean(strict_key),
             clean(med_name_dob_key),
             clean(med_name_zip_key),
-            clean(weak_key)
+            clean(weak_key),
+            clean(gender),
+            clean(race),
+            clean(ethnicity)
         ))
 
         self.conn.commit()
@@ -420,6 +432,9 @@ class ValidationDBLogger:
             med_dob,
             med_zip,
             weak,
+            row.get("Gender"),
+            row.get("Race"),
+            row.get("Ethnicity")
         ))
 
         # Register keys immediately for downstream rows
@@ -446,9 +461,12 @@ class ValidationDBLogger:
                 id_key_medium_name_dob,
                 id_key_medium_name_zip,
                 id_key_weak_name,
+                gender,
+                race,
+                ethnicity,
                 created_timestamp,
                 updated_timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
         """, [
             (
                 pid,
@@ -460,10 +478,13 @@ class ValidationDBLogger:
                 clean(med_dob),
                 clean(med_zip),
                 clean(weak),
+                clean(gender),
+                clean(race),
+                clean(ethnicity)
             )
             for (
                 pid, first, last, dob, zip,
-                strict, med_dob, med_zip, weak
+                strict, med_dob, med_zip, weak, gender, race, ethnicity 
             ) in self._new_people_buffer
         ])
 
@@ -581,6 +602,16 @@ class ValidationDBLogger:
             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         """, self._participant_presence_buffer)
             self.conn.commit()
+
+            self.conn.execute("SELECT 1").fetchone()
+
+            cursor = self.conn.execute("""
+                SELECT COUNT(*) 
+                FROM participant_presence_log 
+                WHERE run_id = ?
+            """, (self._participant_presence_buffer[0][0],))
+
+            print("Rows visible immediately after commit:", cursor.fetchone()[0])
         except Exception:
             self.conn.rollback()
             raise
@@ -840,4 +871,3 @@ class ValidationDBLogger:
             rows
         )
         self.conn.commit()
-

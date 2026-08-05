@@ -119,11 +119,6 @@ file_directory = {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "Y4Q3" / "CareerConneCT Import 4.10.26 (3).xlsx",
         "format": "simple format",
         "starting row": 3
-      },
-      "PY4 Q4": {
-        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "Y4Q4 FINAL" / "Marrakech CareerConneCT Deliverables 7.9.26 (3).xlsx",
-        "format": "simple format",
-        "starting row": 3
       }
     }
   },
@@ -492,6 +487,10 @@ file_directory = {
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Remote Works" / "Y4Q3" / "RemoteWorks CareerConneCT Staggered Data Entry Spreadsheet Y4 Q3.xlsm",
         "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "TWP Remote Works" / "Y4Q4 FINAL" / "RemoteWorks CareerConneCT Staggered Data Entry Spreadsheet Y4 Q4.xlsm",
+        "format": "four sheet format"
       }
     }
   },
@@ -632,6 +631,10 @@ file_directory = {
       "PY4 Q3": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Family Centers" / "Y4Q3" / "FC - Data Entry Spreadsheet.xlsm",
         "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Family Centers" / "Y4Q4 FINAL" / "FC - Data Entry Spreadsheet (June 2026).xlsm",
+        "format": "four sheet format"
       }
     }
   },
@@ -675,6 +678,14 @@ file_directory = {
       },
       "PY4 Q2": {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q2" / "Havenly - Data Entry Spreadsheet Y4Q2.xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q3": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q3" / "Havenly - Data Entry Spreadsheet Y4Q3.xlsm",
+        "format": "four sheet format"
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Havenly" / "Y4Q4 final" / "Havenly - Data Entry Spreadsheet Y4Q4.xlsm",
         "format": "four sheet format"
       }
 

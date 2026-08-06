@@ -119,6 +119,11 @@ file_directory = {
         "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "Y4Q3" / "CareerConneCT Import 4.10.26 (3).xlsx",
         "format": "simple format",
         "starting row": 3
+      },
+      "PY4 Q4": {
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect"  / "Marrakech" / "Y4Q4 FINAL" / "CareerConneCT Import 8.6.26.xlsx",
+        "format": "simple format",
+        "starting row": 3
       }
     }
   },

@@ -63,13 +63,13 @@ from applications.non_participant_level_data.cross_rule_sets import CONNECTED_PR
 
 GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "Testing NPLD"
+LOG_DESCRIPTION = "PY4 Q4 NPLD"
 
 # TARGET_ORGS = ["Charter Oak State College Foundation"]
 TARGET_ORGS = None
-TARGET_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2", "PY4 Q3"]
+TARGET_PERIODS = ["PY4 Q4"]
 
-ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
+ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3", "PY4 Q4"]
 
 periods_to_run = TARGET_PERIODS if TARGET_PERIODS else ALL_PERIODS
 

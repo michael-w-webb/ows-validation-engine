@@ -1,15 +1,7 @@
 import duckdb
 import os
 import sqlite3
-<<<<<<< HEAD:database/cc_db_to_parquet.py
 from config import DB_PATH, PROJECT_ROOT
-=======
-
-# ---------------------------------------------------------------------
-# 0. Define DB path (EDIT THIS!)
-# ---------------------------------------------------------------------
-DB_PATH = r"C:\Users\DalyRob\OneDrive - State of Connecticut\Documents\GitHub Repos\ows-validation-engine\validation_dev.db"
->>>>>>> daly:cc_db_to_parquet.py
 
 print("Working directory:", os.getcwd())
 print("DB exists:", os.path.exists(DB_PATH))
@@ -78,11 +70,7 @@ sqlite_tables = [
 ]
 
 # Output directory
-<<<<<<< HEAD:database/cc_db_to_parquet.py
 OUTPUT_DIR = PROJECT_ROOT / "database" / "cc_db_parquet_output"
-=======
-OUTPUT_DIR = r"C:\Users\DalyRob\State of Connecticut\OWS PII Storage - Documents\Career_ConneCT\.Programmatic_Data\Cleaned Programmatic Data\cc_db_parquet_output"
->>>>>>> daly:cc_db_to_parquet.py
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Export each table directly from sqlite_db.{table}

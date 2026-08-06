@@ -63,13 +63,13 @@ cross_rules = [
 
 GRAB_LATEST = True
 LOGGING = True
-LOG_DESCRIPTION = "5/5 PY4 Q3 Reporting"
+LOG_DESCRIPTION = "8/6 PY4 Q4 Reporting"
 
-# TARGET_ORGS = ["Charter Oak State College Foundation"]
+# TARGET_ORGS = ["Marrakech"]
 TARGET_ORGS = None
-TARGET_PERIODS = ["PY4 Q3"]
+TARGET_PERIODS = ["PY4 Q4"]
 
-ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3"]
+ALL_PERIODS = ["PY2 Q3", "PY2 Q4", "PY3 Q1", "PY3 Q2", "PY3 Q3", "PY3 Q4", "PY4 Q1","PY4 Q2","PY4 Q3","PY4 Q4"]
 
 periods_to_run = TARGET_PERIODS if TARGET_PERIODS else ALL_PERIODS
 

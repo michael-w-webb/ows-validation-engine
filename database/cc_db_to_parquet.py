@@ -33,12 +33,12 @@ con.execute(f"ATTACH '{DB_PATH}' AS sqlite_db (TYPE SQLITE);")
 
 print(con.sql("PRAGMA database_list").df())
 
-# Confirm attach
 db_list = con.sql("PRAGMA database_list").fetchall()
 print("Database list:", db_list)
 print(con.sql("SELECT * FROM sqlite_db.person LIMIT 5").df())
+
 # ---------------------------------------------------------------------
-# 4. Check tables visibile in DuckDB
+# 4. Check tables visible in DuckDB
 # ---------------------------------------------------------------------
 schemas = con.sql("SELECT schema_name FROM information_schema.schemata").fetchall()
 print("\nSchemas:", schemas)
@@ -48,14 +48,8 @@ all_tables = con.sql("""
     FROM information_schema.tables
     ORDER BY table_schema, table_name
 """).fetchall()
-print("All tables:", all_tables)
+print("\nAll tables:", all_tables)
 
-# Your already-working connection (must have sqlite_db attached)
-# con = duckdb.connect(':memory:')
-# con.execute("LOAD sqlite_scanner;")
-# con.execute("ATTACH 'validation_dev.db' AS sqlite_db (TYPE SQLITE);")
-
-# List of all known tables inside the SQLite DB
 sqlite_tables = [
     "person",
     "validation_run",
@@ -73,18 +67,69 @@ sqlite_tables = [
 OUTPUT_DIR = PROJECT_ROOT / "database" / "cc_db_parquet_output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Columns to remove from person
+PERSON_PII_COLUMNS = [
+    "first_name",
+    "last_name",
+    "id_key_strict_name_dob_zip",
+    "id_key_medium_name_dob",
+    "id_key_medium_name_zip",
+    "id_key_weak_name"
+]
+
+# Columns to remove from participant_key_mismatch
+PKM_DROP_COLUMNS = [
+    "id_key"
+]
+
 # Export each table directly from sqlite_db.{table}
 for t in sqlite_tables:
     outpath = os.path.join(OUTPUT_DIR, f"{t}.parquet")
     print(f"Exporting sqlite_db.{t} → {outpath}")
 
-    con.sql(f"""
-        COPY (
-            SELECT *
-            FROM sqlite_db.{t}
-        )
-        TO '{outpath}'
-        (FORMAT PARQUET);
-    """)
+    # --- PERSON special case (drop PII columns) ---
+    if t == "person":
+        col_list_sql = ", ".join([
+            f"{col}" 
+            for col in con.sql("PRAGMA table_info('sqlite_db.person')").df()["name"]
+            if col not in PERSON_PII_COLUMNS
+        ])
+
+        con.sql(f"""
+            COPY (
+                SELECT {col_list_sql}
+                FROM sqlite_db.person
+            )
+            TO '{outpath}'
+            (FORMAT PARQUET);
+        """)
+
+    # --- PARTICIPANT_KEY_MISMATCH special case (drop id_key) ---
+    elif t == "participant_key_mismatch":
+        col_list_sql = ", ".join([
+            f"{col}" 
+            for col in con.sql("PRAGMA table_info('sqlite_db.participant_key_mismatch')").df()["name"]
+            if col not in PKM_DROP_COLUMNS
+        ])
+
+        con.sql(f"""
+            COPY (
+                SELECT {col_list_sql}
+                FROM sqlite_db.participant_key_mismatch
+            )
+            TO '{outpath}'
+            (FORMAT PARQUET);
+        """)
+
+    # --- All other tables exported entirely ---
+    else:
+        con.sql(f"""
+            COPY (
+                SELECT *
+                FROM sqlite_db.{t}
+            )
+            TO '{outpath}'
+            (FORMAT PARQUET);
+        """)
 
 print("Done!")

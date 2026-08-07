@@ -3,6 +3,26 @@ import os
 import sqlite3
 from config import DB_PATH, PROJECT_ROOT
 
+# ---------------------------------------------------------------------
+# OPTION: Toggle PII removal for parquet export. PII cols listed below.
+# ---------------------------------------------------------------------
+REMOVE_PII = True   # set to False to export all columns exactly as in SQLite
+
+# Columns to remove from person
+PERSON_PII_COLUMNS = [
+    "first_name",
+    "last_name",
+    "id_key_strict_name_dob_zip",
+    "id_key_medium_name_dob",
+    "id_key_medium_name_zip",
+    "id_key_weak_name"
+]
+
+# Columns to remove from participant_key_mismatch
+PKM_DROP_COLUMNS = [
+    "id_key"
+]
+
 print("Working directory:", os.getcwd())
 print("DB exists:", os.path.exists(DB_PATH))
 
@@ -67,30 +87,34 @@ sqlite_tables = [
 OUTPUT_DIR = PROJECT_ROOT / "database" / "cc_db_parquet_output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Columns to remove from person
-PERSON_PII_COLUMNS = [
-    "first_name",
-    "last_name",
-    "id_key_strict_name_dob_zip",
-    "id_key_medium_name_dob",
-    "id_key_medium_name_zip",
-    "id_key_weak_name"
-]
 
-# Columns to remove from participant_key_mismatch
-PKM_DROP_COLUMNS = [
-    "id_key"
-]
-
-# Export each table directly from sqlite_db.{table}
+# ---------------------------------------------------------------------
+# Export loop
+# ---------------------------------------------------------------------
 for t in sqlite_tables:
     outpath = os.path.join(OUTPUT_DIR, f"{t}.parquet")
     print(f"Exporting sqlite_db.{t} → {outpath}")
 
-    # --- PERSON special case (drop PII columns) ---
+    # If PII removal is off, export whole table
+    if not REMOVE_PII:
+        con.sql(f"""
+            COPY (
+                SELECT *
+                FROM sqlite_db.{t}
+            )
+            TO '{outpath}'
+            (FORMAT PARQUET);
+        """)
+        continue
+
+    # -----------------------------------------------------------------
+    # If PII removal is ON, apply table-specific column filtering
+    # -----------------------------------------------------------------
+
+    # PERSON: Remove PII columns
     if t == "person":
         col_list_sql = ", ".join([
-            f"{col}" 
+            f"{col}"
             for col in con.sql("PRAGMA table_info('sqlite_db.person')").df()["name"]
             if col not in PERSON_PII_COLUMNS
         ])
@@ -104,10 +128,10 @@ for t in sqlite_tables:
             (FORMAT PARQUET);
         """)
 
-    # --- PARTICIPANT_KEY_MISMATCH special case (drop id_key) ---
+    # PARTICIPANT_KEY_MISMATCH: Remove id_key
     elif t == "participant_key_mismatch":
         col_list_sql = ", ".join([
-            f"{col}" 
+            f"{col}"
             for col in con.sql("PRAGMA table_info('sqlite_db.participant_key_mismatch')").df()["name"]
             if col not in PKM_DROP_COLUMNS
         ])
@@ -121,7 +145,7 @@ for t in sqlite_tables:
             (FORMAT PARQUET);
         """)
 
-    # --- All other tables exported entirely ---
+    # All others: export full table
     else:
         con.sql(f"""
             COPY (

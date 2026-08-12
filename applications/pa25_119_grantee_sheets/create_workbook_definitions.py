@@ -93,7 +93,7 @@ other_cols_of_interest = [
     "PIRL Category",
 ]
 
-DATA_PATH = r"C:\Users\DalyRob\State of Connecticut\OWS HQ - Documents\PA25-119\DataPrep\data_elements_by_program.xlsm"
+DATA_PATH = r"C:\Users\DalyRob\State of Connecticut\OWS HQ - Documents\Data\Documentation\PA25-119\Data Element Mapping\data_elements_by_program.xlsm"
 SHEET_NAME = "data_elements_by_program"
 
 OUTPUT_PY_PATH = PROJECT_ROOT / "applications" / "pa25_119_grantee_sheets"

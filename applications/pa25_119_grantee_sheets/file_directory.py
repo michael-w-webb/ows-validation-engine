@@ -1,5 +1,5 @@
 """
-portal_file_directory.py
+pa25_119_file_directory.py
 ====================
 
 Configuration module defining the directory structure, file paths, workbook
@@ -78,44 +78,28 @@ from config import FILE_DIRECTORY_ROOT
 
 # Auto-generated results module
 file_directory = {
-  None: {
-    "portal data": {
-      "PY2 Q2":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY2 Q3":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },  
-      "PY2 Q4":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q1":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q2":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q3":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY3 Q4":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY4 Q1":{ # Even though this data is from PY3 Q4, we are labeling it as PY4 Q1 b/c we have not done a pull since.
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29_Modified.xlsm",
-          "format": "simple format"
-      },
-      "PY4 Q2":{ # Removing the macro that auto-consolidates the DOB columns
-          "file path": FILE_DIRECTORY_ROOT / "Portal" / "CC_portal_data_6_29.xlsx",
-          "format": "simple format"
-      }
-    }
-  }    
+    'ACI Healthcare': {
+        "pa25_119 data": {
+            "PY4 Q2":{ 
+                "file path": FILE_DIRECTORY_ROOT / "PA25_119_Test" / "ACI Healthcare.xlsx",
+                "format": "simple format"
+            }
+        }
+    },
+    # 'ACI Manufacturing': {
+    #     "pa25_119 data": {
+    #         "PY4 Q2":{ 
+    #             "file path": FILE_DIRECTORY_ROOT / "PA25_119_Test" / "ACI Manufacturing.xlsx",
+    #             "format": "simple format"
+    #         }
+    #     }   
+    # },
+    # 'ACJ WIOA': {
+    #     "pa25_119 data": {
+    #         "PY4 Q2":{ 
+    #             "file path": FILE_DIRECTORY_ROOT / "PA25_119_Test" / "ACJ WIOA.xlsx",
+    #             "format": "simple format"
+    #         }
+    #     }
+    # }
 }

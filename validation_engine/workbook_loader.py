@@ -85,6 +85,8 @@ It is intentionally robust against inconsistent partner data submissions,
 permission locks, and malformed Excel headers.
 """
 
+from multiprocessing.util import debug
+
 import pandas as pd 
 import os
 import win32com.client as win32
@@ -96,6 +98,7 @@ import win32com.client
 
 from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
+from validation_engine.validation_column_concept_classes import concept_classes
 
 def ensure_unprotected_visible(excel, file_path, password="workforce"):
     """
@@ -184,7 +187,146 @@ def ensure_unprotected_visible(excel, file_path, password="workforce"):
             except Exception as e:
                 print(f"⚠️ Workbook did not close cleanly: {e}")
 
-def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int = 5, debug: bool = False):
+def warn_suffix_duplicates(raw_df, col_map, debug=False):
+    """
+    Warn the user if the Excel file contains multiple columns that appear to be
+    unintentional duplicates based on suffixes like '.1', '.2', '.3'**.
+
+    This helper does NOT modify header matching logic or consolidation behavior.
+    Its ONLY job is to notify the user that the input workbook may contain
+    unexpected duplicate columns.
+
+    Why this helper exists
+    -----------------------
+    Pandas automatically appends numeric suffixes such as '.1', '.2', '.3' when
+    an Excel file contains multiple columns with identical names. For example:
+
+        Excel headers:
+            "Date of Birth (MM/DD/YYYY)"
+            "Date of Birth (MM/DD/YYYY)"
+            "Date of Birth (MM/DD/YYYY)"
+
+        Pandas becomes:
+            "Date of Birth (MM/DD/YYYY)"
+            "Date of Birth (MM/DD/YYYY).1"
+            "Date of Birth (MM/DD/YYYY).2"
+
+    In many submissions, this indicates that the workbook definitions
+    should be updated to account for the suffixes in order to consolidate
+    or there are unintended duplicate columns.
+
+    This function alerts the user in these cases.
+
+    What counts as a suspicious duplicate?
+    --------------------------------------
+    A group of duplicate columns will trigger a **warning** when:
+
+        1. 2 or more raw columns differ ONLY by suffix ('.1', '.2', '.3'), AND
+        2. All of the full column names (including suffix) are **NOT** explicitly listed
+           as valid variants in `col_map`.
+
+    Otherwise:
+        - If duplicates ARE explicitly defined in col_map → no warning.
+        - If duplicates do not relate to any canonical variant → only debug log.
+
+    Examples
+    --------
+    Example 1: Suspicious duplicates (warning printed)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        col_map = {
+            "Client Date of Birth": [
+                "Date of Birth",
+                "Date Of Birth",
+                "Date of Birth (MM/DD/YYYY)"
+            ]
+        }
+
+        Excel file contains:
+            "Date of Birth (MM/DD/YYYY)"
+            "Date of Birth (MM/DD/YYYY).1"
+            "Date of Birth (MM/DD/YYYY).2"
+
+        None of the suffix variants ('.1', '.2') are defined in col_map,
+        therefore the user receives:
+
+            [WARN] Possible unintended duplicate columns detected for
+                   'date of birth (mm/dd/yyyy)': [...]
+
+        This helps the user correct their workbook definitions or review the file.
+
+    Example 2: Intentional duplicates (NO warning)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        col_map = {
+            "Client Date of Birth": [
+                "DOB Partner Enhanced",
+                "DOB Partner Enhanced.1",
+                "DOB Partner Enhanced.2"
+            ]
+        }
+
+        Excel file contains:
+            "DOB Partner Enhanced"
+            "DOB Partner Enhanced.1"
+            "DOB Partner Enhanced.2"
+
+        All duplicates appear intentionally in col_map → NO warning printed.
+
+    Parameters
+    ----------
+    raw_df : pd.DataFrame
+        Raw DataFrame read from Excel BEFORE normalization or mapping.
+    col_map : dict
+        Canonical → [variant names]. Variants are normalized and compared to
+        the base column names extracted from the raw DataFrame.
+
+    Returns
+    -------
+    None
+        This function prints warnings but does not modify the DataFrame.
+    """
+
+     # Build normalized sets of *all* explicitly defined variants
+    defined_variants_norm = {
+        str(v).strip().lower()
+        for variants in col_map.values()
+        for v in variants
+    }
+
+    seen = {}
+
+    for raw_col in raw_df.columns:
+        raw_str = str(raw_col)
+        norm = raw_str.strip().lower()
+
+        # Detect numeric suffix (e.g. ".1", ".2", ".10")
+        if "." in norm:
+            base, suffix = norm.split(".", 1)
+            if suffix.isdigit():
+                # Only treat this as a duplicate if suffix is numeric
+                seen.setdefault(base, []).append(raw_str)
+                continue
+
+        # Non-numeric prefix OR no dot → treat column as its own base
+        seen.setdefault(norm, []).append(raw_str)
+
+    # Check for suspicious duplicates
+    for base, cols in seen.items():
+
+        # Check which of the duplicate columns are explicitly defined variants
+        normalized_dup_cols = [str(c).strip().lower() for c in cols]
+        count_defined = sum(1 for c in normalized_dup_cols if c in defined_variants_norm)
+        total_cols = len(cols)
+
+        # If there are duplicates and not all are defined, print warning.
+        if total_cols > 1 and total_cols != count_defined:
+            print(
+                f"[WARN] Possible unintended duplicate columns detected for '{base}':\n"
+                f"       {cols}\n"
+                f"       Some or all of these columns are not present in workbook definitions.\n"
+                f"       Consider updating workbook definitions with suffixes to allow for consolidation."
+            )
+
+def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, accepted_responses: dict, preview_rows: int = 5, debug: bool = False):
     """
     Select and reorder columns from a messy Excel DataFrame using a canonical-to-variants
     mapping, with tolerant header matching and optional debug output.
@@ -217,7 +359,8 @@ def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int
                     "First Name": ["First Name", "FirstName", "FName"],
                     "Last Name":  ["Last Name", "Surname", "LName"],
                 }
-
+        accepted_responses (dict):
+            Mapping of canonical column labels to dict of col concept class, col type, and accepted responses
         preview_rows (int, optional):
             Number of rows to show in the debug preview of ``raw_df``. Default is 5.
         debug (bool, optional):
@@ -232,6 +375,8 @@ def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int
             - canonical_labels:
                 List of canonical column labels corresponding to the columns in
                 ``df_no_headers``.
+            - canonical_labels_present:
+                List of canonical column labels that were found in the raw_df and are present in the final DataFrame.
 
     Notes:
         - If no variant for a canonical label is found in ``raw_df``, the corresponding
@@ -251,15 +396,22 @@ def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int
         if len(raw_cols_as_str) > 30:
             print("       ... (truncated)")
 
+
+    # Warn user about suffix-based duplicates (does not affect matching) so they can update workbook definitions if needed.
+    # This is necessary if user wants to c
+    warn_suffix_duplicates(raw_df, col_map=col_map, debug=debug)
+
     # Build normalization map: normalized -> original
     norm_cols = {}
     for c in raw_df.columns:
         key = str(c).strip().lower()
-        # keep first occurrence only to make duplicates obvious
+
+        # Store ALL raw columns under same normalized key
         if key not in norm_cols:
-            norm_cols[key] = c
-        elif debug:
-            print(f"[warn] duplicate normalized header: '{key}' maps to '{norm_cols[key]}' and '{c}'")
+            norm_cols[key] = [c]         # now a list
+        else:
+            if debug:
+                print(f"[warn] duplicate normalized header: '{key}' now maps to: {norm_cols[key]}")
 
     if debug:
         # Show a few normalized keys
@@ -269,7 +421,8 @@ def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int
             print("           ... (truncated)")
 
     selected_cols = []
-    canonical_labels = []
+    canonical_labels = [] # This list will contain all canonical_labels in the workbook defintions.
+    canonical_labels_present = [] # This list will contain all canonical lables in the workbook definitions that are present in the file.
     matched_count = 0
     missing_count = 0
 
@@ -281,31 +434,65 @@ def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int
         except Exception as e:
             print(f"[preview] failed: {e}")
 
+    # Map col headers to canonical headers
     for canonical, variants in col_map.items():
         if not isinstance(variants, (list, tuple)):
             variants = [variants]
 
-        found_col = None
+        # found_col = None
+        found_cols = [] # List to accomoadate for multiple variants found in the same file.
         tried = []
 
+        # Check each variant for a match in the normalized raw columns, append multiple variants found for the same canonical value in a list.
         for variant in variants:
             variant_norm = str(variant).strip().lower()
             tried.append(variant_norm)
             if variant_norm in norm_cols:
-                found_col = norm_cols[variant_norm]
-                break
+                found_cols.append(norm_cols[variant_norm][0])
 
-        if found_col is not None:
-            selected_cols.append(raw_df[found_col])
+        # If at least one variant was found, proceed with mapping
+        if len(found_cols) > 0:
+
+            # If only one raw column matched, map that column to the canonical header.
+            if len(found_cols) == 1:
+                merged = raw_df[found_cols[0]].copy()
+
+            # Else, if multiple raw columns matched, consolidate them based on the consolidation method defined in the concept class.
+            else:
+                 # Retrieve consolidation_key from concept class
+                concept_class = accepted_responses.get(canonical, {}).get("concept_class", None) # get concept class from workbook definitions
+                consolidation_method = getattr(concept_classes.get(concept_class), "consolidation_method", "single-select") # get consolidation method based on concept class
+
+                # If consolidation method is single-select, then just take the first non-null value
+                if consolidation_method == "single-select":
+                    # Existing behavior: first non-null wins
+                    merged = raw_df[found_cols[0]].copy()
+                    for colname in found_cols[1:]:
+                        merged = merged.fillna(raw_df[colname])
+
+                # If consolidation method is additive, then join the strings by a ','
+                elif consolidation_method == "additive":
+                    # New behavior: combine all non-null/non-empty values
+                    def combine_vals(row):
+                        vals = [
+                            row[c] for c in found_cols
+                            if pd.notna(row[c]) and str(row[c]).strip() != ""
+                        ]
+                        return ", ".join(map(str, vals)) if vals else pd.NA
+
+                    merged = raw_df[found_cols].apply(combine_vals, axis=1)
+
+                else:
+                    raise ValueError(f"Unknown consolidation_key '{consolidation_method}' for column '{canonical}'")
+
+            selected_cols.append(merged)
             matched_count += 1
-            if debug:
-                print(f"[match] canonical='{canonical}' <- raw='{found_col}' (tried={tried})")
-        else:
-            selected_cols.append(pd.Series([pd.NA] * len(raw_df), index=raw_df.index))
-            missing_count += 1
-            if debug:
-                print(f"[MISS ] canonical='{canonical}' had no match. tried variants={tried}")
 
+            # Only add a canonical value to the canonical labels present if a variant is found in the file. 
+            # This is beneficial for large projects that have many data elements in workbook definitions that may not be present in all files.
+            canonical_labels_present.append(canonical)
+
+        # This list contains all canonical_labels in the workbook defintions.    
         canonical_labels.append(canonical)
 
     if debug:
@@ -329,7 +516,7 @@ def extract_columns_noisy(raw_df: pd.DataFrame, col_map: dict, preview_rows: int
             print(f"[info] NA-only columns: {all_na_cols}/{df_no_headers.shape[1]}")
         print("=== [extract_columns] END ===\n")
 
-    return df_no_headers, canonical_labels
+    return df_no_headers, canonical_labels, canonical_labels_present
 
 def clean_text(val):
     """
@@ -687,12 +874,18 @@ class WorkbookLoader:
             # ------------------------------------------------------------
             try:
                 if self.dynamic:
-                    df, labels = extract_columns_noisy(raw_df, config["labels"])
+                    df, labels, labels_present = extract_columns_noisy(raw_df, config["labels"], config["accepted_responses"])
                 else:
                     df = raw_df.iloc[:, starting_col:] if starting_col > 0 else raw_df
                     labels = config["labels"]
+                    labels_present = config["labels_present"]
 
-                df.columns = labels
+                # Ensure all columns present are relabeled to their canonical names, even if some are missing
+                df.columns = labels_present
+
+                # Ensure all expected labels are present, filling missing ones with NA
+                if df.columns.tolist() != labels:
+                    print(f"⚠️ WARNING: Not all columns from labels are present in '{sheet_key}'. Reindexing columns to match expected labels.")
 
                 if self.multi_sheet_mode:
                     df = df.copy()

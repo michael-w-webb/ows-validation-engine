@@ -153,30 +153,41 @@ simple_format_portal_data_labels = {  "First Name": [
       "Zip/Postal Code"
     ],
     "Client Date of Birth": [
-      "Client_Date_Of_Birth_Modified" # Simple Excel macro combining DOB columns and reformatting to consistent date format.
+      "Client_Date_Of_Birth_Modified", # Simple Excel macro combining DOB columns and reformatting to consistent date format.
+      "Date of birth (MM/DD/YYYY)",
+      "Date of birth (MM/DD/YYYY).1",
+      "Date of birth (MM/DD/YYYY).2",
+      "Date of birth (MM/DD/YYYY).3",
+      "Date Of Birth"
     ],
-    # "If you are currently working, what is your hourly wage?": [ # How to handly multiple columns?
-    #   "If you are currently working, what is your hourly wage?"
-      # "If you are not currently working, what was your hourly wage in your most recent job?" # If we add this I think we need to add code to merge these columns
-      # BQ1 has cleanest data but some erroneous annual salary entries. BT1 as well
-    # ]
     "Gender": [
       "How do you currently identify your gender?"
     ],
     "Race": [ 
-      "Race_Modified" # Macro to separate race and ethnicity from the column "What is your race/ethnicity? (Check all that apply)_Modified" 
+      "What is your race/ethnicity? (Check all that apply)",
+      "What is your race/ethnicity? (Check all that apply).1"
     ],
-    "Ethnicity": [
-        "Ethnicity_Modified" # Macro to separate race and ethnicity from the column "What is your race/ethnicity? (Check all that apply)_Modified" 
+    "Testing": [
+      "Testing"
     ]
+    # "Ethnicity": [
+    #     "Ethnicity_Modified" # Macro to separate race and ethnicity from the column "What is your race/ethnicity? (Check all that apply)_Modified" 
+    # ]
 }
 
 simple_format_portal_data_accepted_responses_w_types = {
     'First Name': {'type': 'identifier'},
     'Last Name': {'type': 'identifier'},
     'Zip Code': {'type': 'zipCode'},
-    'Client Date of Birth': {'type': 'dateTime'},
+    'Client Date of Birth': {
+        'concept_class': 'dob',
+        'type': 'dateTime'
+    },
+    'Testing': {
+        'type': 'identifier'
+    },
     'Gender': {
+        'concept_class': 'gender',
         'type': 'categorical', 
         'accepted_responses': {
             "Male": [
@@ -213,9 +224,10 @@ simple_format_portal_data_accepted_responses_w_types = {
             }
     },
     'Race': {
+        'concept_class': 'race/ethnicity',
         'type': 'multiCategorical',
         'accepted_responses': {
-            "Black": [
+            "Black or African American": [
                 "Black or African American",
                 "Noirs ou afro-américains",
                 "Negro o afroamericano",
@@ -226,11 +238,11 @@ simple_format_portal_data_accepted_responses_w_types = {
                 "blanco",
                 "Blanc",
             ],
-            "Hispanic": [
+            "Hispanic or Latino": [
                 "Hispanic",
                 "Latino",
                 "or Spanish",
-                "Hispanic, Latino, or Spanish"
+                "Hispanic, Latino, or Spanish",
                 "Hispano",
                 "latino o español",
                 "Hispano, latino o español",
@@ -245,10 +257,10 @@ simple_format_portal_data_accepted_responses_w_types = {
                 "Asian",
                 "asiática",
             ],
-            "American Indian": [
+            "American Indian or Alaska Native": [
                 "American Indian or Alaska Native",
             ],
-            "Hawaiian/Pacific Islander": [
+            "Native Hawaiian or Other Pacific Islander": [
                 "Native Hawaiian or Other Pacific Islander",
                 "Nativo de Hawái u otras islas del Pacífico",
             ],
@@ -260,52 +272,46 @@ simple_format_portal_data_accepted_responses_w_types = {
                 " ",
                 "",                 # empty string
                 None
-            ],
-            "Multi-Racial": []  # Added to canonical so indicators include in multiCategorical column logic
-        }
-        # 'protected_phrases': [ # These should not be needed now that I already split Race and Ethnicity out. But maybe keep b/c that might be logic worth having in the validation engine.
-        #             "Hispanic, Latino, or Spanish",
-        #             "Hispano, latino o español",
-        #             "Hispânicos, latinos ou espanhóis",
-        #             "Hispanique, latino ou espangnol"
-        #         ]
-    },
-
-    "Ethnicity": {
-        'type': 'categorical',
-        'accepted_responses': {
-            "Hispanic": [
-                "Hispanic",
-                "Latino",
-                "or Spanish",
-                "Hispanic, Latino, or Spanish",
-                "Hispano",
-                "latino o español",
-                "Hispano, latino o español",
-                "Hispânicos",
-                "latinos ou espanhóis",
-                "Hispânicos, latinos ou espanhóis",
-                "Hispanique",
-                "latino ou espagnol",
-                "Hispanique, latino ou espangnol",
-                "hispanique, latino ou espangnol"
-            ],
-            "non-Hispanic": [
-                "Not Hispanic",
-                "non-Hispanic",
-                "Non-Hispanic",
-                "Not Hispanic or Latino",
-                "Non-Hispanic or Latino"
-            ],
-            "Unknown": [
-                "Prefer not to answer",
-                "DID NOT DISCLOSE",
-                "Choose not to answer",
-                " ",
-                "",                 # empty string
-                None
             ]
         }
+      
+    }
+
+    # "Ethnicity": {
+    #     'type': 'categorical',
+    #     'accepted_responses': {
+    #         "Hispanic": [
+    #             "Hispanic",
+    #             "Latino",
+    #             "or Spanish",
+    #             "Hispanic, Latino, or Spanish",
+    #             "Hispano",
+    #             "latino o español",
+    #             "Hispano, latino o español",
+    #             "Hispânicos",
+    #             "latinos ou espanhóis",
+    #             "Hispânicos, latinos ou espanhóis",
+    #             "Hispanique",
+    #             "latino ou espagnol",
+    #             "Hispanique, latino ou espangnol",
+    #             "hispanique, latino ou espangnol"
+    #         ],
+    #         "non-Hispanic": [
+    #             "Not Hispanic",
+    #             "non-Hispanic",
+    #             "Non-Hispanic",
+    #             "Not Hispanic or Latino",
+    #             "Non-Hispanic or Latino"
+    #         ],
+    #         "Unknown": [
+    #             "Prefer not to answer",
+    #             "DID NOT DISCLOSE",
+    #             "Choose not to answer",
+    #             " ",
+    #             "",                 # empty string
+    #             None
+    #         ]
+    #     }
         # 'protected_phrases': [ # These should not be needed now that I already split Race and Ethnicity out. But maybe keep b/c that might be logic worth having in the validation engine.
         #             "Hispanic, Latino, or Spanish",
         #             "Hispano, latino o español",
@@ -314,7 +320,7 @@ simple_format_portal_data_accepted_responses_w_types = {
         #         ]
 
     }
-}
+
 
 workbook_definitions = {
 

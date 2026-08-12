@@ -1,10 +1,10 @@
 """
 ==============================
-Career ConneCT Portal Validation Main Script
+PA25-119 Validation Main Script
 ==============================
 
-This is the Career ConneCT Porta validation main script. It instatiates the validation engine / workbook
-loader with arguments that are specific to Career ConneCT data and file structure. If the pipeline
+This is the PA25-119 validation main script. It instatiates the validation engine / workbook
+loader with arguments that are specific to PA25-119 data and file structure. If the pipeline
 requires program specific data at somepoint, this should be its entryway. 
 
 The file proceeds through the following sections: 
@@ -19,7 +19,7 @@ The file proceeds through the following sections:
 For more complete explanations of each section, see the comments within the code. 
 
 Inputs: 
-- File directory object from 'portal_file_directory.py' specifying file paths and metadata
+- File directory object from 'cc_file_directory.py' specifying file paths and metadata
 - Workbook definitions from 'cc_column_label_list.py' specifying sheet structures and validation rules
 - Crossrule definitions from 'cc_validation_cross_rule_sets.py'
 - Key creator specifications, including key fields and normalizations
@@ -47,9 +47,9 @@ from validation_engine.key_creator import KeyCreator
 from validation_engine.standard_normalizations import strict_alphabetic_normalize
 
 ### Application Specific Imports
-from applications.portal_sheets.workbook_definitions import workbook_definitions
-from applications.portal_sheets.file_directory import file_directory
-from applications.portal_sheets.cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
+from applications.pa25_119_grantee_sheets.workbook_definitions import workbook_definitions
+from applications.pa25_119_grantee_sheets.file_directory import file_directory
+# from applications.pa25_119_grantee_sheets.cross_rule_sets import CONNECTED_PRESENCE_RULES, CONDITIONALLY_BLANK_UNLESS_RULES, CONDITIONALLY_ALLOWED_RULES, CONDITIONALLY_REQUIRED_RULES , CONDITIONALLY_REQUIRED_BY_DATE_COMPARISON_RULES
 
 ### specify cross rule sets, these are dataset specific and should be adjusted for each program (e.g. GJC, CC, etc.)
 
@@ -62,8 +62,8 @@ from applications.portal_sheets.cross_rule_sets import CONNECTED_PRESENCE_RULES,
 #     ]
 
 GRAB_LATEST = True
-LOGGING = False
-LOG_DESCRIPTION = "Testing Duplicated Column Consolidation"
+LOGGING = True
+LOG_DESCRIPTION = "7/9/ multicategorical testing"
 
 # TARGET_ORGS = ["Charter Oak State College Foundation"]
 TARGET_ORGS = None
@@ -94,11 +94,11 @@ for target_period in periods_to_run:
         
         ## Current file types are:
         # 
-        # For Career ConneCT - "training data" 
+        # For PA25-119 - "pa25_119 data" 
         # For Good Jobs Challenge - "TPI" and "SSI" 
         
 
-        file_type = "portal data"
+        file_type = "pa25_119 data"
         
         available_periods = list(data_types[file_type].keys())
 
@@ -139,8 +139,8 @@ for target_period in periods_to_run:
         #### workbook loader if one is specified there. The order of precedence is goings to be : workbook_definitions -> file_meta -> default (0)
 
         starting_row = 0  # default starting row
-        if "starting_row" in file_meta and file_meta["starting_row"] is not None:
-            starting_row = file_meta["starting_row"]
+        if "starting row" in file_meta and file_meta["starting row"] is not None:
+            starting_row = file_meta["starting row"]
 
         ##### End - File Selection #####
 
@@ -149,12 +149,11 @@ for target_period in periods_to_run:
         ## Before loading workbooks, instantiate key creator and provide specifications 
 
         sheetlink_keycreator = KeyCreator(
-        key_fields=["First Name", "Last Name"],     # minimal for now
+        key_fields=["Linking_ID"],     # minimal for now
         normalizers={
-            "First Name": strict_alphabetic_normalize,
-            "Last Name": strict_alphabetic_normalize,
+            "Linking_ID": strict_alphabetic_normalize
         },
-        required_fields=["First Name", "Last Name"],  # will drop invalid rows
+        required_fields=["Linking_ID"],  # will drop invalid rows
         return_unhashed=True,                       # unhashed for easier debugging
     )
         
@@ -162,26 +161,26 @@ for target_period in periods_to_run:
         # No normalization because this is called after normalization is completed.  
 
         kc_strict = KeyCreator(
-        key_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
-        required_fields=["First Name", "Last Name", "Client Date of Birth", "Zip Code"],
+        key_fields=["Linking_ID"],
+        required_fields=["Linking_ID"],
         return_unhashed=True,
         )
 
         kc_med_name_dob = KeyCreator(
-        key_fields=["First Name", "Last Name", "Client Date of Birth"],
-        required_fields=["First Name", "Last Name", "Client Date of Birth"],
+        key_fields=["Linking_ID"],
+        required_fields=["Linking_ID"],
         return_unhashed=True,
         )
 
         kc_med_name_zip = KeyCreator(
-        key_fields=["First Name", "Last Name", "Zip Code"],
-        required_fields=["First Name", "Last Name", "Zip Code"],
+        key_fields=["Linking_ID"],
+        required_fields=["Linking_ID"],
         return_unhashed=True,
         )
 
         kc_weak = KeyCreator(
-        key_fields=["First Name","Last Name"],
-        required_fields =["First Name","Last Name"],
+        key_fields=["Linking_ID"],
+        required_fields =["Linking_ID"],
         return_unhashed=True,
         )
 
@@ -312,7 +311,7 @@ for target_period in periods_to_run:
     mismatches_final = pd.DataFrame(flat_rows)
 
     # --- Write once at the end ---
-    output_file = OUTPUT_DIRECTORY / f"portal_validation_results_{target_period}.xlsx"
+    output_file = OUTPUT_DIRECTORY / f"pa25_119_validation_results_all_orgs_{target_period}.xlsx"
 
     with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
         normalized_final.to_excel(writer, sheet_name="Normalized Data", index=False)

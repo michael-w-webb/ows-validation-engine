@@ -588,6 +588,10 @@ file_directory = {
       "PY4 Q3": { 
         "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Connecticut State Building Trades Training Institute" / "Y4Q3" / "CSBTTI Data Entry Spreadsheet PY4 Q3 - MW Corrected (1).xlsm",
         "format": "four sheet format"
+      },
+      "PY4 Q4": { 
+        "file path": FILE_DIRECTORY_ROOT / "Career Connect" / "Connecticut State Building Trades Training Institute" / "Y4Q4 FINAL" / "CSBTTI Data Entry Spreadsheet PY4 Q2 - MW Corrected _JUNE 2026 (4).xlsm",
+        "format": "four sheet format"
       }
     }
   },
